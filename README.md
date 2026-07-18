@@ -278,37 +278,6 @@ On first analysis call, the hook probes WebLLM availability:
 
 This means the app works identically whether deployed (WebLLM) or running locally (Ollama). No code changes needed.
 
----
-
-## Demo Flow for Hackathon
-
-### What Judges See (Deployed URL)
-
-A deployed frontend (Vercel/Netlify) + backend (Render) shows:
-- Camera and upload interface
-- Scan history with sync status
-- Settings with language toggle and voice test
-- TTS reads results aloud
-
-*On a phone with WebGPU, real Gemma 4 inference runs in-browser. On a phone without WebGPU, it shows simulated results.*
-
-### What You Present (Live Demo)
-
-1. **Laptop**: Run Ollama + Backend + Frontend locally
-2. **Phone**: Connect to same WiFi, open ngrok URL
-3. **Disconnect WiFi**: Show PWA still works (service worker cache)
-4. **Snap photo of real object** (battery, wire, plastic bottle):
-   - Gemma 4 classifies it via Ollama
-   - Safety warnings appear
-   - Estimated value in Naira shown
-   - Read Aloud plays Hausa/Pidgin warning
-5. **Reconnect WiFi**: Scan syncs to backend database
-6. **Show History**: Synced scans appear with material class and price
-
-### Screen Recording Backup
-
-Record a 2-minute walkthrough in case internet is unreliable during judging:
-
 ```
 00:00 - App loads on phone (offline)
 00:15 - Snap photo of scrap material
