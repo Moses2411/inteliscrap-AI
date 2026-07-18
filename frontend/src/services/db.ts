@@ -28,8 +28,12 @@ export async function markScanAsSynced(id: string): Promise<void> {
   await db.scans.update(id, { is_synced: true, synced_at: new Date().toISOString() });
 }
 
+export async function softDeleteScan(id: string): Promise<void> {
+  await db.scans.update(id, { is_deleted: true });
+}
+
 export async function getLocalScans(): Promise<ScrapScan[]> {
-  return db.scans.orderBy("captured_at").reverse().toArray();
+  return db.scans.orderBy("captured_at").reverse().filter(s => !s.is_deleted).toArray();
 }
 
 export async function cachePrices(prices: PriceMatrixEntry[]): Promise<void> {

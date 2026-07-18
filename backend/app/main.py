@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import analyze, health, prices, sync, users
+from app.api import analyze, health, prices, sync, tts, users
 from app.config import settings
 from app.database import init_db
 from app.middleware.cors import setup_cors
@@ -29,6 +29,7 @@ app.include_router(sync.router)
 app.include_router(users.router)
 app.include_router(prices.router)
 app.include_router(analyze.router)
+app.include_router(tts.router)
 
 
 @app.get("/")

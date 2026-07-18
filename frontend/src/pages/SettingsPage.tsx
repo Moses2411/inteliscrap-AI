@@ -6,25 +6,18 @@ export default function SettingsPage() {
   const [testText, setTestText] = useState("");
   const [playing, setPlaying] = useState(false);
 
-  const playTest = async () => {
+  const playTest = () => {
     if (!testText.trim() || playing) return;
     setPlaying(true);
 
-    try {
-      const lang = selected_language === "ha" ? "ha" : "en";
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(testText)}&tl=${lang}&client=tw-ob`;
-
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const blobUrl = URL.createObjectURL(blob);
-
-      const audio = new Audio(blobUrl);
-      audio.onended = () => { setPlaying(false); URL.revokeObjectURL(blobUrl); };
-      audio.onerror = () => { setPlaying(false); URL.revokeObjectURL(blobUrl); };
-      await audio.play();
-    } catch {
-      setPlaying(false);
-    }
+    const lang = selected_language === "ha" ? "ha" : "en";
+    const audio = document.createElement("audio");
+    audio.src = `/api/v1/tts?text=${encodeURIComponent(testText)}&lang=${lang}`;
+    audio.style.display = "none";
+    audio.onended = () => { audio.remove(); setPlaying(false); };
+    audio.onerror = () => { audio.remove(); setPlaying(false); };
+    document.body.appendChild(audio);
+    audio.play().catch(() => { audio.remove(); setPlaying(false); });
   };
 
   return (

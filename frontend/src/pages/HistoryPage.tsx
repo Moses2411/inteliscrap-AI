@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { getLocalScans } from "../services/db";
+import { useEffect, useState, useCallback } from "react";
+import { getLocalScans, softDeleteScan } from "../services/db";
 import { formatNaira, formatDateTime, formatConfidence } from "../utils/formatters";
 import type { ScrapScan } from "../types";
 import { useSync } from "../hooks/useSync";
@@ -8,9 +8,19 @@ export default function HistoryPage() {
   const [scans, setScans] = useState<ScrapScan[]>([]);
   const { triggerSync } = useSync();
 
-  useEffect(() => {
+  const loadScans = useCallback(() => {
     getLocalScans().then(setScans);
   }, []);
+
+  useEffect(() => {
+    loadScans();
+  }, [loadScans]);
+
+  const handleDelete = useCallback(async (id: string) => {
+    if (!window.confirm("Delete this scan from your history?")) return;
+    await softDeleteScan(id);
+    loadScans();
+  }, [loadScans]);
 
   if (scans.length === 0) {
     return (
@@ -35,7 +45,7 @@ export default function HistoryPage() {
 
       <div className="space-y-2">
         {scans.map((scan) => (
-          <div key={scan.id} className="card flex items-center justify-between">
+          <div key={scan.id} className="card flex items-center justify-between gap-2">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-semibold text-gray-900">{scan.material_class}</p>
               <div className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
@@ -44,13 +54,24 @@ export default function HistoryPage() {
                 <span>{formatConfidence(scan.confidence_score)}</span>
               </div>
             </div>
-            <div className="ml-3 text-right">
-              <p className="text-sm font-bold text-brand-600">{formatNaira(scan.estimated_naira_value)}</p>
-              <span
-                className={`text-[10px] font-medium ${scan.is_synced ? "text-green-600" : "text-yellow-600"}`}
+            <div className="flex items-center gap-3">
+              <div className="text-right">
+                <p className="text-sm font-bold text-brand-600">{formatNaira(scan.estimated_naira_value)}</p>
+                <span
+                  className={`text-[10px] font-medium ${scan.is_synced ? "text-green-600" : "text-yellow-600"}`}
+                >
+                  {scan.is_synced ? "Synced" : "Pending"}
+                </span>
+              </div>
+              <button
+                onClick={() => handleDelete(scan.id)}
+                className="shrink-0 rounded-full p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+                aria-label="Delete scan"
               >
-                {scan.is_synced ? "Synced" : "Pending"}
-              </span>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
             </div>
           </div>
         ))}

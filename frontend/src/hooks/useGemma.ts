@@ -4,7 +4,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { GemmaAnalysis } from "../types";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 const MODEL_ID = "gemma-2-2b-it-q4f16_1-MLC-1k";
 const WEBLLM_TIMEOUT = 15_000;
 
