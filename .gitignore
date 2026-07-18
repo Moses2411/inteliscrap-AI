@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.pyc
+__pycache__/
+*.egg-info/
+.pytest_cache/
+alembic/versions/*.pyc
+.vscode/
+*.log
+.DS_Store
+coverage/
+htmlcov/
+*.db
+*.sqlite3
