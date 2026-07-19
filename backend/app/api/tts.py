@@ -1,5 +1,4 @@
 from urllib.parse import quote
-
 import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response

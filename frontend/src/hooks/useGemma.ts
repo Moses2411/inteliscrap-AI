@@ -5,7 +5,7 @@ import { useState, useCallback, useRef } from "react";
 import type { GemmaAnalysis } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
-const MODEL_ID = "gemma-2-2b-it-q4f16_1-MLC-1k";
+const MODEL_ID = "gemma4:e2b-it-q4_K_M";
 const WEBLLM_TIMEOUT = 15_000;
 
 function convertBlobToBase64(blob: Blob): Promise<string> {
