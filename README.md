@@ -1,6 +1,6 @@
 # InteliScrap AI
 
-Empowering Informal Recyclers with Multimodal Edge Intelligence
+Empowering Informal Recyclers, laboratory cleaners, office cleaners and general cleaners with Multimodal Edge Intelligence
 
 **Team Nexus — Build with Gemma Hackathon (ABU Zaria)**
 
