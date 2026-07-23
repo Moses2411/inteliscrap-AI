@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useReducer, type ReactNode } from "react";
-import type { GemmaAnalysis, PriceMatrixEntry, ScrapScan, User } from "../types";
+import type { GemmaAnalysis, Language, PriceMatrixEntry, ScrapScan, User } from "../types";
 import { AppContext, type AppState } from "./appStore";
 
 type Action =
@@ -10,7 +10,7 @@ type Action =
   | { type: "SET_CURRENT_SCAN"; payload: GemmaAnalysis | null }
   | { type: "SET_RECENT_SCANS"; payload: ScrapScan[] }
   | { type: "SET_CACHED_PRICES"; payload: PriceMatrixEntry[] }
-  | { type: "SET_LANGUAGE"; payload: "ha" | "pcm" };
+  | { type: "SET_LANGUAGE"; payload: Language };
 
 interface State {
   user: User | null;
@@ -20,7 +20,7 @@ interface State {
   current_scan: GemmaAnalysis | null;
   recent_scans: ScrapScan[];
   cached_prices: PriceMatrixEntry[];
-  selected_language: "ha" | "pcm";
+  selected_language: Language;
 }
 
 const initialState: State = {
@@ -67,7 +67,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setCurrentScan = useCallback((scan: GemmaAnalysis | null) => dispatch({ type: "SET_CURRENT_SCAN", payload: scan }), []);
   const setRecentScans = useCallback((scans: ScrapScan[]) => dispatch({ type: "SET_RECENT_SCANS", payload: scans }), []);
   const setCachedPrices = useCallback((prices: PriceMatrixEntry[]) => dispatch({ type: "SET_CACHED_PRICES", payload: prices }), []);
-  const setSelectedLanguage = useCallback((lang: "ha" | "pcm") => dispatch({ type: "SET_LANGUAGE", payload: lang }), []);
+  const setSelectedLanguage = useCallback((lang: Language) => dispatch({ type: "SET_LANGUAGE", payload: lang }), []);
 
   const value = useMemo<AppState>(
     () => ({

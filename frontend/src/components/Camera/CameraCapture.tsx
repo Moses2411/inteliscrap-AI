@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback } from "react";
 import { startCamera, stopCamera, captureFrame, readFileAsBlob } from "../../services/camera";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface Props {
   onImageCapture: (blob: Blob) => void;
@@ -7,6 +8,7 @@ interface Props {
 }
 
 export default function CameraCapture({ onImageCapture, disabled }: Props) {
+  const { t } = useTranslation();
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -26,9 +28,9 @@ export default function CameraCapture({ onImageCapture, disabled }: Props) {
       streamRef.current = stream;
       setCameraActive(true);
     } catch (err) {
-      setError("Camera not available. Use upload instead.");
+      setError(t("camera_unavailable"));
     }
-  }, []);
+  }, [t]);
 
   const capture = useCallback(async () => {
     if (!videoRef.current || capturing) return;
@@ -89,7 +91,7 @@ export default function CameraCapture({ onImageCapture, disabled }: Props) {
                 disabled={disabled}
                 className="btn-primary gap-2"
               >
-                Open Camera
+                {t("open_camera")}
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
@@ -99,7 +101,7 @@ export default function CameraCapture({ onImageCapture, disabled }: Props) {
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
-                Upload Image
+                {t("upload_image")}
               </button>
             </div>
             <input

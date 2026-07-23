@@ -44,4 +44,4 @@ export interface GemmaAnalysis {
 
 export type HazardLevel = "low" | "medium" | "high" | "critical";
 
-export type Language = "ha" | "pcm";
+export type Language = "en" | "ha" | "pcm";

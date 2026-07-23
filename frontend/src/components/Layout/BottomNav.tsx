@@ -1,14 +1,16 @@
 import { useNavigate, useLocation } from "react-router-dom";
-
-const tabs = [
-  { path: "/", label: "Scan", icon: CameraIcon },
-  { path: "/history", label: "History", icon: HistoryIcon },
-  { path: "/settings", label: "Settings", icon: SettingsIcon },
-] as const;
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function BottomNav() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const tabs = [
+    { path: "/", label: t("scan"), icon: CameraIcon },
+    { path: "/history", label: t("history"), icon: HistoryIcon },
+    { path: "/settings", label: t("settings"), icon: SettingsIcon },
+  ] as const;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-10 border-t border-gray-200 bg-white">
