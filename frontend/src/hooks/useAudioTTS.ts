@@ -1,11 +1,12 @@
 import { useCallback, useRef } from "react";
+import en from "../locales/en.json";
 import ha from "../locales/ha.json";
 import pcm from "../locales/pcm.json";
 
 type HazardKey = keyof typeof ha.hazards;
 type SafetyKey = keyof typeof ha.safety_instructions;
 
-const LOCALE_MAP = { ha, pcm } as const;
+const LOCALE_MAP = { en, ha, pcm } as const;
 
 function determineSafetyKey(hazards: string[]): SafetyKey {
   if (hazards.includes("corrosive_acid") || hazards.includes("chemical_burns")) return "acid";
@@ -34,7 +35,7 @@ export function useAudioTTS() {
   const playingRef = useRef(false);
 
   const speakReport = useCallback(
-    async (materialClass: string, nairaValue: number, hazards: string[] = [], language: "ha" | "pcm" = "ha") => {
+    async (materialClass: string, nairaValue: number, hazards: string[] = [], language: "en" | "ha" | "pcm" = "en") => {
       if (playingRef.current) return;
       playingRef.current = true;
 
@@ -47,11 +48,16 @@ export function useAudioTTS() {
           ? " Hatsari: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
         speechString = `An gano ${materialClass}. Farashin sa shine naira ${nairaValue} duk kilo.${hazardText}${locale.safety_instructions[safetyKey]}`;
-      } else {
+      } else if (language === "pcm") {
         const hazardText = hazards.length > 0
           ? " Danger: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
         speechString = `We find ${materialClass}. The price na ${nairaValue} Naira per kg.${hazardText}${locale.safety_instructions[safetyKey]}`;
+      } else {
+        const hazardText = hazards.length > 0
+          ? " Hazards: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
+          : "";
+        speechString = `Detected ${materialClass}. Estimated value is ${nairaValue} Naira per kg.${hazardText}${locale.safety_instructions[safetyKey]}`;
       }
 
       const ttsLang = language === "ha" ? "ha" : "en";

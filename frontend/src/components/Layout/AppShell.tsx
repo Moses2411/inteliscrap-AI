@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { useOnlineStatus } from "../../utils/offline";
 import { useApp } from "../../store/appStore";
 import { useSync } from "../../hooks/useSync";
+import { useTranslation } from "../../hooks/useTranslation";
 import BottomNav from "./BottomNav";
 import Header from "./Header";
 
@@ -11,6 +12,7 @@ interface Props {
 
 export default function AppShell({ children }: Props) {
   const { setOnline } = useApp();
+  const { t } = useTranslation();
   const online = useOnlineStatus();
   const { triggerSync } = useSync();
 
@@ -24,7 +26,7 @@ export default function AppShell({ children }: Props) {
       <main className="mx-auto flex w-full max-w-lg flex-1 flex-col px-4 pb-20 pt-4">
         {!online && (
           <div className="mb-3 rounded-lg bg-yellow-50 px-3 py-2 text-center text-xs font-medium text-yellow-800 ring-1 ring-yellow-200">
-            You're offline. Scans will sync when connected.
+            {t("offline_banner")}
           </div>
         )}
         {children}
