@@ -30,7 +30,7 @@ async def analyze_image(image_base64: str) -> dict:
         "options": {"temperature": 0.1, "max_tokens": 512},
     }
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=300.0) as client:
         try:
             resp = await client.post(f"{OLLAMA_BASE_URL}/api/chat", json=payload)
             resp.raise_for_status()
