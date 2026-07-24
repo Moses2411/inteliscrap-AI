@@ -84,6 +84,8 @@
   "deleted": "Deleted",
   "synced": "Synced",
   "pending": "Pending",
+  "pause": "Pause",
+  "continue": "Continue",
   "material": "Material",
   "hazards_detected": "Hazards Detected",
   "voice_language": "Voice Language",

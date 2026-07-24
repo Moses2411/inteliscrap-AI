@@ -34,7 +34,7 @@ export default function ScanPage() {
   const { t } = useTranslation();
   const { selected_language, cached_prices, setCurrentScan } = useApp();
   const { analyzeScrapImage, loading_progress } = useGemma();
-  const { speakReport } = useAudioTTS();
+  const { speakReport, pause, resume, status: ttsStatus } = useAudioTTS();
 
   const finishWith = useCallback(
     (analysis: GemmaAnalysis) => {
@@ -120,6 +120,9 @@ export default function ScanPage() {
             speakReport(result.material_class, estimated_value, result.toxicity_hazards, selected_language)
           }
           onScanAgain={() => setResult(null)}
+          ttsStatus={ttsStatus}
+          onPause={pause}
+          onResume={resume}
         />
       </div>
     );
