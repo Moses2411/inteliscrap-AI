@@ -178,17 +178,17 @@ Choose based on your available RAM:
 
 ```bash
 # 16GB+ RAM (recommended)
-ollama pull gemma4:2b
+ollama pull gemma4:e2b
 
 # 8GB RAM (lighter)
-ollama pull gemma4:2b   # if available as 2B variant
+ollama pull gemma4:e2b   # 2.3B effective params, ~7.2GB download
 ollama pull gemma3:2b   # fallback if 4 isn't available
 ```
 
 ### 3. Run the Model
 
 ```bash
-ollama run gemma4:2b
+ollama run gemma4:e2b
 ```
 
 Keep this terminal window open. Ollama serves on http://localhost:11434.
@@ -197,7 +197,7 @@ Keep this terminal window open. Ollama serves on http://localhost:11434.
 
 ```bash
 # Terminal 1: Ollama (already running)
-ollama run gemma4:2b
+ollama run gemma4:e2b
 
 # Terminal 2: Backend
 cd backend
@@ -484,7 +484,7 @@ IntelliScrap/
 | Problem | Solution |
 |---|---|
 | Frontend shows "Loading AI model..." forever | The WebLLM probe is stuck. Refresh the page. If you don't have WebGPU, the app falls back to mock after 15 seconds. |
-| Backend returns 502 on /api/v1/analyze | Ollama isn't running. Start it with `ollama run gemma4:2b`. |
+| Backend returns 502 on /api/v1/analyze | Ollama isn't running. Start it with `ollama run gemma4:e2b`. |
 | Camera button does nothing | The app tries `environment` → `user` → `any` camera modes. Try selecting "Upload Image" instead. |
 | TTS sounds Chinese | The browser speech synthesis has no Hausa voice installed. The Google TTS proxy (backend) should fix this — make sure the backend is running. |
 | Scans show "Pending" forever | No backend is running, or you're offline. The sync button manually triggers upload. |
