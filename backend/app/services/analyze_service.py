@@ -2,7 +2,7 @@ import json
 import httpx
 
 OLLAMA_BASE_URL = "http://localhost:11434"
-GEMMA_MODEL = "gemma4:2b"
+GEMMA_MODEL = "gemma4:e2b"
 
 SYSTEM_PROMPT = """You are a materials expert for waste recycling in Northern Nigeria.
 Analyze the scrap material shown in the image and return ONLY valid JSON with these fields:
