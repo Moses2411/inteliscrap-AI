@@ -73,6 +73,8 @@
   "deleted": "Don delete",
   "synced": "Don sync",
   "pending": "De wait",
+  "pause": "Pause am",
+  "continue": "Continue",
   "material": "Material",
   "hazards_detected": "Danger wey we see",
   "voice_language": "Voice Language",

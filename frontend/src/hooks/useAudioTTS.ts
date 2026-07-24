@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useState } from "react";
 import en from "../locales/en.json";
 import ha from "../locales/ha.json";
 import pcm from "../locales/pcm.json";
@@ -19,25 +19,61 @@ function determineSafetyKey(hazards: string[]): SafetyKey {
   return "default";
 }
 
-function playAudio(src: string): Promise<boolean> {
+function playAudio(
+  src: string,
+  audioRef: React.MutableRefObject<HTMLAudioElement | null>,
+  cancelledRef: React.MutableRefObject<boolean>
+): Promise<boolean> {
   return new Promise((resolve) => {
     const audio = document.createElement("audio");
     audio.src = src;
     audio.style.display = "none";
-    audio.onended = () => { audio.remove(); resolve(true); };
-    audio.onerror = () => { audio.remove(); resolve(false); };
+
+    const cleanup = () => {
+      audio.remove();
+      if (audioRef.current === audio) audioRef.current = null;
+    };
+
+    audio.onended = () => { cleanup(); resolve(true); };
+    audio.onerror = () => { cleanup(); resolve(false); };
+
     document.body.appendChild(audio);
-    audio.play().catch(() => { audio.remove(); resolve(false); });
+    audioRef.current = audio;
+
+    audio.play().catch(() => {
+      cleanup();
+      resolve(false);
+    });
+
+    const interval = setInterval(() => {
+      if (cancelledRef.current) {
+        clearInterval(interval);
+        audio.pause();
+        cleanup();
+        resolve(false);
+      }
+    }, 200);
   });
 }
 
+export type TtsStatus = "idle" | "playing" | "paused";
+
 export function useAudioTTS() {
+  const [status, setStatus] = useState<TtsStatus>("idle");
   const playingRef = useRef(false);
+  const cancelledRef = useRef(false);
+  const pausedRef = useRef(false);
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const usingFallbackRef = useRef(false);
+  const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const speakReport = useCallback(
     async (materialClass: string, nairaValue: number, hazards: string[] = [], language: "en" | "ha" | "pcm" = "en") => {
       if (playingRef.current) return;
       playingRef.current = true;
+      cancelledRef.current = false;
+      pausedRef.current = false;
+      setStatus("playing");
 
       const locale = LOCALE_MAP[language];
       const safetyKey = determineSafetyKey(hazards);
@@ -65,28 +101,89 @@ export function useAudioTTS() {
       // Split into sentences so each chunk stays under Google TTS length limit
       const sentences = speechString.match(/[^.!?]+[.!?]+/g) || [speechString];
 
+      // Try server TTS
+      usingFallbackRef.current = false;
       let allOk = true;
       for (const sentence of sentences) {
-        const ok = await playAudio(`/api/v1/tts?text=${encodeURIComponent(sentence.trim())}&lang=${ttsLang}`);
+        if (cancelledRef.current) { allOk = false; break; }
+
+        while (pausedRef.current && !cancelledRef.current) {
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        if (cancelledRef.current) { allOk = false; break; }
+
+        const ok = await playAudio(
+          `/api/v1/tts?text=${encodeURIComponent(sentence.trim())}&lang=${ttsLang}`,
+          currentAudioRef,
+          cancelledRef
+        );
         if (!ok) { allOk = false; break; }
       }
 
-      if (!allOk) {
+      if (!allOk && !cancelledRef.current) {
         // Fallback: use browser speech synthesis for the full text at once
         if ("speechSynthesis" in window) {
+          usingFallbackRef.current = true;
           const u = new SpeechSynthesisUtterance(speechString);
           u.lang = ttsLang === "ha" ? "ha-NG" : "en-NG";
           u.rate = 0.85;
-          u.onend = () => { playingRef.current = false; };
+          u.onend = () => {
+            playingRef.current = false;
+            setStatus("idle");
+          };
+          u.onpause = () => setStatus("paused");
+          u.onresume = () => setStatus("playing");
+          fallbackUtteranceRef.current = u;
           window.speechSynthesis.speak(u);
           return;
         }
       }
 
-      playingRef.current = false;
+      if (!cancelledRef.current) {
+        playingRef.current = false;
+        setStatus("idle");
+      } else {
+        playingRef.current = false;
+        setStatus("idle");
+      }
     },
     []
   );
 
-  return { speakReport };
+  const pause = useCallback(() => {
+    if (usingFallbackRef.current && "speechSynthesis" in window) {
+      window.speechSynthesis.pause();
+    } else if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+    }
+    pausedRef.current = true;
+    setStatus("paused");
+  }, []);
+
+  const resume = useCallback(() => {
+    if (usingFallbackRef.current && "speechSynthesis" in window) {
+      window.speechSynthesis.resume();
+    } else if (currentAudioRef.current) {
+      currentAudioRef.current.play().catch(() => {});
+    }
+    pausedRef.current = false;
+    setStatus("playing");
+  }, []);
+
+  const stop = useCallback(() => {
+    cancelledRef.current = true;
+    if (usingFallbackRef.current && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+      fallbackUtteranceRef.current = null;
+    } else if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current.remove();
+      currentAudioRef.current = null;
+    }
+    playingRef.current = false;
+    pausedRef.current = false;
+    setStatus("idle");
+  }, []);
+
+  return { speakReport, pause, resume, stop, status };
 }
