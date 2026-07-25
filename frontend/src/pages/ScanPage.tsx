@@ -10,7 +10,7 @@ import { useApp } from "../store/appStore";
 import { saveScanLocally } from "../services/db";
 import type { GemmaAnalysis } from "../types";
 
-const TIMEOUT_MS = 20_000;
+const TIMEOUT_MS = 300_000;
 
 const FALLBACK_POOL: GemmaAnalysis[] = [
   { material_class: "Copper", confidence: 0.92, toxicity_hazards: [], safety_instructions: "Safe to handle." },
