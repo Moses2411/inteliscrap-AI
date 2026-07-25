@@ -7,8 +7,6 @@ import type { GemmaAnalysis } from "../types";
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 const GEMMA4_MODEL_ID = "gemma-4-E2B-it-q4f16_1-MLC";
 const GEMMA4_REPO = "https://huggingface.co/welcoma/gemma-4-E2B-it-q4f16_1-MLC";
-const WEBLLM_TIMEOUT = 15_000;
-
 function convertBlobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
