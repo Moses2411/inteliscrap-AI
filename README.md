@@ -20,8 +20,9 @@ Empowering Informal Recyclers, laboratory cleaners, office cleaners and general 
 10. [Demo Flow for Hackathon](#demo-flow-for-hackathon)
 11. [API Endpoints](#api-endpoints)
 12. [Testing](#testing)
-13. [Deployment](#deployment)
-14. [Project Structure](#project-structure)
+13. [Troubleshooting](#troubleshooting)
+14. [Deployment](#deployment)
+15. [Project Structure](#project-structure)
 
 ---
 
@@ -118,9 +119,15 @@ The application uses Google Gemma 4 (via Ollama or WebLLM) to analyze photos of 
 |---|---|---|
 | Node.js | >=18 | Frontend (React PWA) |
 | npm | >=9 | Package management |
-| Python | >=3.11 | Backend (FastAPI) |
+| **Python** | **3.11 or 3.12 (64-bit ONLY)** | Backend (FastAPI) |
 | pip | >=23 | Python packages |
 | Ollama | latest | Real Gemma 4 inference |
+
+> ⚠️ **CRITICAL WINDOWS SETUP WARNINGS:**
+>
+> 1. **Do NOT use Python 3.14 (or pre-releases):** Pre-compiled binary wheels (`.whl`) are not yet available on PyPI for Python 3.14. Installing packages like `pydantic-core` will attempt to compile from source and fail without C++/Rust tools.
+> 2. **Install 64-bit (amd64) Python ONLY:** If you accidentally install the 32-bit (`win32`) Python installer, package installations like `httptools` and `greenlet` will fail with errors demanding `Microsoft Visual C++ 14.0 or greater is required`. Download the **64-bit Windows installer (x86-64)** from Python's official download page.
+> 3. **Add Python to PATH:** Ensure you check the box **"Add python.exe to PATH"** on the first screen of the Python installer.
 
 ### Optional (for production deployment)
 - PostgreSQL 15+ (SQLite used in development)
@@ -130,31 +137,59 @@ The application uses Google Gemma 4 (via Ollama or WebLLM) to analyze photos of 
 
 ## Quick Start
 
-### 1. Clone and Install Dependencies
+### 1. Clone the Repository
 
 ```bash
-# Backend
-cd backend
-pip install -r requirements.txt
-
-# Frontend
-cd frontend
-npm install
+git clone https://github.com/your-org/IntelliScrap.git
+cd IntelliScrap
 ```
 
-### 2. Start the Backend
+### 2. Set Up and Start the Backend
+
+Open Command Prompt (`cmd.exe`) or terminal:
 
 ```bash
 cd backend
+
+# 1. Verify you are using 64-bit Python 3.12
+py -3.12 --version
+
+# 2. Create an isolated virtual environment
+py -3.12 -m venv .venv
+
+# 3. Activate the virtual environment
+# On Windows Command Prompt (cmd.exe):
+.venv\Scripts\activate
+
+# On Windows PowerShell:
+# .venv\Scripts\Activate.ps1
+
+# On Linux/macOS:
+# source .venv/bin/activate
+
+# 4. Upgrade pip inside the environment
+python -m pip install --upgrade pip
+
+# 5. Install backend dependencies
+pip install -r requirements.txt
+
+# 6. Run the FastAPI backend server
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 Verify: Open http://localhost:8000/docs — you should see the FastAPI Swagger UI.
 
-### 3. Start the Frontend
+### 3. Set Up and Start the Frontend
+
+Open a **new** terminal window:
 
 ```bash
 cd frontend
+
+# 1. Install Node modules
+npm install
+
+# 2. Start the Vite development server
 npx vite --host 0.0.0.0 --port 5173
 ```
 
@@ -172,17 +207,12 @@ At this point the app runs entirely with mock data (no real analysis). Upload an
 
 Download from https://ollama.com and install.
 
-### 2. Pull a Gemma Model
+### 2. Pull the Gemma 4 Model
 
-Choose based on your available RAM:
+Run the following command in your terminal:
 
 ```bash
-# 16GB+ RAM (recommended)
 ollama pull gemma4:e2b
-
-# 8GB RAM (lighter)
-ollama pull gemma4:e2b   # 2.3B effective params, ~7.2GB download
-ollama pull gemma3:2b   # fallback if 4 isn't available
 ```
 
 ### 3. Run the Model
@@ -199,8 +229,9 @@ Keep this terminal window open. Ollama serves on http://localhost:11434.
 # Terminal 1: Ollama (already running)
 ollama run gemma4:e2b
 
-# Terminal 2: Backend
+# Terminal 2: Backend (inside .venv)
 cd backend
+.venv\Scripts\activate
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Terminal 3: Frontend
@@ -278,6 +309,10 @@ On first analysis call, the hook probes WebLLM availability:
 
 This means the app works identically whether deployed (WebLLM) or running locally (Ollama). No code changes needed.
 
+---
+
+## Demo Flow for Hackathon
+
 ```
 00:00 - App loads on phone (offline)
 00:15 - Snap photo of scrap material
@@ -333,6 +368,7 @@ This means the app works identically whether deployed (WebLLM) or running locall
 
 ```bash
 cd backend
+# Ensure virtual environment is active (.venv\Scripts\activate)
 pytest -v
 ```
 
@@ -343,6 +379,23 @@ Tests cover:
 - Sync idempotency (duplicate scans don't create duplicates)
 - Sync conflict resolution (newer data wins)
 - Deleted scan propagation
+
+---
+
+## Troubleshooting
+
+| Problem | Cause | Solution |
+|---|---|---|
+| `Microsoft Visual C++ 14.0 or greater is required` during `pip install` | You are using 32-bit Python or Python 3.14+. PyPI lacks pre-compiled wheels for these versions. | Uninstall 32-bit Python. Install Python 3.12 64-bit (x86-64). Delete your `.venv` folder, re-create it (`py -3.12 -m venv .venv`), and run `pip install -r requirements.txt`. |
+| `Error: pull model manifest: file does not exist` | Invalid Ollama model tag or outdated Ollama version. | Ensure Ollama is running up-to-date and verify model tag availability using `ollama pull gemma4:e2b`. |
+| Backend returns 502 on `/api/v1/analyze` | Ollama isn't running on port 11434. | Open a terminal and start it with `ollama run gemma4:e2b`. If Ollama is off, the app automatically uses mock mode. |
+| `.venv\Scripts\activate` fails on PowerShell | Execution Policy blocking scripts. | Run in standard CMD (`cmd.exe`), or run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` in PowerShell. |
+| Frontend shows "Loading AI model..." forever | The WebLLM probe is stuck or WebGPU is unsupported. | Refresh the page. The app falls back to backend proxy or mock after timeout. |
+| Camera button does nothing | Camera permissions blocked or unsupported mode. | Try selecting "Upload Image" instead. |
+| TTS sounds Chinese | No native Hausa voice installed in local browser OS. | Google TTS proxy (backend) handles native voices — ensure the backend is running. |
+| Scans show "Pending" forever | Backend offline or internet disconnected. | The sync button manually triggers upload once connected. |
+| `pip install asyncpg` fails | Missing C++ tools on Windows. | Use SQLite (default in local development config). |
+| `npm install` hangs / ETARGET error | Corrupted npm cache. | Clear cache: `npm cache clean --force && npm install`. |
 
 ---
 
@@ -476,20 +529,6 @@ IntelliScrap/
 | Member 3 | Edge AI & Local ML Engineer | `frontend/src/hooks/useGemma.ts`, `frontend/src/hooks/gemmaWorker.ts`, `backend/app/services/analyze_service.py` |
 | Member 4 | Accessibility & Audio Engineer | `frontend/src/hooks/useAudioTTS.ts`, `frontend/src/locales/` |
 | Member 5 | QA, DevOps & Sync Engineer | `backend/tests/`, `docker-compose.yml`, `.github/workflows/`, `Dockerfile` files, sync conflict logic |
-
----
-
-## Troubleshooting
-
-| Problem | Solution |
-|---|---|
-| Frontend shows "Loading AI model..." forever | The WebLLM probe is stuck. Refresh the page. If you don't have WebGPU, the app falls back to mock after 15 seconds. |
-| Backend returns 502 on /api/v1/analyze | Ollama isn't running. Start it with `ollama run gemma4:e2b`. |
-| Camera button does nothing | The app tries `environment` → `user` → `any` camera modes. Try selecting "Upload Image" instead. |
-| TTS sounds Chinese | The browser speech synthesis has no Hausa voice installed. The Google TTS proxy (backend) should fix this — make sure the backend is running. |
-| Scans show "Pending" forever | No backend is running, or you're offline. The sync button manually triggers upload. |
-| `pip install asyncpg` fails | On Windows, asyncpg requires Visual C++ build tools. Use SQLite instead (default in local dev). |
-| `npm install` hangs / ETARGET error | Clear npm cache: `npm cache clean --force && npm install` |
 
 ---
 
