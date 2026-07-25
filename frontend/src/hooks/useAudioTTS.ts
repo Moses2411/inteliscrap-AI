@@ -3,7 +3,7 @@ import en from "../locales/en.json";
 import ha from "../locales/ha.json";
 import pcm from "../locales/pcm.json";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 
 type HazardKey = keyof typeof ha.hazards;
 type SafetyKey = keyof typeof ha.safety_instructions;
@@ -21,41 +21,56 @@ function determineSafetyKey(hazards: string[]): SafetyKey {
   return "default";
 }
 
-function playAudio(
+async function playAudio(
   src: string,
   audioRef: React.MutableRefObject<HTMLAudioElement | null>,
   cancelledRef: React.MutableRefObject<boolean>
 ): Promise<boolean> {
-  return new Promise((resolve) => {
-    const audio = document.createElement("audio");
-    audio.src = src;
-    audio.style.display = "none";
+  try {
+    const resp = await fetch(src);
+    if (!resp.ok) {
+      console.warn("TTS fetch returned", resp.status, resp.statusText);
+      return false;
+    }
+    const blob = await resp.blob();
+    const blobUrl = URL.createObjectURL(blob);
 
-    const cleanup = () => {
-      audio.remove();
-      if (audioRef.current === audio) audioRef.current = null;
-    };
+    return await new Promise<boolean>((resolve) => {
+      const audio = document.createElement("audio");
+      audio.src = blobUrl;
+      audio.style.display = "none";
 
-    audio.onended = () => { cleanup(); resolve(true); };
-    audio.onerror = () => { cleanup(); resolve(false); };
+      const cleanup = () => {
+        URL.revokeObjectURL(blobUrl);
+        audio.remove();
+        if (audioRef.current === audio) audioRef.current = null;
+      };
 
-    document.body.appendChild(audio);
-    audioRef.current = audio;
+      audio.onended = () => { cleanup(); resolve(true); };
+      audio.onerror = (e) => { console.warn("TTS playback error", e); cleanup(); resolve(false); };
 
-    audio.play().catch(() => {
-      cleanup();
-      resolve(false);
-    });
+      document.body.appendChild(audio);
+      audioRef.current = audio;
 
-    const interval = setInterval(() => {
-      if (cancelledRef.current) {
-        clearInterval(interval);
-        audio.pause();
+      audio.play().catch((err) => {
+        console.warn("TTS play() failed", err);
         cleanup();
         resolve(false);
-      }
-    }, 200);
-  });
+      });
+
+      const interval = setInterval(() => {
+        if (cancelledRef.current) {
+          clearInterval(interval);
+          audio.pause();
+          cleanup();
+          resolve(false);
+        }
+      }, 200);
+    });
+  } catch (err) {
+    console.warn("TTS fetch error", err);
+    return false;
+  }
 }
 
 export type TtsStatus = "idle" | "playing" | "paused";
