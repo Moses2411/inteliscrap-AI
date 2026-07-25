@@ -105,7 +105,7 @@ export function useAudioTTS() {
         const hazardText = hazards.length > 0
           ? " Danger: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
-        speechString = `We find ${materialClass}. The price na ${nairaValue} Naira per kg.${hazardText}${locale.safety_instructions[safetyKey]}`;
+        speechString = `We find ${materialClass}. The price nah ${nairaValue} Naira per kg.${hazardText}${locale.safety_instructions[safetyKey]}`;
       } else {
         const hazardText = hazards.length > 0
           ? " Hazards: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
