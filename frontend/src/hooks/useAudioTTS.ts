@@ -3,6 +3,8 @@ import en from "../locales/en.json";
 import ha from "../locales/ha.json";
 import pcm from "../locales/pcm.json";
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
+
 type HazardKey = keyof typeof ha.hazards;
 type SafetyKey = keyof typeof ha.safety_instructions;
 
@@ -113,7 +115,7 @@ export function useAudioTTS() {
         if (cancelledRef.current) { allOk = false; break; }
 
         const ok = await playAudio(
-          `/api/v1/tts?text=${encodeURIComponent(sentence.trim())}&lang=${ttsLang}`,
+          `${API_BASE}/api/v1/tts?text=${encodeURIComponent(sentence.trim())}&lang=${ttsLang}`,
           currentAudioRef,
           cancelledRef
         );
