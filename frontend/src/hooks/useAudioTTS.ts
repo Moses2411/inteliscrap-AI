@@ -100,7 +100,7 @@ export function useAudioTTS() {
         const hazardText = hazards.length > 0
           ? " Hatsari: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
-        speechString = `An gano ${materialClass}. Farashin sa shine naira ${nairaValue} duk kilo.${hazardText}${locale.safety_instructions[safetyKey]}`;
+        speechString = `An gano ${materialClass}. Kilo daya ya kai naira ${nairaValue}.${hazardText}${locale.safety_instructions[safetyKey]}`;
       } else if (language === "pcm") {
         const hazardText = hazards.length > 0
           ? " Danger: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
