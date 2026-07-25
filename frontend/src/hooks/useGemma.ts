@@ -5,7 +5,9 @@ import { useState, useCallback, useRef } from "react";
 import type { GemmaAnalysis } from "../types";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
-const MODEL_ID = "gemma-2-2b-it-q4f16_1-MLC-1k";
+const GEMMA4_MODEL_ID = "gemma-4-E2B-it-q4f16_1-MLC";
+const GEMMA4_REPO = "https://huggingface.co/welcoma/gemma-4-E2B-it-q4f16_1-MLC";
+const WEBLLM_TIMEOUT = 15_000;
 
 function convertBlobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -25,8 +27,18 @@ async function tryWebLLM(imageBase64: string): Promise<GemmaAnalysis | null> {
 
     const engine = await CreateWebWorkerMLCEngine(
       new Worker(new URL("./gemmaWorker.ts", import.meta.url), { type: "module" }),
-      MODEL_ID,
-      { initProgressCallback: () => {} },
+      GEMMA4_MODEL_ID,
+      {
+        initProgressCallback: () => {},
+        appConfig: {
+          model_list: [{
+            model: GEMMA4_REPO,
+            model_id: GEMMA4_MODEL_ID,
+            model_lib: `${GEMMA4_REPO}/resolve/main/libs/${GEMMA4_MODEL_ID}-webgpu.wasm`,
+            required_features: ["shader-f16"],
+          }],
+        },
+      },
     );
 
     const response = await engine.chat.completions.create({
