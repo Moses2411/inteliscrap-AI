@@ -96,7 +96,7 @@ export function useAudioTTS() {
         speechString = `Detected ${materialClass}. Estimated value is ${nairaValue} Naira per kg.${hazardText}${locale.safety_instructions[safetyKey]}`;
       }
 
-      const ttsLang = language === "ha" ? "ha" : "en";
+      const ttsLang = language === "ha" ? "ha" : language === "pcm" ? "en-NG" : "en";
 
       // Split into sentences so each chunk stays under Google TTS length limit
       const sentences = speechString.match(/[^.!?]+[.!?]+/g) || [speechString];
