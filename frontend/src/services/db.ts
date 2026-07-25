@@ -21,7 +21,7 @@ export async function saveScanLocally(scan: ScrapScan): Promise<void> {
 }
 
 export async function getUnsyncedScans(): Promise<ScrapScan[]> {
-  return db.scans.where("is_synced").equals(false).toArray();
+  return db.scans.filter(s => !s.is_synced).toArray();
 }
 
 export async function markScanAsSynced(id: string): Promise<void> {

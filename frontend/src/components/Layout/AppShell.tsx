@@ -1,7 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { useOnlineStatus } from "../../utils/offline";
 import { useApp } from "../../store/appStore";
-import { useSync } from "../../hooks/useSync";
 import { useTranslation } from "../../hooks/useTranslation";
 import BottomNav from "./BottomNav";
 import Header from "./Header";
@@ -14,7 +13,6 @@ export default function AppShell({ children }: Props) {
   const { setOnline } = useApp();
   const { t } = useTranslation();
   const online = useOnlineStatus();
-  const { triggerSync } = useSync();
 
   useEffect(() => {
     setOnline(online);
