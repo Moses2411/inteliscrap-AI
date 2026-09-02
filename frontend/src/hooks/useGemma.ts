@@ -7,8 +7,6 @@ import type { GemmaAnalysis } from "../types";
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 const GEMMA4_MODEL_ID = "gemma-4-E2B-it-q4f16_1-MLC";
 const GEMMA4_REPO = "https://huggingface.co/welcoma/gemma-4-E2B-it-q4f16_1-MLC";
-const WEBLLM_TIMEOUT = 15_000;
-
 function convertBlobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -83,7 +81,7 @@ async function tryOllama(imageBase64: string): Promise<GemmaAnalysis> {
 export function useGemma() {
   const [loading_progress, setLoadingProgress] = useState(0);
   const [is_ready] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error] = useState<string | null>(null);
   const engineMode = useRef<"webllm" | "ollama" | null>(null);
 
   const initModel = useCallback(async () => {}, []);

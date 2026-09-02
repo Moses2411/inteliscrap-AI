@@ -7,7 +7,9 @@ from app.schemas import ScrapScanCreate
 
 
 def _resolve_conflict(existing: ScrapScan, incoming: ScrapScanCreate) -> bool:
-    return incoming.captured_at > existing.captured_at
+    existing_t = existing.captured_at.replace(tzinfo=None)
+    incoming_t = incoming.captured_at.replace(tzinfo=None)
+    return incoming_t > existing_t
 
 
 async def process_scans(db: AsyncSession, user_id: str, scans: list[ScrapScanCreate]) -> list[str]:

@@ -118,5 +118,17 @@
 
   "hazard_safe": "Safe",
   "hazard_high_risk": "High Risk",
-  "hazard_caution": "Caution"
+  "hazard_caution": "Caution",
+
+  "sign_in_title": "Sign in to request a pickup",
+  "your_phone": "Phone number",
+  "send_otp": "Send code",
+  "enter_otp": "6-digit code",
+  "verify": "Verify",
+  "post_pickup": "Request a collector pickup",
+  "estimated_weight": "Estimated weight (kg)",
+  "confirm_post": "Confirm pickup request",
+  "posting": "Posting...",
+  "posted_success": "Request sent! A nearby collector will be notified.",
+  "weight_invalid": "Enter a valid weight"
 }

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InteliScrap AI — NGO M&E Dashboard</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1>InteliScrap AI</h1>
+    <span class="subtitle">NGO Monitoring &amp; Evaluation</span>
+    <button id="logout" class="ghost hidden">Log out</button>
+  </header>
+
+  <main>
+    <section id="login" class="card login">
+      <h2>Admin / NGO sign in</h2>
+      <p class="muted">Sign in with your phone number (role: NGO).</p>
+      <form id="login-form">
+        <input id="phone" type="tel" placeholder="+2348012345678" required />
+        <button type="submit">Request OTP</button>
+      </form>
+      <form id="otp-form" class="hidden">
+        <input id="otp" type="text" inputmode="numeric" maxlength="6" placeholder="6-digit OTP" required />
+        <button type="submit">Verify</button>
+      </form>
+      <p id="login-status" class="status"></p>
+    </section>
+
+    <section id="dashboard" class="hidden">
+      <div class="metrics">
+        <div class="metric card">
+          <span class="metric-label">Recycled tonnage</span>
+          <span id="tonnage" class="metric-value">—</span>
+          <span class="metric-unit">kg</span>
+        </div>
+        <div class="metric card">
+          <span class="metric-label">Carbon offset</span>
+          <span id="carbon" class="metric-value">—</span>
+          <span class="metric-unit">kg CO₂e</span>
+        </div>
+        <div class="metric card">
+          <span class="metric-label">Collector income</span>
+          <span id="income" class="metric-value">—</span>
+          <span class="metric-unit">₦</span>
+        </div>
+        <div class="metric card">
+          <span class="metric-label">Transactions</span>
+          <span id="txn-count" class="metric-value">—</span>
+          <span class="metric-unit">settled</span>
+        </div>
+      </div>
+
+      <div class="charts">
+        <div class="card chart-card">
+          <h3>Tonnage over time</h3>
+          <canvas id="daily-chart"></canvas>
+        </div>
+        <div class="card chart-card">
+          <h3>Tonnage by material</h3>
+          <canvas id="material-chart"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    window.API_BASE = localStorage.getItem("api_base") || "http://localhost:8000";
+  </script>
+</body>
+</html>

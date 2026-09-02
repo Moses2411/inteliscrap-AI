@@ -17,14 +17,9 @@ Output JSON only. No markdown, no extra text."""
 async def analyze_image(image_base64: str) -> dict:
     payload = {
         "model": GEMMA_MODEL,
-        "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
-            {
-                "role": "user",
-                "content": "Classify this scrap material and identify any hazards.",
-                "images": [image_base64],
-            },
-        ],
+        "system": SYSTEM_PROMPT,
+        "prompt": "Classify this scrap material and identify any hazards.",
+        "images": [image_base64],
         "stream": False,
         "format": "json",
         "options": {"temperature": 0.1, "max_tokens": 512},
@@ -32,10 +27,10 @@ async def analyze_image(image_base64: str) -> dict:
 
     async with httpx.AsyncClient(timeout=300.0) as client:
         try:
-            resp = await client.post(f"{OLLAMA_BASE_URL}/api/chat", json=payload)
+            resp = await client.post(f"{OLLAMA_BASE_URL}/api/generate", json=payload)
             resp.raise_for_status()
             data = resp.json()
-            content = data.get("message", {}).get("content", "")
+            content = data.get("response", "")
             return json.loads(content)
         except httpx.HTTPError as e:
             raise RuntimeError(f"Ollama request failed: {e}")

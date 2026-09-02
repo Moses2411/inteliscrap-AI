@@ -25,6 +25,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
         runtimeCaching: [
           {
@@ -33,6 +34,15 @@ export default defineConfig({
             options: {
               cacheName: "price-cache",
               expiration: { maxEntries: 1, maxAgeSeconds: 86400 },
+            },
+          },
+          {
+            urlPattern: /\.(?:onnx|wasm)(?:\?.*)?$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "model-cache",
+              expiration: { maxEntries: 20, maxAgeSeconds: 31536000 },
+              cacheableResponse: { statuses: [0, 200] },
             },
           },
         ],

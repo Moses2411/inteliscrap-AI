@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { GemmaAnalysis } from "../../types";
+import type { GemmaAnalysis, HazardLevel } from "../../types";
 import { formatNaira, formatConfidence } from "../../utils/formatters";
 import { useTranslation, getLocale } from "../../hooks/useTranslation";
 import { useApp } from "../../store/appStore";
@@ -8,12 +8,20 @@ import type { TtsStatus } from "../../hooks/useAudioTTS";
 interface Props {
   result: GemmaAnalysis;
   estimated_value: number;
+  hazard_level?: HazardLevel;
   onReadAloud?: () => void;
   onScanAgain?: () => void;
   ttsStatus?: TtsStatus;
   onPause?: () => void;
   onResume?: () => void;
 }
+
+const HAZARD_LEVEL_STYLE: Record<HazardLevel, { badge: string; accent: string; label: string }> = {
+  low: { badge: "bg-green-100 text-green-800", accent: "border-l-green-400", label: "hazard_safe" },
+  medium: { badge: "bg-yellow-100 text-yellow-800", accent: "border-l-yellow-400", label: "hazard_caution" },
+  high: { badge: "bg-orange-100 text-orange-800", accent: "border-l-orange-400", label: "hazard_caution" },
+  critical: { badge: "bg-red-100 text-red-800", accent: "border-l-red-500", label: "hazard_high_risk" },
+};
 
 type SafetyKey = keyof typeof import("../../locales/en.json")["safety_instructions"];
 
@@ -47,11 +55,12 @@ function determineSafetyKey(hazards: string[]): SafetyKey {
   return "default";
 }
 
-export default function ScanResult({ result, estimated_value, onReadAloud, onScanAgain, ttsStatus = "idle", onPause, onResume }: Props) {
+export default function ScanResult({ result, estimated_value, hazard_level, onReadAloud, onScanAgain, ttsStatus = "idle", onPause, onResume }: Props) {
   const { t } = useTranslation();
   const { selected_language } = useApp();
-  const hazardKey = getHazardKey(result.toxicity_hazards ?? []);
-  const hazardColor = getHazardColor(result.toxicity_hazards ?? []);
+  const levelStyle = hazard_level ? HAZARD_LEVEL_STYLE[hazard_level] : null;
+  const hazardKey = levelStyle ? levelStyle.label : getHazardKey(result.toxicity_hazards ?? []);
+  const hazardColor = levelStyle ? levelStyle.badge : getHazardColor(result.toxicity_hazards ?? []);
   const safetyKey = determineSafetyKey(result.toxicity_hazards ?? []);
   const localeData = getLocale(selected_language);
   const translatedSafety = (localeData.safety_instructions as Record<string, string>)?.[safetyKey] ?? result.safety_instructions;
@@ -101,23 +110,23 @@ export default function ScanResult({ result, estimated_value, onReadAloud, onSca
 
   return (
     <div className="space-y-4">
-      <div className="card space-y-3">
+      <div className={`card space-y-3 ${levelStyle ? `border-l-4 ${levelStyle.accent}` : ""}`}>
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-gray-500">{t("material")}</h3>
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${hazardColor}`}>
             {t(hazardKey)}
           </span>
         </div>
-        <p className="text-xl font-bold text-gray-900">{result.material_class}</p>
+        <p className="text-2xl font-bold text-gray-900">{result.material_class}</p>
 
         <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-3">
           <div>
             <span className="text-xs text-gray-500">{t("estimated_value")}</span>
-            <p className="text-lg font-bold text-brand-600">{formatNaira(estimated_value)}</p>
+            <p className="text-xl font-bold text-brand-600">{formatNaira(estimated_value)}</p>
           </div>
           <div>
             <span className="text-xs text-gray-500">{t("confidence")}</span>
-            <p className="text-lg font-semibold text-gray-900">{formatConfidence(result.confidence)}</p>
+            <p className="text-xl font-semibold text-gray-900">{formatConfidence(result.confidence)}</p>
           </div>
         </div>
       </div>

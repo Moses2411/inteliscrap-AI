@@ -1,0 +1,10 @@
+{
+  "copper": { "label": "Copper", "hazardLevel": "low" },
+  "aluminum": { "label": "Aluminum", "hazardLevel": "low" },
+  "pet-plastic": { "label": "PET Plastic", "hazardLevel": "low" },
+  "lead-battery": { "label": "Lead-Acid Battery", "hazardLevel": "critical" },
+  "brass": { "label": "Brass", "hazardLevel": "low" },
+  "steel": { "label": "Steel", "hazardLevel": "low" },
+  "e-waste": { "label": "E-Waste Board", "hazardLevel": "high" },
+  "glass": { "label": "Glass", "hazardLevel": "medium" }
+}

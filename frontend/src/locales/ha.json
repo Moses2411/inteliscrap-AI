@@ -109,6 +109,18 @@
   "hazard_high_risk": "Haɗari Mai Girma",
   "hazard_caution": "Yi Hattara",
 
+  "sign_in_title": "Shiga don neman karɓa",
+  "your_phone": "Lambar waya",
+  "send_otp": "Aiko lamba",
+  "enter_otp": "Lamba 6",
+  "verify": "Tabbatar",
+  "post_pickup": "Nemi mai karɓa",
+  "estimated_weight": "Kimanin nauyi (kg)",
+  "confirm_post": "Tabbatar da buƙatar",
+  "posting": "Ana aikawa...",
+  "posted_success": "An aika buƙatar! Za a sanar da mai karɓa kusa da kai.",
+  "weight_invalid": "Shigar da nauyi daidai",
+
   "safety_instructions": {
     "default": "Ka saka safar hannu kafin ka taɓa. Ka wanke hannu bayan aiki.",
     "acid": "Ka saka safar hannu da tabarau. Idan ruwan ya taɓa fata, ka wanke da ruwa da sabulu nan da nan.",

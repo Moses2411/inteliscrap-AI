@@ -2,49 +2,50 @@ import { useState, useCallback } from "react";
 import { Camera, Recycle, Zap, WifiOff, ShieldCheck } from "lucide-react";
 import CameraCapture from "../components/Camera/CameraCapture";
 import ScanResult from "../components/Scanner/ScanResult";
+import PostPickupForm from "../components/Pickup/PostPickupForm";
 import LoadingSpinner from "../components/UI/LoadingSpinner";
-import { useGemma } from "../hooks/useGemma";
+import { useVision } from "../hooks/useVision";
 import { useAudioTTS } from "../hooks/useAudioTTS";
 import { useTranslation } from "../hooks/useTranslation";
 import { useApp } from "../store/appStore";
 import { saveScanLocally } from "../services/db";
-import type { GemmaAnalysis } from "../types";
+import type { VisionAnalysis } from "../types";
 
-const TIMEOUT_MS = 20_000;
+const TIMEOUT_MS = 300_000;
 
-const FALLBACK_POOL: GemmaAnalysis[] = [
-  { material_class: "Copper", confidence: 0.92, toxicity_hazards: [], safety_instructions: "Safe to handle." },
-  { material_class: "Lead-Acid Battery", confidence: 0.88, toxicity_hazards: ["corrosive_acid", "lead_poisoning"], safety_instructions: "Do not break open. Avoid skin contact." },
-  { material_class: "Aluminum", confidence: 0.95, toxicity_hazards: [], safety_instructions: "Safe to handle." },
-  { material_class: "Lithium-Ion Cell", confidence: 0.84, toxicity_hazards: ["lithium_fire_risk", "chemical_burns"], safety_instructions: "Do not puncture or submerge in water." },
-  { material_class: "PET Plastic", confidence: 0.91, toxicity_hazards: [], safety_instructions: "Safe to handle." },
-  { material_class: "E-Waste Board", confidence: 0.79, toxicity_hazards: ["lead_poisoning", "pcb_contamination"], safety_instructions: "Do not burn. Contains toxic components." },
-  { material_class: "Rubber", confidence: 0.90, toxicity_hazards: [], safety_instructions: "Safe to handle." },
-  { material_class: "Glass", confidence: 0.94, toxicity_hazards: ["sharp_edges"], safety_instructions: "Handle with care." },
+const FALLBACK_POOL: VisionAnalysis[] = [
+  { material_class: "Copper", material_slug: "copper", hazard_level: "low", confidence: 0.92, toxicity_hazards: [], safety_instructions: "Safe to handle." },
+  { material_class: "Lead-Acid Battery", material_slug: "lead-battery", hazard_level: "critical", confidence: 0.88, toxicity_hazards: ["corrosive_acid", "lead_poisoning"], safety_instructions: "Do not break open. Avoid skin contact." },
+  { material_class: "Aluminum", material_slug: "aluminum", hazard_level: "low", confidence: 0.95, toxicity_hazards: [], safety_instructions: "Safe to handle." },
+  { material_class: "PET Plastic", material_slug: "pet-plastic", hazard_level: "low", confidence: 0.91, toxicity_hazards: [], safety_instructions: "Safe to handle." },
+  { material_class: "E-Waste Board", material_slug: "e-waste", hazard_level: "high", confidence: 0.79, toxicity_hazards: ["lead_poisoning", "pcb_contamination"], safety_instructions: "Do not burn. Contains toxic components." },
+  { material_class: "Glass", material_slug: "glass", hazard_level: "medium", confidence: 0.94, toxicity_hazards: ["sharp_edges"], safety_instructions: "Handle with care." },
 ];
 
-function randomFallback(): GemmaAnalysis {
+function randomFallback(): VisionAnalysis {
   return FALLBACK_POOL[Math.floor(Math.random() * FALLBACK_POOL.length)];
 }
 
 export default function ScanPage() {
-  const [result, setResult] = useState<GemmaAnalysis | null>(null);
+  const [result, setResult] = useState<VisionAnalysis | null>(null);
   const [estimated_value, setEstimatedValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const { t } = useTranslation();
   const { selected_language, cached_prices, setCurrentScan } = useApp();
-  const { analyzeScrapImage, loading_progress } = useGemma();
+  const { analyze, loadingProgress } = useVision();
   const { speakReport, pause, resume, status: ttsStatus } = useAudioTTS();
 
   const finishWith = useCallback(
-    (analysis: GemmaAnalysis) => {
+    (analysis: VisionAnalysis) => {
       setResult(analysis);
       setCurrentScan(analysis);
 
       const priceEntry = cached_prices.find(
         (p) => p.material_class.toLowerCase() === analysis.material_class.toLowerCase()
       );
-      const value = priceEntry ? priceEntry.price_per_kg_naira * 1.0 : Math.round(Math.random() * 3000 + 200);
+      const value = priceEntry
+        ? priceEntry.price_per_kg_naira
+        : Math.round(Math.random() * 3000 + 200);
       setEstimatedValue(value);
 
       saveScanLocally({
@@ -58,7 +59,7 @@ export default function ScanPage() {
         captured_at: new Date().toISOString(),
         is_synced: false,
         is_deleted: false,
-      }).catch(() => { });
+      }).catch(() => {});
     },
     [cached_prices, setCurrentScan]
   );
@@ -74,7 +75,7 @@ export default function ScanPage() {
       }, TIMEOUT_MS);
 
       try {
-        const analysis = await analyzeScrapImage(_blob);
+        const analysis = await analyze(_blob);
         clearTimeout(timer);
         finishWith(analysis);
       } catch {
@@ -84,10 +85,9 @@ export default function ScanPage() {
         setLoading(false);
       }
     },
-    [analyzeScrapImage, finishWith]
+    [analyze, finishWith]
   );
 
-  // ── Loading state ──────────────────────────────────────────────
   if (loading) {
     return (
       <div
@@ -101,20 +101,18 @@ export default function ScanPage() {
             <Recycle className="h-8 w-8 animate-spin text-emerald-600" style={{ animationDuration: "2.5s" }} aria-hidden="true" />
           </span>
         </div>
-        <LoadingSpinner progress={loading_progress} label={t("analyzing_with_gemma")} />
-          <p className="max-w-xs text-sm text-gray-500">
-            {t("analyzing_desc")}
-          </p>
+        <LoadingSpinner progress={loadingProgress} label={t("analyzing_with_gemma")} />
+        <p className="max-w-xs text-sm text-gray-500">{t("analyzing_desc")}</p>
       </div>
     );
   }
 
-  // ── Result state ───────────────────────────────────────────────
   if (result) {
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4 duration-300">
         <ScanResult
           result={result}
+          hazard_level={result.hazard_level}
           estimated_value={estimated_value}
           onReadAloud={() =>
             speakReport(result.material_class, estimated_value, result.toxicity_hazards, selected_language)
@@ -124,32 +122,29 @@ export default function ScanPage() {
           onPause={pause}
           onResume={resume}
         />
+        <div className="mx-auto max-w-md">
+          <PostPickupForm analysis={result} onReset={() => setResult(null)} />
+        </div>
       </div>
     );
   }
 
-  // ── Idle / capture state ───────────────────────────────────────
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 px-4 pb-8 pt-2">
-      {/* Header */}
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100">
           <Camera className="h-7 w-7 text-emerald-700" aria-hidden="true" />
         </div>
         <div>
           <h2 className="text-xl font-bold tracking-tight text-gray-900">{t("snap_scrap")}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-gray-500">
-            {t("snap_scrap_desc")}
-          </p>
+          <p className="mt-1 text-sm leading-relaxed text-gray-500">{t("snap_scrap_desc")}</p>
         </div>
       </div>
 
-      {/* Capture area */}
       <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
         <CameraCapture onImageCapture={handleImageCapture} />
       </div>
 
-      {/* Quick reassurance / value props */}
       <div className="grid grid-cols-3 gap-2" role="list" aria-label={t("how_it_works")}>
         <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center">
           <Zap className="h-5 w-5 text-emerald-600" aria-hidden="true" />
@@ -165,9 +160,7 @@ export default function ScanPage() {
         </div>
       </div>
 
-      <p className="text-center text-xs text-gray-400">
-        {t("scans_save_desc")}
-      </p>
+      <p className="text-center text-xs text-gray-400">{t("scans_save_desc")}</p>
     </div>
   );
 }
