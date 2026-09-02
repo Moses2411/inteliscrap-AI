@@ -42,6 +42,21 @@ export interface GemmaAnalysis {
   safety_instructions: string;
 }
 
+export interface VisionAnalysis extends GemmaAnalysis {
+  material_slug: string;
+  hazard_level: HazardLevel;
+}
+
+export interface MaterialCategoryInfo {
+  id: number;
+  slug: string;
+  name: string;
+  name_ha?: string;
+  name_pcm?: string;
+  price_per_kg_naira: number;
+  is_hazardous: boolean;
+}
+
 export type HazardLevel = "low" | "medium" | "high" | "critical";
 
 export type Language = "en" | "ha" | "pcm";

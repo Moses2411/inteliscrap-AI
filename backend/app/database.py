@@ -16,6 +16,12 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    from app.seed import seed_material_categories
+
+    async with async_session_factory() as session:
+        await seed_material_categories(session)
+        await session.commit()
+
 
 async def get_db() -> AsyncSession:
     async with async_session_factory() as session:

@@ -36,6 +36,15 @@ export default defineConfig({
               expiration: { maxEntries: 1, maxAgeSeconds: 86400 },
             },
           },
+          {
+            urlPattern: /\.(?:onnx|wasm)(?:\?.*)?$/i,
+            handler: "CacheFirst",
+            options: {
+              cacheName: "model-cache",
+              expiration: { maxEntries: 20, maxAgeSeconds: 31536000 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
     }),
@@ -48,7 +57,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       "/api": {
-        target: "http://localhost:8002",
+        target: "http://localhost:8000",
         changeOrigin: true,
       },
     },
