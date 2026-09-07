@@ -90,6 +90,7 @@ class User(Base):
     longitude = Column(Float, nullable=True)
     otp_code = Column(String(6), nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
+    hashed_password = Column(String(255), nullable=True)
     is_verified = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
     last_seen_at = Column(DateTime, nullable=True)
@@ -106,6 +107,19 @@ class User(Base):
     collected_transactions = relationship(
         "Transaction", foreign_keys="Transaction.collector_id", back_populates="collector"
     )
+
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id = Column(String(36), primary_key=True, index=True, default=_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    token_hash = Column(String(64), unique=True, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    revoked_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    user = relationship("User")
 
 
 class MaterialCategory(Base):

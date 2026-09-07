@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "inteliscrap-dev-secret-key-change-in-production-32b"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 10080
+    refresh_token_expire_days: int = 30
     otp_expire_seconds: int = 600
     outbox_worker_enabled: bool = True
     outbox_poll_seconds: int = 60

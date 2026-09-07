@@ -187,8 +187,25 @@ class OTPVerify(BaseModel):
     otp_code: str
 
 
+class PasswordRegister(BaseModel):
+    phone_number: str
+    password: str = Field(min_length=8)
+    full_name: Optional[str] = None
+    role: Optional[UserRole] = UserRole.household
+
+
+class PasswordLogin(BaseModel):
+    phone_number: str
+    password: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
+
+
 class AuthResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user_id: str
     role: str
