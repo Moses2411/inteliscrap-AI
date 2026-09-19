@@ -63,9 +63,15 @@ class UserResponse(BaseModel):
     phone_number: str
     full_name: Optional[str] = None
     location_hub: str
+    role: str = UserRole.household.value
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class LocationUpdate(BaseModel):
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
 
 
 class PriceMatrixUpdate(BaseModel):
@@ -96,6 +102,7 @@ class SettlementRequest(BaseModel):
     weight_kg: float = Field(gt=0)
     unit_price_naira: Optional[float] = None
     payment_method: Optional[PaymentMethod] = PaymentMethod.cash
+    hub_id: Optional[str] = None
 
 
 class TransactionResponse(BaseModel):
@@ -149,6 +156,7 @@ class ListingCreate(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     address_text: Optional[str] = None
+    contact_phone: Optional[str] = None
     auto_dispatch: bool = True
 
 
@@ -169,6 +177,7 @@ class ListingResponse(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     address_text: Optional[str] = None
+    contact_phone: Optional[str] = None
     status: str
     expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
@@ -204,3 +213,161 @@ class MaterialCategoryResponse(BaseModel):
     is_hazardous: bool = False
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PickupOfferResponse(BaseModel):
+    pickup_id: str
+    listing_id: str
+    material_name: str
+    material_slug: str
+    estimated_weight_kg: Optional[float] = None
+    estimated_value_naira: Optional[float] = None
+    toxicity_hazards: Optional[Any] = None
+    address_text: Optional[str] = None
+    distance_m: Optional[float] = None
+    created_at: Optional[datetime] = None
+
+
+class PickupJobResponse(PickupOfferResponse):
+    status: str
+    contact_phone: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    scheduled_at: Optional[datetime] = None
+    accepted_at: Optional[datetime] = None
+
+
+# ── Recycling Hub schemas ────────────────────────────────────────────
+
+
+class RecyclingHubCreate(BaseModel):
+    name: str
+    address_text: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    city: str = "Zaria"
+    contact_phone: Optional[str] = None
+
+
+class RecyclingHubResponse(BaseModel):
+    id: str
+    owner_user_id: str
+    name: str
+    address_text: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    city: str
+    contact_phone: Optional[str] = None
+    is_active: bool
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HubRecyclingRequestCreate(BaseModel):
+    material_category_id: int
+    requested_kg: float = Field(gt=0)
+    note: Optional[str] = None
+    requested_on: datetime
+
+
+class HubRecyclingRequestResponse(BaseModel):
+    id: str
+    hub_id: str
+    hub_name: str
+    material_category_id: int
+    material_name: str
+    requested_kg: float
+    fulfilled_kg: float
+    note: Optional[str] = None
+    requested_on: str
+    status: str
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HubDeliveryResponse(BaseModel):
+    id: str
+    hub_id: str
+    request_id: str
+    transaction_id: str
+    material_category_id: int
+    weight_kg: float
+    hub_price_naira: float
+    delivered_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HubSubscriptionCreate(BaseModel):
+    plan_name: str = "Pro"
+    amount_naira: float = Field(gt=0)
+    payment_method: Optional[PaymentMethod] = PaymentMethod.cash
+    payment_reference: Optional[str] = None
+
+
+class HubSubscriptionResponse(BaseModel):
+    id: str
+    hub_id: str
+    plan_name: str
+    amount_naira: float
+    cycle: str
+    started_at: Optional[datetime] = None
+    next_billing_at: Optional[datetime] = None
+    status: str
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class HubRequestProgress(BaseModel):
+    hub_id: str
+    hub_name: str
+    date: str
+    requests: list[HubRecyclingRequestResponse]
+
+
+# ── Compliance / Manifestoj schemas ──────────────────────────────────
+
+
+class CompliancePartnerCreate(BaseModel):
+    name: str
+    partner_type: str = "pro"
+    api_key: str
+
+
+class CompliancePartnerResponse(BaseModel):
+    id: str
+    name: str
+    partner_type: str
+    is_active: bool
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ManifestoItem(BaseModel):
+    transaction_id: str
+    collector_id: str
+    collector_phone: str
+    material_slug: str
+    material_name: str
+    weight_kg: float
+    gross_value_naira: float
+    carbon_offset_kg_co2e: float
+    hub: Optional[str] = None
+    settled_at: Optional[str] = None
+
+
+class ComplianceManifestoResponse(BaseModel):
+    partner_id: str
+    partner_name: str
+    partner_type: str
+    generated_at: str
+    total_transactions: int
+    total_tonnage_kg: float
+    total_carbon_offset_kg_co2e: float
+    total_collector_income_naira: float
+    items: list[ManifestoItem]

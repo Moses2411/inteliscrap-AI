@@ -3,7 +3,25 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import analyze, auth, health, impact, listings, materials, outbox, prices, sync, transactions, tts, users, ussd, voice
+from app.api import (
+    analyze,
+    auth,
+    compliance,
+    health,
+    hubs,
+    impact,
+    listings,
+    materials,
+    outbox,
+    pickups,
+    prices,
+    sync,
+    transactions,
+    tts,
+    users,
+    ussd,
+    voice,
+)
 from app.config import settings
 from app.database import async_session_factory, init_db
 from app.middleware.cors import setup_cors
@@ -56,6 +74,9 @@ app.include_router(listings.router)
 app.include_router(materials.router)
 app.include_router(auth.router)
 app.include_router(outbox.router)
+app.include_router(pickups.router)
+app.include_router(hubs.router)
+app.include_router(compliance.router)
 
 
 @app.get("/")

@@ -11,7 +11,21 @@ from app.models import (
     User,
     UserRole,
 )
-from app.services import pickup_service
+from app.services import pickup_service, user_service
+
+HUB_PRESETS: dict[str, tuple[str, float, float]] = {
+    "1": ("Samaru", 11.1547, 7.6478),
+    "2": ("Sabon Gari", 11.1313, 7.6299),
+    "3": ("Kongo", 11.1113, 7.7227),
+    "4": ("Bomo", 11.1426, 7.6983),
+    "5": ("Hanwa", 11.0962, 7.7415),
+    "6": ("Dutsen Abba", 11.0952, 7.6875),
+}
+
+HUB_MENU = (
+    "CON Zabi wurin da kake aiki:\n"
+    + "\n".join(f"{k}. {name}" for k, (name, _, _) in HUB_PRESETS.items())
+)
 
 
 def _fmt_num(value) -> str:
@@ -27,7 +41,8 @@ MAIN_MENU = (
     "CON Karibun zuwa InteliScrap!\n"
     "1. Sabbin kaya\n"
     "2. Ayyukana\n"
-    "3. Yanayin lissafi"
+    "3. Yanayin lissafi\n"
+    "4. Wurin da nake aiki"
 )
 
 
@@ -110,10 +125,65 @@ async def _balance_flow(db: AsyncSession, collector: User) -> str:
     return f"END Jimillar samunka: N{_fmt_num(total)}."
 
 
+async def _register_flow(db: AsyncSession, phone_number: str, text: str) -> str:
+    """Feature-phone onboarding: register a caller as a collector from a preset hub.
+
+    Flow: empty -> confirm registration; '1' -> pick hub; '1*N' -> create the
+    collector account with coordinates so H3 dispatch can find them.
+    """
+    parts = [p for p in (text or "").split("*") if p != ""]
+
+    if not parts:
+        return (
+            "CON Barka da zuwa InteliScrap!\n"
+            "Wannan lambar ba ta da rijista.\n"
+            "1. Yi rijista a matsayin mai karba\n"
+            "2. Koma baya"
+        )
+
+    if parts[0] == "2":
+        return "END Na gode. Sai anjima."
+
+    if parts[0] != "1":
+        return "END Zabin bai inganta ba."
+
+    hub_index = parts[1] if len(parts) > 1 else ""
+    if hub_index not in HUB_PRESETS:
+        return HUB_MENU
+
+    hub_name, lat, lng = HUB_PRESETS[hub_index]
+
+    existing = await user_service.get_by_phone(db, phone_number)
+    if existing is None:
+        collector = User(
+            phone_number=phone_number,
+            role=UserRole.collector,
+            full_name="Mai karba (USSD)",
+        )
+        db.add(collector)
+        await db.flush()
+    else:
+        existing.role = UserRole.collector
+        collector = existing
+
+    await user_service.set_user_location(db, collector, lat, lng)
+    return f"END An yi rijista! Wurin aiki: {hub_name}. Kai wayarku ta kara kira don ganin kaya."
+
+
+async def _location_flow(db: AsyncSession, collector: User, rest: list[str]) -> str:
+    if not rest or rest[0] not in HUB_PRESETS:
+        return HUB_MENU
+
+    hub_name, lat, lng = HUB_PRESETS[rest[0]]
+    collector.location_hub = hub_name
+    await user_service.set_user_location(db, collector, lat, lng)
+    return f"END An sabunta wurin aiki: {hub_name}."
+
+
 async def process_ussd(db: AsyncSession, phone_number: str, text: str) -> str:
     collector = await _find_collector(db, phone_number)
     if collector is None:
-        return "END Wannan lambar ba ta da rijista a InteliScrap."
+        return await _register_flow(db, phone_number, text)
 
     parts = [p for p in (text or "").split("*") if p != ""]
 
@@ -128,4 +198,6 @@ async def process_ussd(db: AsyncSession, phone_number: str, text: str) -> str:
         return await _my_pickups_flow(db, collector, rest)
     if head == "3":
         return await _balance_flow(db, collector)
+    if head == "4":
+        return await _location_flow(db, collector, rest)
     return "END Zabin bai inganta ba."

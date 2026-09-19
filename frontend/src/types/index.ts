@@ -35,16 +35,14 @@ export interface User {
   created_at?: string;
 }
 
-export interface GemmaAnalysis {
+export interface VisionAnalysis {
   material_class: string;
+  material_slug: string;
   confidence: number;
   toxicity_hazards: string[];
   safety_instructions: string;
-}
-
-export interface VisionAnalysis extends GemmaAnalysis {
-  material_slug: string;
   hazard_level: HazardLevel;
+  source: "onnx" | "server" | "manual";
 }
 
 export interface MaterialCategoryInfo {
@@ -60,3 +58,5 @@ export interface MaterialCategoryInfo {
 export type HazardLevel = "low" | "medium" | "high" | "critical";
 
 export type Language = "en" | "ha" | "pcm";
+
+export type Theme = "light" | "dark";

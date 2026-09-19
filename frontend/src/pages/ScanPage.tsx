@@ -1,51 +1,46 @@
 import { useState, useCallback } from "react";
-import { Camera, Recycle, Zap, WifiOff, ShieldCheck } from "lucide-react";
+import { Camera, Recycle, Zap, WifiOff, ShieldCheck, AlertTriangle } from "lucide-react";
 import CameraCapture from "../components/Camera/CameraCapture";
 import ScanResult from "../components/Scanner/ScanResult";
+import ManualMaterialSelect from "../components/Scanner/ManualMaterialSelect";
 import PostPickupForm from "../components/Pickup/PostPickupForm";
-import LoadingSpinner from "../components/UI/LoadingSpinner";
+import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { useVision } from "../hooks/useVision";
 import { useAudioTTS } from "../hooks/useAudioTTS";
 import { useTranslation } from "../hooks/useTranslation";
 import { useApp } from "../store/appStore";
 import { saveScanLocally } from "../services/db";
+import { getCategoryBySlug } from "../services/materials";
+import { resolveTradeRule } from "../services/language";
 import type { VisionAnalysis } from "../types";
-
-const TIMEOUT_MS = 300_000;
-
-const FALLBACK_POOL: VisionAnalysis[] = [
-  { material_class: "Copper", material_slug: "copper", hazard_level: "low", confidence: 0.92, toxicity_hazards: [], safety_instructions: "Safe to handle." },
-  { material_class: "Lead-Acid Battery", material_slug: "lead-battery", hazard_level: "critical", confidence: 0.88, toxicity_hazards: ["corrosive_acid", "lead_poisoning"], safety_instructions: "Do not break open. Avoid skin contact." },
-  { material_class: "Aluminum", material_slug: "aluminum", hazard_level: "low", confidence: 0.95, toxicity_hazards: [], safety_instructions: "Safe to handle." },
-  { material_class: "PET Plastic", material_slug: "pet-plastic", hazard_level: "low", confidence: 0.91, toxicity_hazards: [], safety_instructions: "Safe to handle." },
-  { material_class: "E-Waste Board", material_slug: "e-waste", hazard_level: "high", confidence: 0.79, toxicity_hazards: ["lead_poisoning", "pcb_contamination"], safety_instructions: "Do not burn. Contains toxic components." },
-  { material_class: "Glass", material_slug: "glass", hazard_level: "medium", confidence: 0.94, toxicity_hazards: ["sharp_edges"], safety_instructions: "Handle with care." },
-];
-
-function randomFallback(): VisionAnalysis {
-  return FALLBACK_POOL[Math.floor(Math.random() * FALLBACK_POOL.length)];
-}
 
 export default function ScanPage() {
   const [result, setResult] = useState<VisionAnalysis | null>(null);
   const [estimated_value, setEstimatedValue] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [manualMode, setManualMode] = useState(false);
   const { t } = useTranslation();
   const { selected_language, cached_prices, setCurrentScan } = useApp();
   const { analyze, loadingProgress } = useVision();
   const { speakReport, pause, resume, status: ttsStatus } = useAudioTTS();
 
   const finishWith = useCallback(
-    (analysis: VisionAnalysis) => {
+    async (analysis: VisionAnalysis) => {
       setResult(analysis);
       setCurrentScan(analysis);
 
       const priceEntry = cached_prices.find(
         (p) => p.material_class.toLowerCase() === analysis.material_class.toLowerCase()
       );
-      const value = priceEntry
-        ? priceEntry.price_per_kg_naira
-        : Math.round(Math.random() * 3000 + 200);
+      let value = priceEntry ? priceEntry.price_per_kg_naira : 0;
+      if (!value && navigator.onLine) {
+        try {
+          const category = await getCategoryBySlug(analysis.material_slug);
+          if (category) value = category.price_per_kg_naira;
+        } catch {
+          // keep 0; the pickup form resolves the authoritative price server-side
+        }
+      }
       setEstimatedValue(value);
 
       saveScanLocally({
@@ -65,27 +60,37 @@ export default function ScanPage() {
   );
 
   const handleImageCapture = useCallback(
-    async (_blob: Blob) => {
+    async (blob: Blob) => {
       setResult(null);
+      setManualMode(false);
       setLoading(true);
-
-      const timer = setTimeout(() => {
-        setLoading(false);
-        finishWith(randomFallback());
-      }, TIMEOUT_MS);
-
       try {
-        const analysis = await analyze(_blob);
-        clearTimeout(timer);
-        finishWith(analysis);
+        const analysis = await analyze(blob);
+        await finishWith(analysis);
       } catch {
-        clearTimeout(timer);
-        finishWith(randomFallback());
+        setManualMode(true);
       } finally {
         setLoading(false);
       }
     },
     [analyze, finishWith]
+  );
+
+  const handleManualSelect = useCallback(
+    async (slug: string) => {
+      const rule = resolveTradeRule(slug);
+      await finishWith({
+        material_class: rule.material,
+        material_slug: rule.slug,
+        confidence: 0,
+        toxicity_hazards: rule.hazards,
+        safety_instructions: rule.safety,
+        hazard_level: rule.hazardLevel,
+        source: "manual",
+      });
+      setManualMode(false);
+    },
+    [finishWith]
   );
 
   if (loading) {
@@ -96,13 +101,13 @@ export default function ScanPage() {
         aria-live="polite"
       >
         <div className="relative flex h-20 w-20 items-center justify-center">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-20" />
-          <span className="relative inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
-            <Recycle className="h-8 w-8 animate-spin text-emerald-600" style={{ animationDuration: "2.5s" }} aria-hidden="true" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-20" />
+          <span className="relative inline-flex h-16 w-16 items-center justify-center rounded-full bg-brand-50">
+            <Recycle className="h-8 w-8 animate-spin text-brand-600" style={{ animationDuration: "2.5s" }} aria-hidden="true" />
           </span>
         </div>
-        <LoadingSpinner progress={loadingProgress} label={t("analyzing_with_gemma")} />
-        <p className="max-w-xs text-sm text-gray-500">{t("analyzing_desc")}</p>
+        <LoadingSpinner progress={loadingProgress} label={t("analyzing_with_ai")} />
+        <p className="max-w-xs text-sm text-gray-500 dark:text-gray-400">{t("analyzing_desc")}</p>
       </div>
     );
   }
@@ -129,38 +134,47 @@ export default function ScanPage() {
     );
   }
 
+  if (manualMode) {
+    return <ManualMaterialSelect onSelect={handleManualSelect} onRetry={() => setManualMode(false)} />;
+  }
+
   return (
     <div className="mx-auto flex max-w-md flex-col gap-6 px-4 pb-8 pt-2">
       <div className="flex flex-col items-center gap-3 text-center">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100">
-          <Camera className="h-7 w-7 text-emerald-700" aria-hidden="true" />
+        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 dark:bg-brand-950">
+          <Camera className="h-7 w-7 text-brand-700 dark:text-brand-300" aria-hidden="true" />
         </div>
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-gray-900">{t("snap_scrap")}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-gray-500">{t("snap_scrap_desc")}</p>
+          <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">{t("snap_scrap")}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">{t("snap_scrap_desc")}</p>
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <CameraCapture onImageCapture={handleImageCapture} />
       </div>
 
       <div className="grid grid-cols-3 gap-2" role="list" aria-label={t("how_it_works")}>
-        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center">
-          <Zap className="h-5 w-5 text-emerald-600" aria-hidden="true" />
-          <span className="text-xs font-medium leading-tight text-gray-700">{t("feature_instant_ai")}</span>
+        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center dark:bg-gray-900">
+          <Zap className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden="true" />
+          <span className="text-xs font-medium leading-tight text-gray-700 dark:text-gray-300">{t("feature_instant_ai")}</span>
         </div>
-        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center">
-          <ShieldCheck className="h-5 w-5 text-emerald-600" aria-hidden="true" />
-          <span className="text-xs font-medium leading-tight text-gray-700">{t("feature_safety_tips")}</span>
+        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center dark:bg-gray-900">
+          <ShieldCheck className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden="true" />
+          <span className="text-xs font-medium leading-tight text-gray-700 dark:text-gray-300">{t("feature_safety_tips")}</span>
         </div>
-        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center">
-          <WifiOff className="h-5 w-5 text-emerald-600" aria-hidden="true" />
-          <span className="text-xs font-medium leading-tight text-gray-700">{t("feature_works_offline")}</span>
+        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center dark:bg-gray-900">
+          <WifiOff className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden="true" />
+          <span className="text-xs font-medium leading-tight text-gray-700 dark:text-gray-300">{t("feature_works_offline")}</span>
         </div>
       </div>
 
-      <p className="text-center text-xs text-gray-400">{t("scans_save_desc")}</p>
+      <div className="flex items-center justify-center gap-1.5 text-xs text-amber-600 dark:text-amber-400" role="note">
+        <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+        {t("manual_fallback_hint")}
+      </div>
+
+      <p className="text-center text-xs text-gray-400 dark:text-gray-500">{t("scans_save_desc")}</p>
     </div>
   );
 }

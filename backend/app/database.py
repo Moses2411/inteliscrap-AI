@@ -1,4 +1,3 @@
-from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -13,13 +12,20 @@ class Base(DeclarativeBase):
 
 
 async def init_db():
+    import app.models  # noqa: F401 — register all tables before create_all
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
+    from app.config import settings
     from app.seed import seed_material_categories
 
     async with async_session_factory() as session:
         await seed_material_categories(session)
+        if settings.debug and settings.seed_demo_data:
+            from app.seed_demo import seed_demo_data
+
+            await seed_demo_data(session)
         await session.commit()
 
 

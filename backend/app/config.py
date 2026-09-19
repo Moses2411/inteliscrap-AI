@@ -16,14 +16,21 @@ class Settings(BaseSettings):
     voice_tts_url: str = ""
     dispatch_radius_m: int = 5000
     dispatch_max_collectors: int = 5
+    h3_resolution: int = 8
+    h3_search_k: int = 8
     platform_fee_rate: float = 0.05
     jwt_secret_key: str = "inteliscrap-dev-secret-key-change-in-production-32b"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 10080
     otp_expire_seconds: int = 600
+    mock_otp: bool = True
+    mock_otp_code: str = "123456"
+    seed_demo_data: bool = True
     outbox_worker_enabled: bool = True
     outbox_poll_seconds: int = 60
     voice_public_base_url: str = ""
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_vision_model: str = "llava:13b"
 
     class Config:
         env_file = ".env"

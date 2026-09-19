@@ -26,7 +26,7 @@ async def process_pending(db: AsyncSession, limit: int = 100) -> int:
     sent = 0
     for item in items:
         try:
-            if item.event_type == "sms.location":
+            if item.event_type in {"sms.location", "sms.new_offer"}:
                 payload = item.payload or {}
                 await messaging_service.send_sms(
                     payload["phone_number"], payload["message"]

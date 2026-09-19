@@ -120,7 +120,7 @@ add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
 
 # Cards
 card_data = [
-    ("Snap & Analyze", "Take a photo of any scrap material\nGemma 4 instantly identifies it"),
+    ("Snap & Analyze", "Take a photo of any scrap material\nEdge AI instantly identifies it"),
     ("Safety First", "Detects toxic hazards\nPlays warnings in Hausa / Pidgin"),
     ("Fair Pricing", "Shows real-time market price\nper kg in Naira"),
     ("Works Offline", "PWA installs on any smartphone\nNo internet needed after setup"),
@@ -129,7 +129,7 @@ for i, (title, body) in enumerate(card_data):
     add_card(slide, Inches(1.5 + i * 3), Inches(1.8), Inches(2.7), Inches(3.2), title, body)
 
 add_textbox(slide, Inches(1.5), Inches(5.5), Inches(10), Inches(0.5),
-            "Powered by Google Gemma 4 — running entirely on-device via WebLLM or Ollama",
+            "On-device ONNX classifier → server vision model (Ollama) → manual fallback — results are never faked",
             font_size=14, color=RGBColor(0xA1, 0xA1, 0xAA), align=PP_ALIGN.CENTER)
 
 
@@ -143,8 +143,8 @@ add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
 
 steps = [
     ("1", "User captures photo\nof scrap material", "via phone camera or upload"),
-    ("2", "Image sent to\nthe AI engine", "WebLLM (in-browser)\nor Ollama (backend)"),
-    ("3", "Gemma 4 classifies\n& detects hazards", "Returns: material type,\nconfidence, toxicity"),
+    ("2", "Image sent to\nthe AI engine", "On-device ONNX classifier\nor server vision model"),
+    ("3", "Model classifies\n& detects hazards", "Returns: material type,\nconfidence, toxicity"),
     ("4", "Result displayed\nin local language", "Shows price, hazards,\nsafety instructions"),
 ]
 
@@ -177,8 +177,8 @@ add_textbox(slide, Inches(1.3), Inches(1.6), Inches(4.5), Inches(0.4),
             "📱  Phone (PWA)", font_size=16, bold=True, color=EMERALD)
 phone_items = [
     "  •  Camera Capture — snap or upload photo",
-    "  •  useGemma — dual-mode inference engine",
-    "  •  WebLLM (in-browser)  /  Ollama proxy",
+    "  •  ONNX classifier — on-device inference",
+    "  •  analysis.ts — fallback chain (edge → server → manual)",
     "  •  IndexedDB — offline scan persistence",
     "  •  TTS — reads results in Hausa / Pidgin",
 ]
@@ -202,30 +202,30 @@ add_bullet_textbox(slide, Inches(1.3), Inches(5.9), Inches(4.5), Inches(1.2),
 ai = add_shape(slide, Inches(7), Inches(1.5), Inches(5.5), Inches(5.6), WHITE)
 ai.line.color.rgb = RGBColor(0xE5, 0xE7, 0xEB)
 add_textbox(slide, Inches(7.3), Inches(1.6), Inches(5), Inches(0.4),
-            "🧠  AI Layer — Google Gemma 4", font_size=16, bold=True, color=EMERALD)
+            "🧠  AI Layer — Fallback Chain", font_size=16, bold=True, color=EMERALD)
 
-# Dual mode boxes
+# Three-layer boxes
 dm1 = add_shape(slide, Inches(7.3), Inches(2.3), Inches(4.8), Inches(1.6), RGBColor(0xEC, 0xFD, 0xF5))
 dm1.line.color.rgb = RGBColor(0xA7, 0xF3, 0xD0)
 add_textbox(slide, Inches(7.5), Inches(2.4), Inches(4.3), Inches(0.3),
-            "WebLLM (Production)", font_size=15, bold=True, color=EMERALD)
+            "On-device ONNX (Edge)", font_size=15, bold=True, color=EMERALD)
 add_textbox(slide, Inches(7.5), Inches(2.8), Inches(4.3), Inches(1),
-            "Runs Gemma 2 in-browser via WebGPU\nZero backend dependency\n~700MB model cached locally\nWorks on Android 12+ / Chrome 113+",
+            "Runs in-browser via wasm\nFully offline classification\nZero backend dependency",
             font_size=12, color=DARK)
 
 dm2 = add_shape(slide, Inches(7.3), Inches(4.2), Inches(4.8), Inches(1.6), RGBColor(0xEF, 0xF6, 0xFF))
 dm2.line.color.rgb = RGBColor(0xBF, 0xDB, 0xFE)
 add_textbox(slide, Inches(7.5), Inches(4.3), Inches(4.3), Inches(0.3),
-            "Ollama (Development)", font_size=15, bold=True, color=RGBColor(0x25, 0x67, 0xEB))
+            "Server vision model (Ollama)", font_size=15, bold=True, color=RGBColor(0x25, 0x67, 0xEB))
 add_textbox(slide, Inches(7.5), Inches(4.7), Inches(4.3), Inches(1),
-            "Runs Gemma 4 on local server\nProxied via FastAPI backend\nUsed in laptop demos / development",
+            "Configurable model (e.g. llava:13b)\nProxied via FastAPI backend\nUsed when online / no edge model",
             font_size=12, color=DARK)
 
 # Fallback
 fb = add_shape(slide, Inches(7.3), Inches(6.1), Inches(4.8), Inches(0.7), RGBColor(0xFF, 0xFB, 0xEB))
 fb.line.color.rgb = RGBColor(0xFD, 0xE6, 0x8A)
 add_textbox(slide, Inches(7.5), Inches(6.2), Inches(4.3), Inches(0.5),
-            "⚡ Fallback: Random mock results when no model available",
+            "⚡ Fallback: Manual material picker — never fakes results",
             font_size=11, bold=True, color=ACCENT)
 
 
@@ -238,7 +238,7 @@ add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
             "Key Features", font_size=40, bold=True, color=DARK)
 
 features = [
-    ("📸", "Multimodal AI", "Analyzes scrap photos using Google Gemma 4\nIdentifies 20+ material types & toxic hazards"),
+    ("📸", "Multimodal AI", "Classifies scrap photos on-device (ONNX)\nor via server vision model\nIdentifies 20+ material types & toxic hazards"),
     ("🗣️", "Local Language TTS", "Reads results aloud in Hausa & Nigerian Pidgin\nAuto-plays on scan completion"),
     ("📡", "Offline-First PWA", "Installs on any smartphone home screen\nFull functionality without internet"),
     ("💾", "IndexedDB Persistence", "All scans saved locally\nSyncs when connectivity returns"),
@@ -269,9 +269,9 @@ add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
             "Technology Stack", font_size=40, bold=True, color=WHITE)
 
 stacks = [
-    ("Frontend", "React 18  |  TypeScript  |  Tailwind CSS\nVite  |  VitePWA  |  Dexie.js\nWebLLM (MLC AI)  |  Lucide Icons"),
+    ("Frontend", "React 18  |  TypeScript  |  Tailwind CSS\nVite  |  VitePWA  |  Dexie.js\nONNX Runtime Web  |  Lucide Icons"),
     ("Backend", "Python  |  FastAPI  |  SQLAlchemy\nSQLite / PostgreSQL  |  Alembic\nhttpx  |  Pydantic v2"),
-    ("AI / ML", "Google Gemma 4 (via Ollama)\nGoogle Gemma 2 (via WebLLM)\nWebGPU  |  @mlc-ai/web-llm"),
+    ("AI / ML", "On-device ONNX classifier\nOllama vision model (configurable)\nUSS-based hub matching"),
     ("DevOps", "Docker  |  Render  |  GitHub Actions\nNginx  |  PostgreSQL 16"),
 ]
 
@@ -295,7 +295,7 @@ add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
 demos = [
     ("00:00", "Open App", "PWA loads from home screen\n(fully offline after initial load)"),
     ("00:15", "Snap Photo", "Camera captures scrap material\nor upload from gallery"),
-    ("00:30", "AI Analysis", "Gemma classifies material &\ndetects toxic hazards"),
+    ("00:30", "AI Analysis", "On-device / server AI classifies\nmaterial & detects toxic hazards"),
     ("00:50", "Read Aloud", "TTS plays result in Hausa\nwith safety instructions"),
     ("01:10", "View History", "Browse past scans with\nsync status indicators"),
     ("01:30", "Settings", "Toggle language, test voice,\nview about information"),
@@ -329,7 +329,7 @@ add_textbox(slide, Inches(1.5), Inches(1.5), Inches(10), Inches(0.5),
 milestones = [
     ("Day 1-2", "Ideation & Design", "Identified problem space\nDesigned architecture"),
     ("Day 3-4", "Backend & Database", "FastAPI + SQLAlchemy\nSync engine with conflict resolution"),
-    ("Day 5-6", "Frontend & AI", "React PWA + WebLLM\ndual-mode inference hook"),
+    ("Day 5-6", "Frontend & AI", "React PWA + ONNX edge\nclassifier + fallback chain"),
     ("Day 7", "Integration & Polish", "TTS, offline support, PWA\nDemo preparation"),
 ]
 
@@ -362,7 +362,7 @@ add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
 members = [
     ("👨‍💻", "Backend Lead", "FastAPI, Database, Sync Engine\nAPI Design & Deployment"),
     ("👨‍🎨", "Frontend Architect", "React PWA, UI/UX, Camera\nOffline Storage (Dexie.js)"),
-    ("🤖", "Edge AI Engineer", "WebLLM Integration, Ollama\nGemma 4 Model Optimization"),
+    ("🤖", "Edge AI Engineer", "ONNX Runtime Integration, Ollama\nVision Model Calibration"),
     ("🔊", "Accessibility Engineer", "TTS, Hausa/Pidgin Locales\nVoice System Architecture"),
     ("🧪", "QA & DevOps", "Testing, Docker, CI/CD\nSync Conflict Resolution"),
 ]

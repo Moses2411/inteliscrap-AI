@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react";
-import type { GemmaAnalysis, HazardLevel } from "../../types";
+import type { VisionAnalysis, HazardLevel } from "../../types";
 import { formatNaira, formatConfidence } from "../../utils/formatters";
 import { useTranslation, getLocale } from "../../hooks/useTranslation";
 import { useApp } from "../../store/appStore";
 import type { TtsStatus } from "../../hooks/useAudioTTS";
 
 interface Props {
-  result: GemmaAnalysis;
+  result: VisionAnalysis;
   estimated_value: number;
   hazard_level?: HazardLevel;
   onReadAloud?: () => void;
@@ -59,6 +59,7 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
   const { t } = useTranslation();
   const { selected_language } = useApp();
   const levelStyle = hazard_level ? HAZARD_LEVEL_STYLE[hazard_level] : null;
+  const sourceTag = result.source ? `source_${result.source}` : null;
   const hazardKey = levelStyle ? levelStyle.label : getHazardKey(result.toxicity_hazards ?? []);
   const hazardColor = levelStyle ? levelStyle.badge : getHazardColor(result.toxicity_hazards ?? []);
   const safetyKey = determineSafetyKey(result.toxicity_hazards ?? []);
@@ -112,34 +113,41 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
     <div className="space-y-4">
       <div className={`card space-y-3 ${levelStyle ? `border-l-4 ${levelStyle.accent}` : ""}`}>
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-500">{t("material")}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{t("material")}</h3>
+            {sourceTag && (
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                {t(sourceTag)}
+              </span>
+            )}
+          </div>
           <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${hazardColor}`}>
             {t(hazardKey)}
           </span>
         </div>
-        <p className="text-2xl font-bold text-gray-900">{result.material_class}</p>
+        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{result.material_class}</p>
 
-        <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-3">
+        <div className="grid grid-cols-2 gap-4 border-t border-gray-100 pt-3 dark:border-gray-800">
           <div>
-            <span className="text-xs text-gray-500">{t("estimated_value")}</span>
-            <p className="text-xl font-bold text-brand-600">{formatNaira(estimated_value)}</p>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{t("estimated_value")}</span>
+            <p className="text-xl font-bold text-brand-600 dark:text-brand-400">{formatNaira(estimated_value)}</p>
           </div>
           <div>
-            <span className="text-xs text-gray-500">{t("confidence")}</span>
-            <p className="text-xl font-semibold text-gray-900">{formatConfidence(result.confidence)}</p>
+            <span className="text-xs text-gray-500 dark:text-gray-400">{t("confidence")}</span>
+            <p className="text-xl font-semibold text-gray-900 dark:text-gray-100">{formatConfidence(result.confidence)}</p>
           </div>
         </div>
       </div>
 
       {result.toxicity_hazards && result.toxicity_hazards.length > 0 && (
-        <div className="card space-y-2 border-l-4 border-red-400">
-          <h4 className="text-sm font-semibold text-red-700">{t("hazards_detected")}</h4>
+        <div className="card space-y-2 border-l-4 border-red-400 dark:border-red-600">
+          <h4 className="text-sm font-semibold text-red-700 dark:text-red-400">{t("hazards_detected")}</h4>
           <ul className="space-y-1">
             {result.toxicity_hazards.map((h, i) => {
               const hazardKey = `hazards.${h}` as const;
               const translatedHazard = t(hazardKey);
               return (
-                <li key={i} className="flex items-start gap-2 text-sm text-red-600">
+                <li key={i} className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
                   <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-500" />
                   {translatedHazard !== hazardKey ? translatedHazard : h}
                 </li>
@@ -150,8 +158,8 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
       )}
 
       {translatedSafety && (
-        <div className="card bg-brand-50 ring-brand-200">
-          <p className="text-sm text-brand-800">{translatedSafety}</p>
+        <div className="card bg-brand-50 ring-brand-200 dark:bg-brand-950/50 dark:ring-brand-900">
+          <p className="text-sm text-brand-800 dark:text-brand-300">{translatedSafety}</p>
         </div>
       )}
 

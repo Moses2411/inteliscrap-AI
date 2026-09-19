@@ -1,5 +1,5 @@
 from datetime import datetime
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +16,7 @@ from app.models import (
     TransactionStatus,
     User,
 )
+from app.services import hub_service
 
 MONEY = Decimal("0.01")
 WEIGHT = Decimal("0.001")
@@ -32,6 +33,7 @@ async def settle_pickup(
     weight_kg: float | Decimal,
     unit_price_naira: float | Decimal | None = None,
     payment_method: PaymentMethod = PaymentMethod.cash,
+    hub_id: str | None = None,
 ) -> Transaction:
     if pickup.collector_id is None:
         raise ValueError("Pickup has no assigned collector")
@@ -91,6 +93,30 @@ async def settle_pickup(
         period=datetime.utcnow().date(),
     )
     db.add(impact)
+
+    # ── Hub delivery traceability ──────────────────────────────────
+    # Collector may deliver directly to a registered recycling hub
+    # (explicit hub_id), otherwise we fall back to the seller's hub.
+    if hub_id is not None:
+        hub = await hub_service.get_hub_by_id(db, hub_id)
+        if hub is None or not hub.is_active:
+            raise ValueError("Recycling hub not found or inactive")
+    else:
+        hub = await hub_service.get_hub_by_name(db, hub) if hub else None
+
+    if hub is not None:
+        open_reqs = await hub_service.get_open_requests_for_hub_material(
+            db, hub.id, material.id
+        )
+        if open_reqs:
+            for req in open_reqs:
+                await hub_service.record_delivery(
+                    db, hub, req, transaction, float(weight), float(gross)
+                )
+        else:
+            await hub_service.record_unmatched_delivery(
+                db, hub, transaction, material.id, float(weight), float(gross)
+            )
 
     listing.actual_weight_kg = _q(weight, WEIGHT)
     listing.final_value_naira = gross

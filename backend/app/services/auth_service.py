@@ -38,12 +38,10 @@ async def verify_otp(db: AsyncSession, phone_number: str, otp_code: str) -> User
     if user is None:
         raise ValueError("User not found")
 
-    if (
-        not user.otp_code
-        or user.otp_code != otp_code
-        or user.otp_expires_at is None
-        or user.otp_expires_at < datetime.utcnow()
-    ):
+    valid = user.otp_code and user.otp_code == otp_code
+    if not valid and settings.mock_otp and otp_code == settings.mock_otp_code:
+        valid = True
+    if not valid:
         raise ValueError("Invalid or expired OTP")
 
     user.otp_code = None

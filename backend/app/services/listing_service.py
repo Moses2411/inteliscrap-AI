@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.models import Listing, ListingStatus, User
+from app.models import Listing, ListingStatus, MaterialCategory, User
 from app.schemas import ListingCreate
 from app.services import matching_service
 
@@ -21,14 +21,20 @@ async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate)
         latitude=payload.latitude,
         longitude=payload.longitude,
         address_text=payload.address_text,
+        contact_phone=payload.contact_phone,
         status=ListingStatus.active,
     )
     db.add(listing)
     await db.flush()
 
     if payload.auto_dispatch and listing.latitude is not None and listing.longitude is not None:
+        material = await db.get(MaterialCategory, payload.material_category_id)
         await matching_service.dispatch_listing(
-            db, listing, settings.dispatch_radius_m, settings.dispatch_max_collectors
+            db,
+            listing,
+            material.name if material else None,
+            settings.dispatch_radius_m,
+            settings.dispatch_max_collectors,
         )
 
     await db.flush()
@@ -44,7 +50,7 @@ async def list_active(db: AsyncSession) -> list[Listing]:
         select(Listing)
         .where(
             Listing.status.in_(
-                [ListingStatus.active, ListingStatus.matched, ListingStatus.scheduled]
+                [ListingStatus.active, ListingStatus.matched]
             )
         )
         .order_by(Listing.created_at.desc())

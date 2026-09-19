@@ -1,196 +1,276 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  Bell,
+  Globe,
+  Languages,
+  LogOut,
+  Moon,
+  Play,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+  WandSparkles,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
+import { PageHeader } from "../components/ui/PageHeader";
+import { Card } from "../components/ui/Card";
+import { Badge } from "../components/ui/Badge";
+import { Button } from "../components/ui/Button";
+import { Toggle } from "../components/ui/Toggle";
+import { Avatar } from "../components/ui/Avatar";
 import { useApp } from "../store/appStore";
 import { useTranslation } from "../hooks/useTranslation";
+import { clearToken, getRole, getSavedPhone, setRole, type UserRole } from "../services/auth";
+import { previewEnabled, setPreviewEnabled } from "../lib/demoData";
+import { cn } from "../lib/cn";
 import type { Language } from "../types";
 
-const LANG_OPTIONS: { value: Language; label: string; native: string }[] = [
-  { value: "en", label: "English", native: "EN" },
-  { value: "ha", label: "Hausa", native: "HA" },
-  // { value: "pcm", label: "Pidgin (Nigeria)", native: "PCM" },
+const LANG_OPTIONS: { value: Language; label: string }[] = [
+  { value: "en", label: "English" },
+  { value: "ha", label: "Hausa" },
+  { value: "pcm", label: "Pidgin (Nigeria)" },
 ];
 
+const ROLE_OPTIONS: UserRole[] = [
+  "household",
+  "collector",
+  "recycling_hub",
+  "ngo",
+  "partner",
+  "admin",
+];
+
+function Row({ icon, title, desc, children }: { icon: ReactNode; title: string; desc?: string; children?: ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</p>
+          {desc && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{desc}</p>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
 export default function SettingsPage() {
-  const { selected_language, setSelectedLanguage, is_online } = useApp();
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
+  const { selected_language, setSelectedLanguage, is_online, theme, toggleTheme } = useApp();
+  const navigate = useNavigate();
+  const phone = getSavedPhone();
+  const role = getRole();
+
   const [testText, setTestText] = useState("");
   const [playing, setPlaying] = useState(false);
+  const [preview, setPreview] = useState(previewEnabled());
+  const [allowNotifications] = useState(true);
 
   const playTest = () => {
     if (!testText.trim() || playing) return;
     setPlaying(true);
-
     const lang = selected_language === "ha" ? "ha" : "en";
     const audio = document.createElement("audio");
     audio.src = `/api/v1/tts?text=${encodeURIComponent(testText)}&lang=${lang}`;
     audio.style.display = "none";
-    audio.onended = () => { audio.remove(); setPlaying(false); };
-    audio.onerror = () => { audio.remove(); setPlaying(false); };
+    audio.onended = () => {
+      audio.remove();
+      setPlaying(false);
+    };
+    audio.onerror = () => {
+      audio.remove();
+      setPlaying(false);
+    };
     document.body.appendChild(audio);
-    audio.play().catch(() => { audio.remove(); setPlaying(false); });
+    audio.play().catch(() => {
+      audio.remove();
+      setPlaying(false);
+    });
   };
 
-  const hintKey = `test_voice_hint_${selected_language}` as const;
   const placeholderKey = `placeholder_${selected_language}` as const;
 
+  function onPreviewToggle(v: boolean) {
+    setPreview(v);
+    setPreviewEnabled(v);
+    navigate("/dashboard", { replace: true });
+  }
+
+  function switchRole(r: UserRole) {
+    setRole(r);
+    navigate("/dashboard", { replace: true });
+  }
+
   return (
-    <div className="space-y-5 pb-8">
-      <div className="px-1">
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{t("settings")}</h2>
-        <p className="mt-1 text-sm text-gray-500">{t("settings_subtitle")}</p>
-      </div>
+    <div className="space-y-6 pb-8 animate-fade-in">
+      <PageHeader
+        title={t("settings")}
+        subtitle={t("settings_subtitle")}
+        actions={is_online ? <Badge tone="green"><Wifi className="h-3 w-3" /> Online</Badge> : <Badge tone="amber"><WifiOff className="h-3 w-3" /> Offline</Badge>}
+      />
 
-      {/* Language + voice test */}
-      <div className="card space-y-5 rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-              </svg>
-            </span>
-            <label className="text-base font-semibold text-gray-900">{t("voice_language")}</label>
+      {/* Account */}
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-4 pt-1">
+          <div className="flex items-center gap-3">
+            <Avatar name={phone ?? "Guest"} size="lg" />
+            <div>
+              <p className="text-sm font-bold text-slate-900 dark:text-white">{phone ?? "Not signed in"}</p>
+              <p className="text-xs text-slate-400">
+                {role ? `${role.replace("_", " ")} account` : "guest"} ·{" "}
+                <span className={is_online ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}>
+                  {is_online ? t("online") : t("offline")}
+                </span>
+              </p>
+            </div>
           </div>
-
-          <div className="grid gap-2.5" style={{ gridTemplateColumns: `repeat(${LANG_OPTIONS.length}, minmax(0, 1fr))` }}>
-            {LANG_OPTIONS.map((opt) => {
-              const active = selected_language === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => setSelectedLanguage(opt.value)}
-                  aria-pressed={active}
-                  className={`group relative flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-xl border-2 px-2 py-3 text-center transition-all duration-200 active:scale-95 ${active
-                    ? "border-brand-500 bg-brand-50 shadow-sm"
-                    : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                    }`}
-                >
-                  {active && (
-                    <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-brand-500">
-                      <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    </span>
-                  )}
-                  <span className={`text-xs font-bold tracking-wide ${active ? "text-brand-700" : "text-gray-400"}`}>
-                    {opt.native}
-                  </span>
-                  <span className={`text-sm font-medium leading-tight ${active ? "text-brand-700" : "text-gray-600"}`}>
-                    {opt.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+          {role && (
+            <Button
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                clearToken();
+                navigate("/login", { replace: true });
+              }}
+            >
+              <LogOut className="h-3.5 w-3.5" /> {t("logout")}
+            </Button>
+          )}
         </div>
+      </Card>
 
-        <div className="h-px w-full bg-gray-100" />
+      {/* Appearance + voice */}
+      <Card>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <Row
+            icon={<Moon className="h-4 w-4" />}
+            title="Dark mode"
+            desc="Easier on the eyes at night, saves battery on AMOLED"
+          >
+            <Toggle checked={theme === "dark"} onChange={() => toggleTheme()} />
+          </Row>
 
-        <div className="space-y-2.5">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-600">
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-              </svg>
-            </span>
-            <label className="text-base font-semibold text-gray-900">{t("test_voice")}</label>
-          </div>
-          <p className="pl-10 text-xs leading-relaxed text-gray-500">{t(hintKey)}</p>
+          <Row icon={<Languages className="h-4 w-4" />} title={t("language")} desc="Interface, hazards & voice">
+            <select
+              value={selected_language}
+              onChange={(e) => setSelectedLanguage(e.target.value as Language)}
+              aria-label={t("language")}
+              className="input !w-36 !py-2 text-xs font-bold"
+            >
+              {LANG_OPTIONS.map((l) => (
+                <option key={l.value} value={l.value}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </Row>
 
-          <div className="flex gap-2 pl-10 sm:pl-0 sm:flex-row">
-            <div className="flex-1 pl-0">
+          <div className="py-3.5">
+            <div className="mb-3 flex items-start gap-3">
+              <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                <Play className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t("test_voice")}</p>
+                <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                  {locale === "ha" ? t("test_voice_hint_ha") : locale === "pcm" ? t("test_voice_hint_pcm") : t("test_voice_hint_en")}
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
               <input
-                className="input w-full rounded-xl border border-gray-200 px-3.5 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-100"
+                className="input flex-1"
                 value={testText}
                 onChange={(e) => setTestText(e.target.value)}
                 placeholder={t(placeholderKey)}
-                onKeyDown={(e) => e.key === "Enter" && playTest()}
-                aria-label={t("test_voice")}
               />
+              <Button onClick={playTest} disabled={!testText.trim() || playing} loading={playing}>
+                <Play className="h-4 w-4" /> Play
+              </Button>
             </div>
-            <button
-              onClick={playTest}
-              disabled={playing || !testText.trim()}
-              aria-busy={playing}
-              className="btn-primary flex min-w-[64px] items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-sm font-semibold shadow-sm transition-all duration-150 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {playing ? (
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                    <polygon points="5 3 19 12 5 21 5 3" />
-                  </svg>
-                  <span className="hidden sm:inline">{t("play")}</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Connection status */}
-      <div className="card rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className={`flex h-9 w-9 items-center justify-center rounded-full ${is_online ? "bg-green-50 text-green-600" : "bg-yellow-50 text-yellow-600"}`}>
-              {is_online ? (
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12.55a11 11 0 0 1 14.08 0" />
-                  <path d="M1.42 9a16 16 0 0 1 21.16 0" />
-                  <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-                  <line x1="12" y1="20" x2="12.01" y2="20" />
-                </svg>
-              ) : (
-                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                  <path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55" />
-                  <path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39" />
-                  <path d="M10.71 5.05A16 16 0 0 1 22.58 9" />
-                  <path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88" />
-                  <path d="M8.53 16.11a6 6 0 0 1 6.95 0" />
-                  <line x1="12" y1="20" x2="12.01" y2="20" />
-                </svg>
-              )}
-            </span>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900">{t("connection")}</h3>
-              <p className="text-xs text-gray-500">{t("status")}</p>
-            </div>
-          </div>
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold ${is_online ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"
-              }`}
+      {/* Preview mode */}
+      <Card>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <Row
+            icon={<WandSparkles className="h-4 w-4" />}
+            title="Preview dashboard data"
+            desc="When the API is unreachable, show sample market & impact data so you can demo every dashboard."
           >
-            <span className={`h-1.5 w-1.5 rounded-full ${is_online ? "bg-green-500" : "bg-yellow-500"} ${is_online ? "" : "animate-pulse"}`} />
-            {is_online ? t("online") : t("offline")}
-          </span>
+            <Toggle checked={preview} onChange={onPreviewToggle} />
+          </Row>
+          {preview && (
+            <div className="flex items-center gap-3 py-3.5">
+              <Badge tone="gold">
+                <Sparkles className="h-3 w-3" /> Preview on
+              </Badge>
+              <p className="text-xs text-slate-400">Sample rows are clearly labelled in every dashboard.</p>
+            </div>
+          )}
         </div>
-      </div>
+      </Card>
+
+      {/* Role switcher (dev/demo) */}
+      <Card>
+        <div className="mb-3 flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Switch workspace</h2>
+        </div>
+        <p className="mb-3 text-xs text-slate-500 dark:text-slate-400">
+          Preview the dedicated dashboard for each user group — sellers, collectors, hubs, NGOs, PROs and admins.
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {ROLE_OPTIONS.map((r) => (
+            <button
+              key={r}
+              onClick={() => switchRole(r)}
+              className={cn(
+                "rounded-xl border px-3 py-2.5 text-left text-xs font-bold capitalize transition-all active:scale-[0.98]",
+                role === r
+                  ? "border-brand-500 bg-brand-50 text-brand-700 shadow-glow dark:bg-brand-950/60 dark:text-brand-300"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600",
+              )}
+            >
+              {r.replace("_", " ")}
+            </button>
+          ))}
+        </div>
+      </Card>
 
       {/* About */}
-      <div className="card rounded-2xl border border-gray-100 bg-white p-5 shadow-sm">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-50 text-gray-500">
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="16" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12.01" y2="8" />
-            </svg>
+      <Card>
+        <div className="divide-y divide-slate-100 dark:divide-slate-800">
+          <Row
+            icon={<Globe className="h-4 w-4" />}
+            title={t("about")}
+            desc={t("team")}
+          />
+          <Row icon={<UserRound className="h-4 w-4" />} title="Account role" desc={role ?? "none"}>
+            <Badge tone="brand">{getRole() ?? "guest"}</Badge>
+          </Row>
+          <Row
+            icon={<Bell className="h-4 w-4" />}
+            title="Pickup notifications"
+            desc="Collector dispatch & hub demand alerts"
+          >
+            <Toggle checked={allowNotifications} onChange={() => {}} />
+          </Row>
+        </div>
+        <p className="mt-4 rounded-xl bg-slate-50 px-3.5 py-2.5 text-[11px] leading-relaxed text-slate-400 dark:bg-slate-800/60 dark:text-slate-500">
+          InteliScrap AI v0.1.0 · Offline-first PWA with on-device vision. {t("tagline")} ·
+          <span className="ml-1 inline-flex items-center gap-1">
+            <Wifi className="h-3 w-3" /> syncs scans when back online
           </span>
-          <h3 className="text-sm font-semibold text-gray-900">{t("about")}</h3>
-        </div>
-        <div className="space-y-1.5 pl-10 text-sm text-gray-500">
-          <p className="font-medium text-gray-700">{t("app_name")} <span className="font-normal text-gray-400">v0.1.0</span></p>
-          <p>{t("team")}</p>
-          <p className="italic text-gray-400">{t("tagline")}</p>
-        </div>
-      </div>
+        </p>
+      </Card>
     </div>
   );
 }

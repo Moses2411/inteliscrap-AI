@@ -1,24 +1,22 @@
 import { createContext, useContext } from "react";
-import type { GemmaAnalysis, Language, PriceMatrixEntry, ScrapScan, User } from "../types";
+import type { VisionAnalysis, Language, PriceMatrixEntry, ScrapScan, User, Theme } from "../types";
 
 export interface AppState {
   user: User | null;
   is_online: boolean;
-  is_gemma_ready: boolean;
-  gemma_progress: number;
-  current_scan: GemmaAnalysis | null;
+  current_scan: VisionAnalysis | null;
   recent_scans: ScrapScan[];
   cached_prices: PriceMatrixEntry[];
   selected_language: Language;
+  theme: Theme;
 
   setUser: (user: User | null) => void;
   setOnline: (online: boolean) => void;
-  setGemmaReady: (ready: boolean) => void;
-  setGemmaProgress: (progress: number) => void;
-  setCurrentScan: (scan: GemmaAnalysis | null) => void;
+  setCurrentScan: (scan: VisionAnalysis | null) => void;
   setRecentScans: (scans: ScrapScan[]) => void;
   setCachedPrices: (prices: PriceMatrixEntry[]) => void;
   setSelectedLanguage: (lang: Language) => void;
+  toggleTheme: () => void;
 }
 
 export const AppContext = createContext<AppState | null>(null);

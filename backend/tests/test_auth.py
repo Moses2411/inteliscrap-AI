@@ -37,3 +37,20 @@ async def test_otp_verify_rejects_wrong_code(client):
 async def test_me_requires_token(client):
     resp = await client.get("/api/v1/auth/me")
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_mock_otp_code_verifies(client):
+    from app.config import settings
+
+    phone = "+2348080000099"
+    resp = await client.post("/api/v1/auth/otp/request", json={"phone_number": phone})
+    assert resp.status_code == 200
+    assert resp.json()["otp"] is not None
+
+    verify = await client.post(
+        "/api/v1/auth/otp/verify",
+        json={"phone_number": phone, "otp_code": settings.mock_otp_code},
+    )
+    assert verify.status_code == 200
+    assert verify.json()["role"] == "household"

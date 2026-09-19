@@ -40,7 +40,12 @@ async def settle_pickup(
     payment_method = payload.payment_method or PaymentMethod.cash
     try:
         return await settlement_service.settle_pickup(
-            db, pickup, payload.weight_kg, payload.unit_price_naira, payment_method
+            db,
+            pickup,
+            payload.weight_kg,
+            payload.unit_price_naira,
+            payment_method,
+            hub_id=payload.hub_id,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

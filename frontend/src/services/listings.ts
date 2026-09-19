@@ -12,6 +12,7 @@ export interface CreateListingPayload {
   latitude?: number;
   longitude?: number;
   address_text?: string;
+  contact_phone?: string;
   auto_dispatch?: boolean;
 }
 

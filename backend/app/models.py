@@ -39,6 +39,15 @@ class UserRole(str, enum.Enum):
     collector = "collector"
     admin = "admin"
     ngo = "ngo"
+    recycling_hub = "recycling_hub"
+    partner = "partner"
+
+
+class HubSubscriptionStatus(str, enum.Enum):
+    active = "active"
+    past_due = "past_due"
+    cancelled = "cancelled"
+    trial = "trial"
 
 
 class ListingStatus(str, enum.Enum):
@@ -88,6 +97,7 @@ class User(Base):
     location_hub = Column(String(64), default="Zaria")
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    h3_cell = Column(String(16), nullable=True, index=True)
     otp_code = Column(String(6), nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
     is_verified = Column(Boolean, nullable=False, default=False)
@@ -151,6 +161,7 @@ class Listing(Base):
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     address_text = Column(String(320), nullable=True)
+    contact_phone = Column(String(20), nullable=True)
     status = Column(_db_enum(ListingStatus), nullable=False, default=ListingStatus.active, index=True)
     expires_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
@@ -275,3 +286,104 @@ class PriceMatrix(Base):
     price_per_kg_naira = Column(Float, nullable=False)
     last_updated = Column(DateTime, onupdate=func.now(), server_default=func.now())
     updated_by = Column(String, nullable=True)
+
+
+class RecyclingHub(Base):
+    __tablename__ = "recycling_hubs"
+
+    id = Column(String(36), primary_key=True, index=True, default=_uuid)
+    owner_user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String(160), nullable=False)
+    address_text = Column(String(320), nullable=True)
+    latitude = Column(Float, nullable=True)
+    longitude = Column(Float, nullable=True)
+    city = Column(String(80), nullable=False, default="Zaria")
+    contact_phone = Column(String(20), nullable=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    requests = relationship(
+        "HubRecyclingRequest", back_populates="hub", cascade="all, delete-orphan"
+    )
+
+
+class HubSubscription(Base):
+    __tablename__ = "hub_subscriptions"
+
+    id = Column(String(36), primary_key=True, index=True, default=_uuid)
+    hub_id = Column(String(36), ForeignKey("recycling_hubs.id"), nullable=False, index=True)
+    plan_name = Column(String(60), nullable=False, default="Pro")
+    amount_naira = Column(Numeric(12, 2), nullable=False)
+    cycle = Column(String(20), nullable=False, default="monthly")
+    started_at = Column(DateTime, nullable=False, server_default=func.now())
+    next_billing_at = Column(DateTime, nullable=True)
+    status = Column(
+        _db_enum(HubSubscriptionStatus),
+        nullable=False,
+        default=HubSubscriptionStatus.active,
+        index=True,
+    )
+    payment_method = Column(_db_enum(PaymentMethod), nullable=True)
+    payment_reference = Column(String(120), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    hub = relationship("RecyclingHub", backref="subscriptions")
+
+
+class HubRecyclingRequest(Base):
+    __tablename__ = "hub_recycling_requests"
+
+    id = Column(String(36), primary_key=True, index=True, default=_uuid)
+    hub_id = Column(String(36), ForeignKey("recycling_hubs.id"), nullable=False, index=True)
+    material_category_id = Column(
+        Integer, ForeignKey("material_categories.id"), nullable=False, index=True
+    )
+    requested_kg = Column(Numeric(12, 3), nullable=False)
+    fulfilled_kg = Column(Numeric(12, 3), nullable=False, default=0)
+    note = Column(String(320), nullable=True)
+    requested_on = Column(Date, nullable=False, index=True)
+    status = Column(String(20), nullable=False, default="open", index=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    hub = relationship("RecyclingHub", back_populates="requests", foreign_keys=[hub_id])
+    material_category = relationship("MaterialCategory")
+    deliveries = relationship("HubDelivery", back_populates="request")
+
+
+class HubDelivery(Base):
+    __tablename__ = "hub_deliveries"
+
+    id = Column(String(36), primary_key=True, index=True, default=_uuid)
+    hub_id = Column(String(36), ForeignKey("recycling_hubs.id"), nullable=False, index=True)
+    request_id = Column(
+        String(36), ForeignKey("hub_recycling_requests.id"), nullable=True, index=True
+    )
+    transaction_id = Column(
+        String(36), ForeignKey("transactions.id"), nullable=False, unique=True, index=True
+    )
+    material_category_id = Column(
+        Integer, ForeignKey("material_categories.id"), nullable=False, index=True
+    )
+    weight_kg = Column(Numeric(12, 3), nullable=False)
+    hub_price_naira = Column(Numeric(12, 2), nullable=False, default=0)
+    delivered_at = Column(DateTime, nullable=False, server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
+
+    hub = relationship("RecyclingHub")
+    request = relationship("HubRecyclingRequest", back_populates="deliveries")
+    transaction = relationship("Transaction")
+
+
+class CompliancePartner(Base):
+    __tablename__ = "compliance_partners"
+
+    id = Column(String(36), primary_key=True, index=True, default=_uuid)
+    name = Column(String(160), nullable=False)
+    partner_type = Column(String(40), nullable=False, default="pro")  # pro | recycler | fg
+    api_key = Column(String(80), unique=True, nullable=False, index=True)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

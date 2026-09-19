@@ -12,18 +12,19 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ----------------------------------------------------------------------------
--- users  (Household, Collector, Admin, NGO)
+-- users  (Household, Collector, Admin, NGO, Recycling Hub, Compliance Partner)
 -- ----------------------------------------------------------------------------
 CREATE TABLE users (
     id              VARCHAR(36) PRIMARY KEY,
     phone_number    VARCHAR(20)  NOT NULL UNIQUE,
     full_name       VARCHAR(120),
     role            VARCHAR(20)  NOT NULL DEFAULT 'household'
-                    CHECK (role IN ('household', 'collector', 'admin', 'ngo')),
+                    CHECK (role IN ('household', 'collector', 'admin', 'ngo', 'recycling_hub', 'partner')),
     language_pref   VARCHAR(8)   NOT NULL DEFAULT 'ha',
     location_hub    VARCHAR(64)  NOT NULL DEFAULT 'Zaria',
     latitude        DOUBLE PRECISION,
     longitude       DOUBLE PRECISION,
+    h3_cell         VARCHAR(16),
     geom            GEOMETRY(Point, 4326)
                     GENERATED ALWAYS AS (
                         ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
@@ -39,6 +40,7 @@ CREATE TABLE users (
 );
 
 CREATE INDEX idx_users_role_active   ON users (role, is_active);
+CREATE INDEX idx_users_h3_cell       ON users (h3_cell);
 CREATE INDEX idx_users_geom          ON users USING GIST (geom);
 CREATE INDEX idx_users_location_hub  ON users (location_hub);
 
@@ -88,6 +90,7 @@ CREATE TABLE listings (
                                ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
                            ) STORED,
     address_text           VARCHAR(320),
+    contact_phone          VARCHAR(20),
     status                 VARCHAR(20)  NOT NULL DEFAULT 'active'
                            CHECK (status IN ('draft','active','matched','scheduled','completed','cancelled','expired')),
     expires_at             TIMESTAMPTZ,
@@ -178,6 +181,102 @@ CREATE INDEX idx_ngo_impact_hub_period ON ngo_impact_logs (hub, period);
 CREATE INDEX idx_ngo_impact_material  ON ngo_impact_logs (material_category_id);
 
 -- ----------------------------------------------------------------------------
+-- recycling_hubs  (registered recycling facilities / aggregators)
+-- ----------------------------------------------------------------------------
+CREATE TABLE recycling_hubs (
+    id             VARCHAR(36) PRIMARY KEY,
+    owner_user_id  VARCHAR(36) NOT NULL REFERENCES users(id),
+    name           VARCHAR(160) NOT NULL,
+    address_text   VARCHAR(320),
+    latitude       DOUBLE PRECISION,
+    longitude      DOUBLE PRECISION,
+    city           VARCHAR(80)  NOT NULL DEFAULT 'Zaria',
+    contact_phone  VARCHAR(20),
+    is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at     TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at     TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_hubs_owner ON recycling_hubs (owner_user_id);
+CREATE INDEX idx_hubs_active_city ON recycling_hubs (is_active, city);
+
+-- ----------------------------------------------------------------------------
+-- hub_subscriptions  (monthly revenue: recycling hubs pay for the platform)
+-- ----------------------------------------------------------------------------
+CREATE TABLE hub_subscriptions (
+    id                VARCHAR(36) PRIMARY KEY,
+    hub_id            VARCHAR(36) NOT NULL REFERENCES recycling_hubs(id) ON DELETE CASCADE,
+    plan_name         VARCHAR(60)  NOT NULL DEFAULT 'Pro',
+    amount_naira      NUMERIC(12,2) NOT NULL,
+    cycle             VARCHAR(20)  NOT NULL DEFAULT 'monthly',
+    started_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    next_billing_at   TIMESTAMPTZ,
+    status            VARCHAR(20)  NOT NULL DEFAULT 'active'
+                      CHECK (status IN ('active','past_due','cancelled','trial')),
+    payment_method    VARCHAR(20)
+                      CHECK (payment_method IN ('cash','mobile_money','bank_transfer')),
+    payment_reference VARCHAR(120),
+    created_at        TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at        TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_hub_subs_hub ON hub_subscriptions (hub_id);
+CREATE INDEX idx_hub_subs_status ON hub_subscriptions (status);
+
+-- ----------------------------------------------------------------------------
+-- hub_recycling_requests  (hub's daily public need: material x quantity)
+-- ----------------------------------------------------------------------------
+CREATE TABLE hub_recycling_requests (
+    id                     VARCHAR(36) PRIMARY KEY,
+    hub_id                 VARCHAR(36) NOT NULL REFERENCES recycling_hubs(id) ON DELETE CASCADE,
+    material_category_id   INTEGER     NOT NULL REFERENCES material_categories(id),
+    requested_kg           NUMERIC(12,3) NOT NULL,
+    fulfilled_kg           NUMERIC(12,3) NOT NULL DEFAULT 0,
+    note                   VARCHAR(320),
+    requested_on           DATE         NOT NULL,
+    status                 VARCHAR(20)  NOT NULL DEFAULT 'open'
+                           CHECK (status IN ('open','filled','closed','cancelled')),
+    created_at             TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at             TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_hub_req_hub       ON hub_recycling_requests (hub_id);
+CREATE INDEX idx_hub_req_hub_date  ON hub_recycling_requests (hub_id, requested_on);
+CREATE INDEX idx_hub_req_material  ON hub_recycling_requests (material_category_id);
+CREATE INDEX idx_hub_req_status    ON hub_recycling_requests (status);
+
+-- ----------------------------------------------------------------------------
+-- hub_deliveries  (traceability: which collection/transaction fed a hub)
+-- ----------------------------------------------------------------------------
+CREATE TABLE hub_deliveries (
+    id                     VARCHAR(36) PRIMARY KEY,
+    hub_id                 VARCHAR(36) NOT NULL REFERENCES recycling_hubs(id) ON DELETE CASCADE,
+    request_id             VARCHAR(36) REFERENCES hub_recycling_requests(id) ON DELETE CASCADE,
+    transaction_id         VARCHAR(36) NOT NULL UNIQUE REFERENCES transactions(id),
+    material_category_id   INTEGER     NOT NULL REFERENCES material_categories(id),
+    weight_kg              NUMERIC(12,3) NOT NULL,
+    hub_price_naira        NUMERIC(12,2) NOT NULL DEFAULT 0,
+    delivered_at           TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    created_at             TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_hub_deliveries_hub     ON hub_deliveries (hub_id);
+CREATE INDEX idx_hub_deliveries_request ON hub_deliveries (request_id);
+
+-- ----------------------------------------------------------------------------
+-- compliance_partners  (API-key access for PROs / recyclers / FG audits)
+-- ----------------------------------------------------------------------------
+CREATE TABLE compliance_partners (
+    id            VARCHAR(36) PRIMARY KEY,
+    name          VARCHAR(160) NOT NULL,
+    partner_type  VARCHAR(40)  NOT NULL DEFAULT 'pro',  -- pro | recycler | fg
+    api_key       VARCHAR(80)  NOT NULL UNIQUE,
+    is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+-- ----------------------------------------------------------------------------
 -- sync_outbox  (fault-tolerant offline sync / network retry queue)
 -- ----------------------------------------------------------------------------
 CREATE TABLE sync_outbox (
@@ -196,6 +295,10 @@ CREATE TABLE sync_outbox (
 
 CREATE INDEX idx_sync_outbox_status_retry ON sync_outbox (status, next_retry_at);
 
+CREATE INDEX idx_compliance_partners_api_key ON compliance_partners (api_key);
+
+CREATE INDEX idx_hub_deliveries_material ON hub_deliveries (material_category_id);
+
 -- ----------------------------------------------------------------------------
 -- updated_at trigger
 -- ----------------------------------------------------------------------------
@@ -213,6 +316,9 @@ CREATE TRIGGER trg_listings_updated_at            BEFORE UPDATE ON listings     
 CREATE TRIGGER trg_pickups_updated_at             BEFORE UPDATE ON pickups             FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_transactions_updated_at        BEFORE UPDATE ON transactions        FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_sync_outbox_updated_at         BEFORE UPDATE ON sync_outbox         FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_recycling_hubs_updated_at      BEFORE UPDATE ON recycling_hubs      FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_hub_subscriptions_updated_at   BEFORE UPDATE ON hub_subscriptions   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_hub_recycling_requests_updated_at BEFORE UPDATE ON hub_recycling_requests FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ----------------------------------------------------------------------------
 -- Seed data: material categories (Hausa/Pidgin labels + carbon offset factors)
