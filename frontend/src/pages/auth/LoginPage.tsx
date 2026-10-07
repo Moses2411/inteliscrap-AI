@@ -38,14 +38,17 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [debugOtp, setDebugOtp] = useState<string | null>(null);
 
-  const validPhone = useMemo(() => /^\+?\d{10,15}$/.test(phone.trim()), [phone]);
+  // Users type spaces/dashes (the placeholder itself has spaces) — strip them
+  // for validation and before sending to the API so lookups match consistently.
+  const normalizedPhone = useMemo(() => phone.replace(/[\s\-().]/g, ""), [phone]);
+  const validPhone = useMemo(() => /^\+?\d{10,15}$/.test(normalizedPhone), [normalizedPhone]);
 
   const sendCode = useCallback(async () => {
     setBusy(true);
     setError(null);
     setDebugOtp(null);
     try {
-      const { otp: code, debug } = await requestOtp(phone.trim(), role);
+      const { otp: code, debug } = await requestOtp(normalizedPhone, role);
       if (debug && code) setDebugOtp(code);
       setStep("otp");
     } catch {
@@ -53,20 +56,20 @@ export default function LoginPage() {
     } finally {
       setBusy(false);
     }
-  }, [phone, role]);
+  }, [normalizedPhone, role]);
 
   const confirmOtp = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
-      await verifyOtp(phone.trim(), otp.trim());
+      await verifyOtp(normalizedPhone, otp.trim());
       navigate(from, { replace: true });
     } catch {
       setError("That code didn't match. Try again.");
     } finally {
       setBusy(false);
     }
-  }, [phone, otp, navigate, from]);
+  }, [normalizedPhone, otp, navigate, from]);
 
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -177,6 +180,12 @@ export default function LoginPage() {
               </div>
 
               {error && <ErrorNote message={error} />}
+
+              {phone && !validPhone && (
+                <p className="text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                  Enter a valid phone number, e.g. +234 801 234 5678
+                </p>
+              )}
 
               <Button fullWidth size="lg" onClick={sendCode} loading={busy} disabled={!validPhone}>
                 Send verification code

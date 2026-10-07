@@ -5,6 +5,7 @@ import { getNavForRole } from "../../lib/nav";
 import { getRole, clearToken, getSavedPhone } from "../../services/auth";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useApp } from "../../store/appStore";
+import { formatPhoneDisplay } from "../../utils/formatters";
 import { Avatar } from "../ui/Avatar";
 
 export default function Sidebar() {
@@ -60,12 +61,12 @@ export default function Sidebar() {
       {/* User */}
       <div className="border-t border-slate-100 p-3 dark:border-slate-800">
         <div className="flex items-center gap-3 rounded-xl px-2 py-2">
-          <Avatar name={phone ?? "Collector"} size="md" />
+          <Avatar name={formatPhoneDisplay(phone) ?? "Collector"} size="md" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-100">
-              {phone ?? "Guest"}
+              {formatPhoneDisplay(phone) ?? "Guest"}
             </p>
-            <p className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500">
+            <p className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
               <span className={cn("badge-dot", is_online ? "bg-emerald-500" : "bg-amber-400")} />
               {is_online ? t("online") : t("offline")}
             </p>

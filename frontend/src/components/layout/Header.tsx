@@ -1,4 +1,5 @@
 import { Moon, Recycle, Sun } from "lucide-react";
+import { motion } from "framer-motion";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useApp } from "../../store/appStore";
 import { cn } from "../../lib/cn";
@@ -28,7 +29,7 @@ export default function Header() {
           </div>
           <div className="leading-tight">
             <p className="text-[13px] font-extrabold tracking-tight text-slate-900 dark:text-white">InteliScrap</p>
-            <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">{roleName}</p>
+            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">{roleName}</p>
           </div>
         </div>
 
@@ -41,7 +42,16 @@ export default function Header() {
                 : "bg-amber-50 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300",
             )}
           >
-            <span className={cn("badge-dot", is_online ? "bg-emerald-500" : "bg-amber-400 animate-pulse-soft")} />
+            {is_online ? (
+              <span className="badge-dot bg-emerald-500" aria-hidden="true" />
+            ) : (
+              <motion.span
+                className="badge-dot bg-amber-400"
+                animate={{ opacity: [1, 0.35, 1] }}
+                transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }}
+                aria-hidden="true"
+              />
+            )}
             {is_online ? t("online") : t("offline")}
           </span>
 

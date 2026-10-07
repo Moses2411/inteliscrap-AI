@@ -50,7 +50,7 @@ export default function BottomNav() {
           <span
             className={cn(
               "mt-1 text-[10px] font-bold",
-              isActive("/scan") ? "text-brand-600 dark:text-brand-400" : "text-slate-400 dark:text-slate-500",
+              isActive("/scan") ? "text-brand-600 dark:text-brand-400" : "text-slate-500 dark:text-slate-400",
             )}
           >
             {t("nav_scan")}
@@ -97,7 +97,7 @@ function Tab({
         "flex flex-col items-center gap-1 pb-1.5 pt-2 text-[10px] font-bold transition-colors",
         active
           ? "text-brand-600 dark:text-brand-400"
-          : "text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300",
+          : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",
       )}
     >
       {icon}

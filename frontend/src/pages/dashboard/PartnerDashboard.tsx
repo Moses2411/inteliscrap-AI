@@ -132,7 +132,7 @@ export default function PartnerDashboard() {
           label="Settled transactions"
           value={compliance.loading || !data ? "—" : data.total_transactions.toLocaleString()}
           icon={<FileText className="h-5 w-5" />}
-          hint="in this manifest"
+          hint="In this manifest"
         />
         <StatCard
           label="Total tonnage"

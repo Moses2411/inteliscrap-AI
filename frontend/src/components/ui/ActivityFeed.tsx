@@ -42,7 +42,7 @@ export function ActivityFeed({ items, className }: { items: ActivityItem[]; clas
             {item.meta && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{item.meta}</p>}
           </div>
           {item.time && (
-            <span className="shrink-0 pt-0.5 text-[11px] font-medium text-slate-400 dark:text-slate-500">
+            <span className="shrink-0 pt-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
               {relativeTime(item.time)}
             </span>
           )}

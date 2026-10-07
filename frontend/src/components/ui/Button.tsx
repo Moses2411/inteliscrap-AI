@@ -2,7 +2,7 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "../../lib/cn";
 
-type Variant = "primary" | "secondary" | "ghost" | "soft" | "gold" | "danger";
+type Variant = "primary" | "secondary" | "ghost" | "soft" | "gold" | "danger" | "white";
 type Size = "sm" | "md" | "lg" | "icon";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -29,10 +29,11 @@ const VARIANT: Record<Variant, string> = {
   soft: "btn-soft",
   gold: "btn-gold",
   danger: "btn-danger",
+  white: "btn-white",
 };
 
 const SIZE: Record<Size, string> = {
-  sm: "h-9 px-3 text-[13px]",
+  sm: "h-10 px-3.5 text-[13px]",
   md: "h-11 px-5",
   lg: "h-12 px-6 text-base",
   icon: "h-10 w-10 p-0",

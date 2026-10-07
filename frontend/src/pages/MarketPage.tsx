@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   Camera,
@@ -21,6 +22,7 @@ import { SearchInput } from "../components/ui/SearchInput";
 import { StatusBadge, StatusDot } from "../components/ui/StatusBadge";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
+import { PageMotion, pageItem } from "../components/ui/PageMotion";
 import { useMarketData } from "../hooks/useDashboardData";
 import { materialNameById } from "../services/market";
 import { formatDateTime, formatNaira } from "../utils/formatters";
@@ -31,9 +33,16 @@ type Tab = "listings" | "prices" | "hubs";
 export default function MarketPage() {
   const market = useMarketData();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<Tab>("listings");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [tab, setTabState] = useState<Tab>(tabParam === "prices" || tabParam === "hubs" ? tabParam : "listings");
   const [q, setQ] = useState("");
   const [hazardOnly, setHazardOnly] = useState(false);
+
+  const setTab = (next: Tab) => {
+    setTabState(next);
+    setSearchParams({ tab: next }, { replace: true });
+  };
 
   const materials = market.data?.materials ?? [];
   const listings = market.data?.listings ?? [];
@@ -74,28 +83,35 @@ export default function MarketPage() {
     [hubs, query],
   );
 
+  const maxVisiblePrice = useMemo(
+    () => (filteredPrices.length ? Math.max(...filteredPrices.map((m) => m.price_per_kg_naira)) : 1),
+    [filteredPrices],
+  );
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title={
-          <span className="flex items-center gap-2">
-            <Store className="h-6 w-6 text-brand-600 dark:text-brand-400" />
-            Scrap marketplace
-          </span>
-        }
-        subtitle="Live prices, active sellers and recycling hubs across Zaria."
-        actions={
-          <div className="flex items-center gap-2">
-            {market.isPreview && <PreviewPill />}
-            <Button size="sm" onClick={() => navigate("/scan")}>
-              <Camera className="h-3.5 w-3.5" /> Sell scrap
-            </Button>
-          </div>
-        }
-      />
+    <PageMotion className="space-y-6">
+      <motion.div variants={pageItem}>
+        <PageHeader
+          title={
+            <span className="flex items-center gap-2">
+              <Store className="h-6 w-6 text-brand-600 dark:text-brand-400" />
+              Scrap marketplace
+            </span>
+          }
+          subtitle="Live prices, active sellers and recycling hubs across Zaria."
+          actions={
+            <div className="flex items-center gap-2">
+              {market.isPreview && <PreviewPill />}
+              <Button size="sm" onClick={() => navigate("/scan")}>
+                <Camera className="h-3.5 w-3.5" /> Sell scrap
+              </Button>
+            </div>
+          }
+        />
+      </motion.div>
 
       {/* Search + tabs */}
-      <div className="space-y-3">
+      <motion.div variants={pageItem} className="space-y-3">
         <SearchInput value={q} onChange={setQ} placeholder="Search materials, sellers or hubs…" className="max-w-md" />
         <SegmentedTabs<Tab>
           value={tab}
@@ -106,13 +122,20 @@ export default function MarketPage() {
             { value: "hubs", label: "Recycling hubs", count: filteredHubs.length },
           ]}
         />
-      </div>
+      </motion.div>
 
+      <motion.div
+        key={tab}
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25, ease: "easeOut" }}
+        className="space-y-6"
+      >
       {/* ── Listings ─────────────────────────────────────────── */}
       {tab === "listings" && (
         <>
           {market.loading ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               {[0, 1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-40 w-full" />
               ))}
@@ -138,7 +161,7 @@ export default function MarketPage() {
                         </span>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{name}</p>
-                          <p className="flex items-center gap-1 truncate text-xs text-slate-400">
+                          <p className="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400">
                             <MapPin className="h-3 w-3 shrink-0" />
                             {l.address_text ?? "Location on request"}
                           </p>
@@ -161,7 +184,7 @@ export default function MarketPage() {
                           <ShieldAlert className="h-3 w-3" /> {hazards.length} hazard{hazards.length > 1 ? "s" : ""}
                         </Badge>
                       )}
-                      <span className="ml-auto text-[11px] text-slate-400">
+                      <span className="ml-auto text-[11px] text-slate-500 dark:text-slate-400">
                         {l.created_at ? formatDateTime(l.created_at) : ""}
                       </span>
                     </div>
@@ -195,10 +218,10 @@ export default function MarketPage() {
             <button
               onClick={() => setHazardOnly((v) => !v)}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors",
+                "inline-flex min-h-[40px] items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-colors",
                 hazardOnly
                   ? "bg-red-50 text-red-700 ring-1 ring-red-200 dark:bg-red-950/60 dark:text-red-300 dark:ring-red-900"
-                  : "bg-slate-100 text-slate-500 hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400",
+                  : "bg-slate-100 text-slate-500 hover:text-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:text-slate-200",
               )}
               aria-pressed={hazardOnly}
             >
@@ -224,11 +247,24 @@ export default function MarketPage() {
                     >
                       {m.name.slice(0, 2).toUpperCase()}
                     </span>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{m.name}</p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {m.is_hazardous ? "Handle with care" : "Safe to handle"}
                       </p>
+                      <div
+                        className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                        aria-hidden="true"
+                      >
+                        <motion.div
+                          className="h-full rounded-full bg-brand-500 dark:bg-brand-400"
+                          initial={{ width: 0 }}
+                          animate={{
+                            width: `${Math.max(6, Math.round((m.price_per_kg_naira / maxVisiblePrice) * 100))}%`,
+                          }}
+                          transition={{ type: "spring", stiffness: 120, damping: 20 }}
+                        />
+                      </div>
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -237,9 +273,9 @@ export default function MarketPage() {
                         <ShieldAlert className="h-3 w-3" /> hazardous
                       </Badge>
                     )}
-                    <span className="text-sm font-bold text-brand-600 dark:text-brand-400">
+                    <span className="text-sm font-bold tabular-nums text-brand-600 dark:text-brand-400">
                       {formatNaira(m.price_per_kg_naira)}
-                      <span className="text-[10px] font-medium text-slate-400">/kg</span>
+                      <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">/kg</span>
                     </span>
                   </div>
                 </li>
@@ -253,7 +289,7 @@ export default function MarketPage() {
       {tab === "hubs" && (
         <>
           {market.loading ? (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               {[0, 1, 2].map((i) => (
                 <Skeleton key={i} className="h-32 w-full" />
               ))}
@@ -270,7 +306,7 @@ export default function MarketPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-slate-900 dark:text-white">{h.name}</p>
-                      <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
+                      <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
                         <MapPin className="h-3 w-3" /> {h.city}
                         {h.address_text ? ` · ${h.address_text}` : ""}
                       </p>
@@ -293,6 +329,7 @@ export default function MarketPage() {
           )}
         </>
       )}
-    </div>
+      </motion.div>
+    </PageMotion>
   );
 }

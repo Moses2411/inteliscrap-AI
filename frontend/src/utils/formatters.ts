@@ -69,3 +69,13 @@ export function generateScanId(): string {
   const rand = Math.random().toString(36).substring(2, 8);
   return `scan_${ts}_${rand}`;
 }
+
+/** Readable display form for a saved phone: "+2349160634282" → "0916 063 4282". */
+export function formatPhoneDisplay(phone?: string | null): string | null {
+  if (!phone) return null;
+  let d = phone.replace(/\D/g, "");
+  if (d.startsWith("234") && d.length > 10) d = `0${d.slice(3)}`;
+  const m = d.match(/^(\d{4})(\d{3})(\d{4})/);
+  if (m) return `${m[1]} ${m[2]} ${m[3]}`;
+  return d || null;
+}

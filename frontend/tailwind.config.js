@@ -27,6 +27,9 @@ export default {
           500: "#f59e0b",
           600: "#d97706",
           700: "#b45309",
+          800: "#92400e",
+          900: "#78350f",
+          950: "#451a03",
         },
         hazard: {
           low: "#fbbf24",
@@ -73,6 +76,10 @@ export default {
         "shimmer": {
           "100%": { transform: "translateX(100%)" },
         },
+        "chart-draw": {
+          "0%": { clipPath: "inset(0 100% 0 0)" },
+          "100%": { clipPath: "inset(0 0 0 0)" },
+        },
       },
       animation: {
         "fade-up": "fade-up 0.45s cubic-bezier(0.16, 1, 0.3, 1) both",
@@ -82,6 +89,7 @@ export default {
         "pulse-soft": "pulse-soft 2s ease-in-out infinite",
         "bar-grow": "bar-grow 0.5s cubic-bezier(0.16, 1, 0.3, 1) both",
         shimmer: "shimmer 1.6s infinite",
+        "chart-draw": "chart-draw 1.05s cubic-bezier(0.22, 1, 0.36, 1) 0.3s both",
       },
     },
   },

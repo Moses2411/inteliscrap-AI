@@ -42,7 +42,7 @@ export function BarList({ items, max, className }: Props) {
                 }}
               />
             </div>
-            {it.sub && <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">{it.sub}</p>}
+            {it.sub && <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">{it.sub}</p>}
           </div>
         );
       })}

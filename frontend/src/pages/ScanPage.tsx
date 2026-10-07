@@ -1,10 +1,13 @@
 import { useState, useCallback } from "react";
+import { motion } from "framer-motion";
 import { Camera, Recycle, Zap, WifiOff, ShieldCheck, AlertTriangle } from "lucide-react";
 import CameraCapture from "../components/Camera/CameraCapture";
 import ScanResult from "../components/Scanner/ScanResult";
 import ManualMaterialSelect from "../components/Scanner/ManualMaterialSelect";
 import PostPickupForm from "../components/Pickup/PostPickupForm";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
+import { Card } from "../components/ui/Card";
+import { PageMotion, pageItem } from "../components/ui/PageMotion";
 import { useVision } from "../hooks/useVision";
 import { useAudioTTS } from "../hooks/useAudioTTS";
 import { useTranslation } from "../hooks/useTranslation";
@@ -101,20 +104,37 @@ export default function ScanPage() {
         aria-live="polite"
       >
         <div className="relative flex h-20 w-20 items-center justify-center">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-400 opacity-20" />
+          <motion.span
+            className="absolute inline-flex h-full w-full rounded-full bg-brand-400"
+            initial={{ scale: 1, opacity: 0.35 }}
+            animate={{ scale: [1, 1.9], opacity: [0.35, 0] }}
+            transition={{ repeat: Infinity, duration: 1.6, ease: "easeOut" }}
+          />
           <span className="relative inline-flex h-16 w-16 items-center justify-center rounded-full bg-brand-50">
-            <Recycle className="h-8 w-8 animate-spin text-brand-600" style={{ animationDuration: "2.5s" }} aria-hidden="true" />
+            <motion.span
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: "linear" }}
+              className="inline-flex"
+              aria-hidden="true"
+            >
+              <Recycle className="h-8 w-8 text-brand-600" />
+            </motion.span>
           </span>
         </div>
         <LoadingSpinner progress={loadingProgress} label={t("analyzing_with_ai")} />
-        <p className="max-w-xs text-sm text-gray-500 dark:text-gray-400">{t("analyzing_desc")}</p>
+        <p className="max-w-xs text-sm text-slate-600 dark:text-slate-400">{t("analyzing_desc")}</p>
       </div>
     );
   }
 
   if (result) {
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-2 space-y-4 duration-300">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        className="space-y-4"
+      >
         <ScanResult
           result={result}
           hazard_level={result.hazard_level}
@@ -130,7 +150,7 @@ export default function ScanPage() {
         <div className="mx-auto max-w-md">
           <PostPickupForm analysis={result} onReset={() => setResult(null)} />
         </div>
-      </div>
+      </motion.div>
     );
   }
 
@@ -139,42 +159,55 @@ export default function ScanPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-6 px-4 pb-8 pt-2">
-      <div className="flex flex-col items-center gap-3 text-center">
+    <PageMotion className="mx-auto flex max-w-md flex-col gap-6 px-4 pb-8 pt-2">
+      <motion.div variants={pageItem} className="flex flex-col items-center gap-3 text-center">
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 dark:bg-brand-950">
           <Camera className="h-7 w-7 text-brand-700 dark:text-brand-300" aria-hidden="true" />
         </div>
         <div>
-          <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-gray-100">{t("snap_scrap")}</h2>
-          <p className="mt-1 text-sm leading-relaxed text-gray-500 dark:text-gray-400">{t("snap_scrap_desc")}</p>
+          <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{t("snap_scrap")}</h1>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t("snap_scrap_desc")}</p>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900">
-        <CameraCapture onImageCapture={handleImageCapture} />
-      </div>
+      <motion.div variants={pageItem}>
+        <Card pad={false} className="overflow-hidden shadow-sm">
+          <CameraCapture onImageCapture={handleImageCapture} />
+        </Card>
+      </motion.div>
 
-      <div className="grid grid-cols-3 gap-2" role="list" aria-label={t("how_it_works")}>
-        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center dark:bg-gray-900">
+      <motion.div
+        variants={pageItem}
+        className="grid grid-cols-3 gap-2"
+        role="list"
+        aria-label={t("how_it_works")}
+      >
+        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-slate-50 px-2 py-3 text-center dark:bg-slate-900">
           <Zap className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden="true" />
-          <span className="text-xs font-medium leading-tight text-gray-700 dark:text-gray-300">{t("feature_instant_ai")}</span>
+          <span className="text-xs font-medium leading-tight text-slate-700 dark:text-slate-300">{t("feature_instant_ai")}</span>
         </div>
-        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center dark:bg-gray-900">
+        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-slate-50 px-2 py-3 text-center dark:bg-slate-900">
           <ShieldCheck className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden="true" />
-          <span className="text-xs font-medium leading-tight text-gray-700 dark:text-gray-300">{t("feature_safety_tips")}</span>
+          <span className="text-xs font-medium leading-tight text-slate-700 dark:text-slate-300">{t("feature_safety_tips")}</span>
         </div>
-        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-gray-50 px-2 py-3 text-center dark:bg-gray-900">
+        <div role="listitem" className="flex flex-col items-center gap-1.5 rounded-xl bg-slate-50 px-2 py-3 text-center dark:bg-slate-900">
           <WifiOff className="h-5 w-5 text-brand-600 dark:text-brand-400" aria-hidden="true" />
-          <span className="text-xs font-medium leading-tight text-gray-700 dark:text-gray-300">{t("feature_works_offline")}</span>
+          <span className="text-xs font-medium leading-tight text-slate-700 dark:text-slate-300">{t("feature_works_offline")}</span>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="flex items-center justify-center gap-1.5 text-xs text-amber-600 dark:text-amber-400" role="note">
+      <motion.div
+        variants={pageItem}
+        className="flex items-center justify-center gap-1.5 text-xs text-amber-600 dark:text-amber-400"
+        role="note"
+      >
         <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
         {t("manual_fallback_hint")}
-      </div>
+      </motion.div>
 
-      <p className="text-center text-xs text-gray-400 dark:text-gray-500">{t("scans_save_desc")}</p>
-    </div>
+      <motion.p variants={pageItem} className="text-center text-xs text-slate-500 dark:text-slate-400">
+        {t("scans_save_desc")}
+      </motion.p>
+    </PageMotion>
   );
 }

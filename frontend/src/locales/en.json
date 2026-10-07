@@ -10,6 +10,7 @@
   "nav_hub": "Hub",
   "nav_compliance": "Compliance",
   "nav_impact": "Impact",
+  "nav_report": "Report",
   "logout": "Log out",
   "scan": "Scan",
   "analyzing": "Analyzing...",
@@ -29,7 +30,6 @@
   "scrap_type": "Scrap Type",
   "weight_estimate": "Estimated Weight",
   "no_scans": "No scan history yet",
-
   "hazards": {
     "corrosive_acid": "This material contains corrosive acid. Do not touch with bare hands.",
     "lead_poisoning": "This material contains lead. Do not break it or inhale its dust.",
@@ -47,7 +47,6 @@
     "pcb_contamination": "Contains PCBs which may cause cancer. Do not burn.",
     "biological_waste": "Household or medical waste. Wear gloves before handling."
   },
-
   "materials": {
     "copper": "Copper",
     "aluminum": "Aluminum",
@@ -67,7 +66,6 @@
     "rubber": "Rubber",
     "textile": "Textile / Cloth"
   },
-
   "safety_instructions": {
     "default": "Wear gloves before handling. Wash hands thoroughly after work.",
     "acid": "Wear gloves and goggles. If acid touches skin, wash immediately with water and soap.",
@@ -78,7 +76,6 @@
     "sharp": "Use thick gloves. Be cautious of sharp edges.",
     "general": "This material is generally safe. Still, wash your hands after handling."
   },
-
   "header_scrap_type": "Scrap Type",
   "estimated_value": "Estimated Value",
   "read_aloud": "Read Aloud",
@@ -114,7 +111,6 @@
   "placeholder_ha": "Sannu, yaya kake?",
   "placeholder_pcm": "How you dey?",
   "placeholder_en": "Type something here",
-
   "analyzing_desc": "Hold steady — we're identifying the material and checking today's price.",
   "manual_fallback_hint": "If the AI model is unavailable, you can pick the material manually.",
   "manual_select_title": "Pick the material",
@@ -127,16 +123,13 @@
   "feature_works_offline": "Works offline",
   "how_it_works": "How it works",
   "scans_save_desc": "Scans are saved to your device and sync automatically when you're back online.",
-
   "scan_noun": "scan",
   "scan_noun_plural": "scans",
   "delete": "Delete",
   "settings_subtitle": "Manage your voice, language, and connection preferences",
-
   "hazard_safe": "Safe",
   "hazard_high_risk": "High Risk",
   "hazard_caution": "Caution",
-
   "sign_in_title": "Sign in to request a pickup",
   "your_phone": "Phone number",
   "send_otp": "Send code",
@@ -151,7 +144,6 @@
   "posted_success": "Request sent! A nearby collector will be notified.",
   "weight_invalid": "Enter a valid weight",
   "share_phone_label": "Optional: share your phone number with the collector so they can contact you",
-
   "new_pickups": "New Pickups",
   "my_jobs": "My Jobs",
   "accept": "Accept",
@@ -165,5 +157,6 @@
   "loc_sharing": "Updating location...",
   "loading": "Loading...",
   "pickups_empty": "No new pickups right now. Keep your location on and check back soon.",
-  "my_jobs_empty": "You have no active pickups yet. Accept a pickup to see it here."
+  "my_jobs_empty": "You have no active pickups yet. Accept a pickup to see it here.",
+  "close": "Close camera"
 }
