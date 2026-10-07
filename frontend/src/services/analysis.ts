@@ -1,7 +1,200 @@
 import type { VisionAnalysis } from "../types";
 import { classifyScrap } from "../vision/visionEngine";
-import { classifyScrapZeroShot, RUNTIME_MIN_SCORE } from "../vision/visionEngineRuntime";
 import { resolveTradeRule } from "./language";
+
+function rgbToHsl(r: number, g: number, b: number) {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0;
+  let s = 0;
+  const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0);
+        break;
+      case g:
+        h = (b - r) / d + 2;
+        break;
+      case b:
+        h = (r - g) / d + 4;
+        break;
+    }
+    h /= 6;
+  }
+  return { h, s, l };
+}
+
+function clamp01(v: number) {
+  if (v < 0) return 0;
+  if (v > 1) return 1;
+  return v;
+}
+
+async function classifyHeuristicInline(image: Blob) {
+  const url = URL.createObjectURL(image);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    const size = 224;
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    if (!ctx) throw new Error("no canvas");
+    ctx.drawImage(img, 0, 0, size, size);
+    const data = ctx.getImageData(0, 0, size, size).data;
+    let sumR = 0,
+      sumG = 0,
+      sumB = 0;
+    let dark = 0,
+      light = 0,
+      midGray = 0;
+    let pixels = 0;
+    const stride = 8;
+    for (let y = 0; y < size; y += stride) {
+      for (let x = 0; x < size; x += stride) {
+        const i = (y * size + x) * 4;
+        const r = data[i] / 255;
+        const g = data[i + 1] / 255;
+        const b = data[i + 2] / 255;
+        pixels++;
+        sumR += r;
+        sumG += g;
+        sumB += b;
+        const bright = (r + g + b) / 3;
+        if (bright < 0.12) dark++;
+        if (bright > 0.78) light++;
+        const hsl = rgbToHsl(r, g, b);
+        if (hsl.s < 0.15 && hsl.l > 0.25 && hsl.l < 0.75) midGray++;
+      }
+    }
+    const meanR = sumR / pixels;
+    const meanG = sumG / pixels;
+    const meanB = sumB / pixels;
+    const bright = (meanR + meanG + meanB) / 3;
+    const hslM = rgbToHsl(meanR, meanG, meanB);
+    const total = meanR + meanG + meanB || 1;
+    const redRatio = meanR / total;
+    const greenRatio = meanG / total;
+    const blueRatio = meanB / total;
+    const rules = [
+      {
+        slug: "copper",
+        material: "Copper",
+        hazardLevel: "low" as const,
+        score: () => {
+          let s = 0;
+          if (redRatio > 0.42) s += 0.5;
+          if (meanR > meanB + 0.15) s += 0.25;
+          if (meanR > meanG + 0.1) s += 0.15;
+          if (hslM.s > 0.25) s += 0.1;
+          return clamp01(s);
+        },
+      },
+      {
+        slug: "brass",
+        material: "Brass",
+        hazardLevel: "low" as const,
+        score: () => {
+          let s = 0;
+          if (redRatio > 0.38 && greenRatio > 0.35) s += 0.4;
+          if (meanR > meanB + 0.08 && meanG > meanB + 0.05) s += 0.3;
+          if (hslM.s > 0.2 && bright > 0.4) s += 0.2;
+          if (blueRatio < 0.22) s += 0.1;
+          return clamp01(s);
+        },
+      },
+      {
+        slug: "aluminum",
+        material: "Aluminum",
+        hazardLevel: "low" as const,
+        score: () => {
+          let s = 0;
+          if (bright > 0.55) s += 0.35;
+          if (hslM.s < 0.25) s += 0.35;
+          if (midGray / pixels > 0.25) s += 0.2;
+          if (light / pixels > 0.15) s += 0.1;
+          return clamp01(s);
+        },
+      },
+      {
+        slug: "steel",
+        material: "Steel",
+        hazardLevel: "low" as const,
+        score: () => {
+          let s = 0;
+          if (hslM.s < 0.15) s += 0.4;
+          if (bright > 0.25 && bright < 0.6) s += 0.25;
+          if (midGray / pixels > 0.35) s += 0.25;
+          if (dark / pixels < 0.3) s += 0.1;
+          return clamp01(s);
+        },
+      },
+      {
+        slug: "lead-battery",
+        material: "Lead-Acid Battery",
+        hazardLevel: "critical" as const,
+        score: () => {
+          let s = 0;
+          if (bright < 0.35) s += 0.45;
+          if (dark / pixels > 0.4) s += 0.3;
+          if (hslM.s < 0.2) s += 0.15;
+          return clamp01(s);
+        },
+      },
+      {
+        slug: "e-waste",
+        material: "E-Waste Board",
+        hazardLevel: "high" as const,
+        score: () => {
+          let s = 0;
+          if (greenRatio > 0.36 && blueRatio > 0.25) s += 0.35;
+          if (meanG > meanR && meanG > meanB) s += 0.25;
+          if (hslM.s > 0.15 && hslM.s < 0.5) s += 0.2;
+          if (bright > 0.25 && bright < 0.65) s += 0.2;
+          return clamp01(s);
+        },
+      },
+      {
+        slug: "glass",
+        material: "Glass",
+        hazardLevel: "medium" as const,
+        score: () => {
+          let s = 0;
+          if (bright > 0.6) s += 0.4;
+          if (light / pixels > 0.25) s += 0.3;
+          if (hslM.s < 0.25) s += 0.2;
+          if (midGray / pixels > 0.2) s += 0.1;
+          return clamp01(s);
+        },
+      },
+      {
+        slug: "pet-plastic",
+        material: "PET Plastic",
+        hazardLevel: "low" as const,
+        score: () => {
+          let s = 0;
+          if (bright > 0.4 && bright < 0.85) s += 0.3;
+          if (hslM.s > 0.1 && hslM.s < 0.45) s += 0.3;
+          if (dark / pixels < 0.25 && light / pixels < 0.5) s += 0.25;
+          if (midGray / pixels < 0.4) s += 0.15;
+          return clamp01(s);
+        },
+      },
+    ];
+    const preds = rules
+      .map((r) => ({ slug: r.slug, material: r.material, hazardLevel: r.hazardLevel, confidence: r.score() }))
+      .sort((a, b) => b.confidence - a.confidence);
+    const top = preds[0];
+    return { top, preds };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -124,22 +317,19 @@ export async function analyzeScrapImage(image: Blob): Promise<VisionAnalysis> {
     }
   }
 
+  // Lightweight heuristic (real analysis, works offline, very fast for low-end phones)
   try {
-    const runtime = await classifyScrapZeroShot(image);
-    if (
-      runtime.top &&
-      runtime.top.materialSlug !== "other" &&
-      runtime.top.confidence >= RUNTIME_MIN_SCORE
-    ) {
+    const heuristic = await classifyHeuristicInline(image);
+    if (heuristic.top && heuristic.top.confidence > 0.5) {
       return buildAnalysis(
-        runtime.top.material,
-        runtime.top.materialSlug,
-        runtime.top.confidence,
+        heuristic.top.material,
+        heuristic.top.slug,
+        heuristic.top.confidence,
         "onnx",
       );
     }
-  } catch {
-    // runtime model failed to download or run — fall through to manual
+  } catch (err) {
+    console.warn("heuristic failed", err);
   }
 
   throw new AnalysisUnavailableError();
