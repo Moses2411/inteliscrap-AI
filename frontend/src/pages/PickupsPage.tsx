@@ -144,13 +144,13 @@ export default function PickupsPage() {
       <button
         onClick={refresh}
         disabled={locBusy}
-        className="flex w-full items-center justify-between rounded-2xl border border-brand-200 bg-brand-50/70 px-4 py-3 text-left transition-colors hover:bg-brand-100/70 dark:border-brand-900 dark:bg-brand-950/50 dark:hover:bg-brand-900/50"
+        className="group flex w-full items-center justify-between rounded-2xl border border-brand-200 bg-white px-4 py-3 text-left shadow-sm transition-all hover:shadow-md active:scale-[0.995] dark:border-brand-900 dark:bg-slate-900"
       >
-        <span className="inline-flex items-center gap-2 text-sm font-bold text-brand-700 dark:text-brand-300">
+        <span className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 dark:text-brand-300">
           <RefreshCw className={`h-4 w-4 ${locBusy ? "animate-spin" : ""}`} aria-hidden="true" />
           {locBusy ? t("loc_sharing") : t("refresh_location")}
         </span>
-        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-bold text-brand-700 shadow-sm dark:bg-brand-900 dark:text-brand-300">
+        <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 shadow-sm group-hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300">
           {distanceLabel(offers[0]?.distance_m)}
         </span>
       </button>
