@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models import User
-from app.schemas import LocationUpdate, UserCreate, UserResponse
+from app.schemas import LocationUpdate, RoleUpdate, UserCreate, UserResponse
 from app.services import user_service
 
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
@@ -29,6 +29,17 @@ async def update_my_location(
     db: AsyncSession = Depends(get_db),
 ):
     return await user_service.set_user_location(db, user, payload.latitude, payload.longitude)
+
+
+@router.patch("/me/role", response_model=UserResponse)
+async def update_my_role(
+    payload: RoleUpdate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    user.role = payload.role
+    await db.flush()
+    return user
 
 
 @router.get("/{user_id}", response_model=UserResponse)

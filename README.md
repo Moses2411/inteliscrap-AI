@@ -1,41 +1,162 @@
-# InteliScrap AI
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/header/glow.svg?title=%E2%99%BB%EF%B8%8F%20InteliScrap%20AI&amp;subtitle=Offline-first%20multimodal%20edge%20intelligence%20for%20informal%20recyclers&amp;mode=dark" />
+    <img alt="InteliScrap AI" src="https://shieldcn.dev/header/glow.svg?title=%E2%99%BB%EF%B8%8F%20InteliScrap%20AI&amp;subtitle=Offline-first%20multimodal%20edge%20intelligence%20for%20informal%20recyclers&amp;mode=light" />
+  </picture>
+</p>
 
-Empowering Informal Recyclers, laboratory cleaners, office cleaners and general cleaners with Multimodal Edge Intelligence
+<p align="center">
+  <strong>Offline-first PWA that identifies scrap materials, flags hazards and pays fair prices — on-device AI, in Hausa, Nigerian Pidgin and English.</strong>
+</p>
+
+<!-- Status & metrics -->
+<p align="center">
+  <a href="https://github.com/Moses2411/inteliscrap-AI">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/group/github/Moses2411/inteliscrap-AI/ci+github/Moses2411/inteliscrap-AI/stars+github/Moses2411/inteliscrap-AI/forks+views/repo/Moses2411/inteliscrap-AI+badge/license-Apache_2.0-71717a+badge/version-0.1.0-71717a.svg?size=xs&amp;variant=ghost&amp;mode=dark" />
+      <img alt="CI passing, stars, forks, views, Apache 2.0 license, version 0.1.0" src="https://shieldcn.dev/group/github/Moses2411/inteliscrap-AI/ci+github/Moses2411/inteliscrap-AI/stars+github/Moses2411/inteliscrap-AI/forks+views/repo/Moses2411/inteliscrap-AI+badge/license-Apache_2.0-71717a+badge/version-0.1.0-71717a.svg?size=xs&amp;variant=ghost&amp;mode=light" />
+    </picture>
+  </a>
+</p>
+
+<!-- Tech stack & tooling -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/React-18-61DAFB.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=react" />
+    <img alt="React 18" src="https://shieldcn.dev/badge/React-18-61DAFB.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=react" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/TypeScript-5.5-3178C6.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=typescript" />
+    <img alt="TypeScript 5.5" src="https://shieldcn.dev/badge/TypeScript-5.5-3178C6.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=typescript" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Vite-5-646CFF.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=vite" />
+    <img alt="Vite 5" src="https://shieldcn.dev/badge/Vite-5-646CFF.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=vite" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Tailwind-3.4-06B6D4.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=tailwindcss" />
+    <img alt="Tailwind CSS 3.4" src="https://shieldcn.dev/badge/Tailwind-3.4-06B6D4.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=tailwindcss" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Python-3.11-3776AB.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=python" />
+    <img alt="Python 3.11" src="https://shieldcn.dev/badge/Python-3.11-3776AB.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=python" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/FastAPI-0.115-009688.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=fastapi" />
+    <img alt="FastAPI 0.115" src="https://shieldcn.dev/badge/FastAPI-0.115-009688.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=fastapi" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/PostgreSQL-16-4169E1.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=postgresql" />
+    <img alt="PostgreSQL 16" src="https://shieldcn.dev/badge/PostgreSQL-16-4169E1.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=postgresql" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Docker-24-2496ED.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=docker" />
+    <img alt="Docker 24" src="https://shieldcn.dev/badge/Docker-24-2496ED.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=docker" />
+  </picture>
+</p>
+
+<!-- AI & ecosystem -->
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/AI_Powered-Edge_%2B_Server-10b981.svg?size=xs&amp;variant=ghost&amp;mode=dark" />
+    <img alt="AI powered, edge and server" src="https://shieldcn.dev/badge/AI_Powered-Edge_%2B_Server-10b981.svg?size=xs&amp;variant=ghost&amp;mode=light" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Ollama-llava__13b-0f172a.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=ollama" />
+    <img alt="Ollama llava:13b" src="https://shieldcn.dev/badge/Ollama-llava__13b-0f172a.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=ollama" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/ONNX_Runtime-wasm-4b55c3.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=onnx" />
+    <img alt="ONNX Runtime WebAssembly" src="https://shieldcn.dev/badge/ONNX_Runtime-wasm-4b55c3.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=onnx" />
+  </picture>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Transformers.js-CLIP-ffd21f.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=huggingface" />
+    <img alt="Transformers.js CLIP" src="https://shieldcn.dev/badge/Transformers.js-CLIP-ffd21f.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=huggingface" />
+  </picture>
+</p>
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Architecture](#architecture)
-3. [System Components](#system-components)
-4. [Prerequisites](#prerequisites)
-5. [Quick Start](#quick-start)
-8. [Voice System (TTS)](#voice-system-tts)
-9. [Dual-Mode Inference](#dual-mode-inference)
-11. [API Endpoints](#api-endpoints)
-12. [Testing](#testing)
-13. [Troubleshooting](#troubleshooting)
+2. [Key Features](#key-features)
+3. [Tech Stack](#tech-stack)
+4. [Architecture](#architecture)
+5. [System Components](#system-components)
+6. [Analysis Fallback Chain](#analysis-fallback-chain)
+7. [Getting Started](#getting-started)
+8. [Running with Ollama (Server Vision Model)](#running-with-ollama-server-vision-model)
+9. [Running Without Ollama (Offline)](#running-without-ollama-offline)
+10. [Voice System (TTS)](#voice-system-tts)
+11. [Bundling a Real Scrap Classifier](#bundling-a-real-scrap-classifier-training)
+12. [API Endpoints](#api-endpoints)
+13. [Testing](#testing)
 14. [Deployment](#deployment)
 15. [Project Structure](#project-structure)
+16. [Troubleshooting](#troubleshooting)
+17. [Charts & Analytics](#charts--analytics)
+18. [Contributing](#contributing)
+19. [Team Ownership](#team-ownership)
+20. [License](#license)
 
 ---
 
 ## Overview
 
-InteliScrap AI is an offline-first Progressive Web Application (PWA) that helps informal waste recyclers (Baban Bola) in Northern Nigeria identify scrap materials, detect hazardous substances, and determine fair market prices — all without internet access.
+InteliScrap AI is an **offline-first Progressive Web Application (PWA)** that helps informal waste recyclers (*Baban Bola*), laboratory cleaners and office cleaners across Northern Nigeria identify scrap materials, detect hazardous substances and determine fair market prices — all without internet access.
 
-The application uses an on-device ONNX image classifier to analyze photos of scrap materials on-device — instantly showing the material type, safety hazards, and fair pricing in Hausa, Nigerian Pidgin, or English. When the on-device model is unavailable and the phone is online, the backend runs a vision model over Ollama. If neither is available, the app honestly asks the collector to select the material manually — it **never fabricates** a result.
+The app runs an on-device ONNX image classifier straight from the browser: snap a photo, get the material type, its safety hazards and a fair price in **Hausa, Nigerian Pidgin or English**. When the on-device model is unavailable and the phone is online, the backend calls a vision model over **Ollama**. If neither is reachable, the app honestly asks the collector to select the material manually — it **never fabricates** a result.
 
 ### Core Problem
+
 - Waste pickers handle toxic e-waste without knowing the dangers
 - Middlemen exploit lack of material knowledge to underpay
 - No access to real-time scrap pricing
 
 ### Solution
+
 - Snap a photo → on-device AI (or server vision model) classifies the material → shows fair price → reads safety warnings in the local language
 - Works offline via on-device ONNX + cached prices; manual material selection as a last-resort fallback
-- PWA installs on any smartphone; feature-phone users get USSD registration, location, and SMS pickup notifications
+- PWA installs on any smartphone; feature-phone users get USSD registration, location and SMS pickup notifications
+
+> [!NOTE]
+> Every analysis result carries a `source` field (`onnx` · `server` · `manual`) plus a confidence score, so a collector can always tell whether they are looking at a real inference or an honest manual pick.
+
+---
+
+## Key Features
+
+- 📸 **Snap-to-identify** — camera capture or image upload, classified in the browser with `onnxruntime-web` (WASM), no round trip required
+- 📴 **Offline-first** — service worker caching, Dexie/IndexedDB scan store and a sync queue that uploads when connectivity returns
+- 🛡️ **Hazard detection** — corrosive acid, lead poisoning, mercury exposure and 12 more hazard classes with colour-coded severity badges
+- ⚖️ **Fair pricing** — material → price-per-kg matrix in Naira, cached locally and reconciled on every sync
+- 🗣️ **Local-language voice** — read-aloud TTS in Hausa and Nigerian Pidgin via a Google TTS proxy, with Web Speech fallback
+- 🤖 **Honest 4-tier AI fallback** — bundled ONNX → server `/api/v1/analyze` → runtime CLIP model → manual picker (never a mock)
+- 📱 **PWA + feature phones** — installable app for smartphones, USSD shortcode + SMS outbox for feature phones
+- 📍 **H3 dispatch** — Uber H3 hex-grid, ring-by-ring collector matching with haversine ranking
+- 🏦 **Hub traceability** — recycling-hub daily buy requests, live `fulfilled_kg` progress, subscriptions and EPR compliance exports
+- 📊 **Role dashboards** — collector, household, hub, partner, impact and sales-report views drawn with dependency-free SVG charts
+
+> [!TIP]
+> Fastest path to a working demo: `docker compose up` starts the FastAPI backend, the Vite frontend and PostGIS-backed PostgreSQL in one command.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 18 · TypeScript 5.5 · Vite 5 · Tailwind CSS 3.4 · `vite-plugin-pwa` · framer-motion · lucide-react |
+| **Dashboards** | Role dashboards (collector, household, hub, partner, impact, sales) with hand-rolled SVG charts — no charting dependency |
+| **Offline data** | Dexie.js (IndexedDB) · `idb` · custom sync queue with timestamp conflict resolution |
+| **Edge AI** | `onnxruntime-web` (WASM) · MobileNetV4 int8 ONNX classifier · `@huggingface/transformers` (zero-shot CLIP) |
+| **Backend** | Python 3.11+ · FastAPI 0.115 · SQLAlchemy 2 (async) · Pydantic v2 · Alembic · PyJWT · `h3` |
+| **Database** | PostgreSQL 16 + PostGIS (production) · SQLite (development & tests) · `asyncpg` / `aiosqlite` |
+| **Server AI** | Ollama vision model (`llava:13b` default, configurable via `OLLAMA_VISION_MODEL`) |
+| **Voice & comms** | Google TTS proxy · Web Speech API · Africa's Talking SMS + USSD + IVR |
+| **Infrastructure** | Docker / docker-compose · GitHub Actions CI · nginx (production) · Vercel/Netlify + Render/Railway |
+| **Quality** | pytest + pytest-asyncio (62 tests) · Ruff · `tsc --noEmit` · production PWA build |
 
 ---
 
@@ -86,40 +207,61 @@ The application uses an on-device ONNX image classifier to analyze photos of scr
 ## System Components
 
 ### Frontend (React PWA + Vite + TypeScript + Tailwind)
-- **CameraCapture** — Activates device camera or accepts image upload
-- **vision/visionEngine** — On-device ONNX scrap classifier (runs in-browser via onnxruntime-web wasm)
-- **vision/visionEngineRuntime** — Offline runtime model via transformers.js (zero-shot CLIP) as a secondary on-device path
-- **services/analysis** — Fallback chain: bundled ONNX → server `/api/v1/analyze` → runtime model → manual material selection (never mocks)
-- **ManualMaterialSelect** — Honest manual picker when no AI path is available offline
-- **useAudioTTS** — Text-to-speech in Hausa/Pidgin via Google TTS proxy
-- **IndexedDB (Dexie.js)** — Offline scan persistence, survives browser close
-- **PWA Service Worker** — Caches assets and API responses for offline use
-- **Sync Engine** — Queues scans offline, uploads when connectivity returns
-- **Dark mode** — Class-based theme with light/dark toggle, persisted and system-aware
+
+- **CameraCapture** — activates device camera or accepts image upload
+- **vision/visionEngine** — on-device ONNX scrap classifier (runs in-browser via onnxruntime-web WASM)
+- **vision/visionEngineRuntime** — offline runtime model via transformers.js (zero-shot CLIP) as a secondary on-device path
+- **services/analysis** — fallback chain: bundled ONNX → server `/api/v1/analyze` → runtime model → manual material selection (never mocks)
+- **ManualMaterialSelect** — honest manual picker when no AI path is available offline
+- **useAudioTTS** — text-to-speech in Hausa/Pidgin via Google TTS proxy
+- **IndexedDB (Dexie.js)** — offline scan persistence, survives browser close
+- **PWA Service Worker** — caches assets and API responses for offline use
+- **Sync Engine** — queues scans offline, uploads when connectivity returns
+- **Dark mode** — class-based theme with light/dark toggle, persisted and system-aware
 
 ### Backend (FastAPI + SQLAlchemy + PostgreSQL/SQLite)
-- **Sync API** — Bidirectional scan synchronization with conflict resolution (newer timestamp wins)
-- **Price Matrix** — Material → price per kg in Naira, cached locally
-- **User Management** — Phone-number-based registration + JWT auth
-- **Analyze Proxy** — Forwards images to Ollama (configurable model), returns structured JSON
-- **USSD Handler** — Feature-phone self-registration + preset-location menus (no smartphone needed)
+
+- **Sync API** — bidirectional scan synchronization with conflict resolution (newer timestamp wins)
+- **Price Matrix** — material → price per kg in Naira, cached locally
+- **User Management** — phone-number-based registration + JWT auth
+- **Analyze Proxy** — forwards images to Ollama (configurable model), returns structured JSON
+- **USSD Handler** — feature-phone self-registration + preset-location menus (no smartphone needed)
 - **SMS Outbox** — Africa's Talking SMS notifications (`sms.new_offer`, `sms.location`) with retry worker
 - **H3 Matcher** — Uber H3 hex-grid dispatch of offers to nearby collectors
-- **TTS Proxy** — Fetches audio from Google Translate TTS, returns MP3
-- **Recycling Hubs** — Hub registration, monthly subscriptions, daily buy requests with live progress tracking
+- **TTS Proxy** — fetches audio from Google Translate TTS, returns MP3
+- **Recycling Hubs** — hub registration, monthly subscriptions, daily buy requests with live progress tracking
+- **Impact Dashboards** — summary / daily / by-material aggregates powering the role dashboards
 - **Compliance Manifests** — API-key-protected traceability export for PROs / recyclers / FG (EPR audits)
-- **Hub Delivery Traceability** — Settled collections linked to the hub request they fulfill
-- **Health Check** — Database connectivity monitoring
+- **Hub Delivery Traceability** — settled collections linked to the hub request they fulfil
+- **Health Check** — database connectivity monitoring
 
 ### AI Layer (fallback chain)
+
 1. **Bundled ONNX** — `vision/visionEngine` classifies the photo in-browser (works fully offline)
-2. **Server vision model** — When online and edge inference is unavailable, the backend calls Ollama with `OLLAMA_VISION_MODEL` (default `llava:13b`, configurable via env)
-3. **Runtime model (transformers.js)** — Offline fallback that downloads a zero-shot CLIP once (cached locally), trusted above a confidence threshold
-4. **Manual selection** — If no AI path succeeds, the collector picks the material from the visible scrap classes; the result is never fabricated
+2. **Server vision model** — when online and edge inference is unavailable, the backend calls Ollama with `OLLAMA_VISION_MODEL` (default `llava:13b`, configurable via env)
+3. **Runtime model (transformers.js)** — offline fallback that downloads a zero-shot CLIP once (cached locally), trusted above a confidence threshold
+4. **Manual selection** — if no AI path succeeds, the collector picks the material from the visible scrap classes; the result is never fabricated
 
 ---
 
-## Prerequisites
+## Analysis Fallback Chain
+
+`services/analysis.ts` resolves the analysis source transparently:
+
+| Path | Requirements | How It Works |
+|---|---|---|
+| **Bundled ONNX classifier** | `frontend/public/models/mobilenetv4_scrap_int8.onnx` present | Runs the (ideally scrap-tuned) classifier in-browser via onnxruntime-web (WASM). Fully offline, no backend. Results carry `source: "onnx"`. |
+| **Server `/api/v1/analyze`** | `navigator.onLine` + Ollama reachable | POSTs the base64 image; the backend proxies to Ollama (`OLLAMA_VISION_MODEL`). Results carry `source: "server"`. |
+| **Runtime model (transformers.js)** | Offline; first run needs to download once from Hugging Face (cached) | Zero-shot CLIP matches the photo against the 8 scrap categories in the browser. Only trusted when the top match clears a confidence threshold; falls through otherwise. Results carry `source: "onnx"`. |
+| **Manual selection** | No AI path available | The app never fabricates — it shows the scrap-classes grid and stores the pick with `source: "manual"` and zero AI confidence. |
+
+Every result carries a `source` field so collectors can trust what they're seeing.
+
+---
+
+## Getting Started
+
+### Prerequisites
 
 | Dependency | Version | Required For |
 |---|---|---|
@@ -128,31 +270,25 @@ The application uses an on-device ONNX image classifier to analyze photos of scr
 | **Python** | **3.11 or 3.12 (64-bit ONLY)** | Backend (FastAPI) |
 | pip | >=23 | Python packages |
 | Ollama | latest | Configurable server-side vision model (`llava:13b` default) |
+| Docker (optional) | latest | One-command full-stack orchestration |
 
-> ⚠️ **CRITICAL WINDOWS SETUP WARNINGS:**
+> [!IMPORTANT]
+> **Critical Windows setup warnings**
 >
-> 1. **Do NOT use Python 3.14 (or pre-releases):** Pre-compiled binary wheels (`.whl`) are not yet available on PyPI for Python 3.14. Installing packages like `pydantic-core` will attempt to compile from source and fail without C++/Rust tools.
-> 2. **Install 64-bit (amd64) Python ONLY:** If you accidentally install the 32-bit (`win32`) Python installer, package installations like `httptools` and `greenlet` will fail with errors demanding `Microsoft Visual C++ 14.0 or greater is required`. Download the **64-bit Windows installer (x86-64)** from Python's official download page.
-> 3. **Add Python to PATH:** Ensure you check the box **"Add python.exe to PATH"** on the first screen of the Python installer.
+> 1. **Do NOT use Python 3.14 (or pre-releases):** pre-compiled binary wheels (`.whl`) are not yet available on PyPI for Python 3.14. Installing packages like `pydantic-core` will attempt to compile from source and fail without C++/Rust tools.
+> 2. **Install 64-bit (amd64) Python ONLY:** a 32-bit (`win32`) install makes packages such as `httptools` and `greenlet` fail with `Microsoft Visual C++ 14.0 or greater is required`. Download the **64-bit Windows installer (x86-64)**.
+> 3. **Add Python to PATH:** tick **"Add python.exe to PATH"** on the first screen of the installer.
 
-### Optional (for production deployment)
-- PostgreSQL 15+ (SQLite used in development)
-- ngrok (for HTTPS demo on phone)
-
----
-
-## Quick Start
+Optional for production: PostgreSQL 15+ (SQLite is used in development), ngrok (HTTPS demo on a phone).
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/IntelliScrap.git
-cd IntelliScrap
+git clone https://github.com/Moses2411/inteliscrap-AI.git
+cd inteliscrap-AI
 ```
 
 ### 2. Set Up and Start the Backend
-
-Open Command Prompt (`cmd.exe`) or terminal:
 
 ```bash
 cd backend
@@ -164,13 +300,13 @@ py -3.12 --version
 py -3.12 -m venv .venv
 
 # 3. Activate the virtual environment
-# On Windows Command Prompt (cmd.exe):
+# Windows Command Prompt (cmd.exe):
 .venv\Scripts\activate
 
-# On Windows PowerShell:
+# Windows PowerShell:
 # .venv\Scripts\Activate.ps1
 
-# On Linux/macOS:
+# Linux/macOS:
 # source .venv/bin/activate
 
 # 4. Upgrade pip inside the environment
@@ -183,7 +319,7 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Verify: Open http://localhost:8000/docs — you should see the FastAPI Swagger UI.
+Verify: open <http://localhost:8000/docs> — you should see the FastAPI Swagger UI.
 
 ### 3. Set Up and Start the Frontend
 
@@ -199,11 +335,19 @@ npm install
 npx vite --host 0.0.0.0 --port 5173
 ```
 
-Verify: Open http://localhost:5173 — you should see the InteliScrap AI app.
+Verify: open <http://localhost:5173> — you should see the InteliScrap AI app.
 
 ### 4. Test the App
 
 Snap or upload any image. The app runs the bundled ONNX classifier first; if no model is in `frontend/public/models/`, it goes to the server `/api/v1/analyze` when online, then to the on-device runtime model (transformers.js, offline-capable after one download), and finally offers an honest **manual material picker** — there is no random/mock result ever.
+
+### Docker (all three services)
+
+```bash
+docker compose up
+```
+
+This starts three containers: backend (FastAPI, port 8000), frontend (Vite, port 5173) and PostgreSQL (PostGIS 16, port 5432).
 
 ---
 
@@ -211,11 +355,9 @@ Snap or upload any image. The app runs the bundled ONNX classifier first; if no 
 
 ### 1. Install Ollama
 
-Download from https://ollama.com and install.
+Download from <https://ollama.com> and install.
 
 ### 2. Pull the Vision Model
-
-Run the following command in your terminal:
 
 ```bash
 ollama pull llava:13b
@@ -227,9 +369,9 @@ ollama pull llava:13b
 ollama run llava:13b
 ```
 
-Keep this terminal window open. Ollama serves on http://localhost:11434.
+Keep that terminal open. Ollama serves on <http://localhost:11434>.
 
-The model is configurable via the `OLLAMA_VISION_MODEL` environment variable (and `OLLAMA_BASE_URL` for a remote Ollama host). Set them in `backend/.env`:
+The model is configurable via `OLLAMA_VISION_MODEL` (and `OLLAMA_BASE_URL` for a remote Ollama host). Set them in `backend/.env`:
 
 ```bash
 OLLAMA_BASE_URL=http://localhost:11434
@@ -263,7 +405,7 @@ Upload photo → services/analysis.ts
 
 ---
 
-## Running Without Ollama (Offline / No Model)
+## Running Without Ollama (Offline)
 
 When no AI model is reachable — no bundled ONNX, backend Ollama down, and the runtime model not yet downloaded or below the confidence threshold — the app shows a **manual material selection grid** built from the trade-rule knowledge base. Results from this path use `source: "manual"` and are presented honestly (zero AI confidence), so a pickup request can still be posted.
 
@@ -284,33 +426,19 @@ Frontend "Read Aloud" button
 
 ### Fallback Chain
 
-1. **Google TTS (via backend proxy)** — Native Hausa/Nigerian English accent. Requires internet on the backend. This is what produces authentic voice.
-2. **Browser Speech Synthesis** — Uses OS voices with `lang="ha-NG"` or `lang="en-NG"`. On Android (target device), Google TTS provides native Hausa voices. On Windows without Hausa language pack, it falls back to whatever is available.
+1. **Google TTS (via backend proxy)** — native Hausa/Nigerian English accent. Requires internet on the backend. This is what produces authentic voice.
+2. **Browser Speech Synthesis** — uses OS voices with `lang="ha-NG"` or `lang="en-NG"`. On Android (target device), Google TTS provides native Hausa voices. On Windows without a Hausa language pack, it falls back to whatever is available.
 
 ### Language Support
 
-- **Hausa**: Google TTS language code `ha`, Web Speech `ha-NG`
-- **Nigerian Pidgin**: Google TTS language code `en`, Web Speech `en-NG`
+- **Hausa** — Google TTS language code `ha`, Web Speech `ha-NG`
+- **Nigerian Pidgin** — Google TTS language code `en`, Web Speech `en-NG`
 
 The locale files (`locales/ha.json`, `locales/pcm.json`) contain full dictionaries for:
+
 - 15 hazard types (corrosive acid, lead poisoning, mercury exposure, etc.)
 - 17 material names
 - 8 safety instruction templates
-
----
-
-## Analysis Fallback Chain
-
-`services/analysis.ts` resolves the analysis source transparently:
-
-| Path | Requirements | How It Works |
-|---|---|---|
-| **Bundled ONNX classifier** | `frontend/public/models/mobilenetv4_scrap_int8.onnx` present | Runs the (ideally scrap-tuned) classifier in-browser via onnxruntime-web (wasm). Fully offline, no backend. Results carry `source: "onnx"`. |
-| **Server `/api/v1/analyze`** | `navigator.onLine` + Ollama reachable | POSTs the base64 image; the backend proxies to Ollama (`OLLAMA_VISION_MODEL`). Results carry `source: "server"`. |
-| **Runtime model (transformers.js)** | Offline; first run needs to download once from Hugging Face (cached) | Zero-shot CLIP matches the photo against the 8 scrap categories in the browser. Only trusted when the top match clears a confidence threshold; falls through otherwise. Results carry `source: "onnx"`. |
-| **Manual selection** | No AI path available | The app never fabricates — it shows the scrap-classes grid and stores the pick with `source: "manual"` and zero AI confidence. |
-
-Every result carries a `source` field so collectors can trust what they're seeing.
 
 ---
 
@@ -328,13 +456,13 @@ training/
 
 Run it once you have labeled photos (a few hundred per class):
 
-```
+```bash
 pip install -r training/requirements.txt
 python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap_int8.onnx
 python training/verify_model.py --image path/to/test_photo.jpg
 ```
 
-The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]` ImageNet-normalized input, one output of 8 logits whose index order equals `frontend/public/models/classes.json`. Trained output goes straight to `frontend/public/models/mobilenetv4_scrap_int8.onnx`; a `prebuild` step already copies the onnxruntime wasm to `public/ort/` so edge inference runs on deploy.
+The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]` ImageNet-normalized input, one output of 8 logits whose index order equals `frontend/public/models/classes.json`. Trained output goes straight to `frontend/public/models/mobilenetv4_scrap_int8.onnx`; a `prebuild` step already copies the onnxruntime WASM to `public/ort/` so edge inference runs on deploy.
 
 ---
 
@@ -358,10 +486,10 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | POST | `/api/v1/listings` | Create a scrap listing from a scan (auto-dispatches to nearby collectors) |
 | GET | `/api/v1/listings` | List active listings |
 | GET | `/api/v1/listings/{listing_id}` | Get a single listing |
-| POST | `/api/v1/pickups/offers` → GET `/api/v1/pickups/offers` | Offers dispatched to the current collector (H3 disk ring) |
+| POST/GET | `/api/v1/pickups/offers` | Offers dispatched to the current collector (H3 disk ring) |
 | POST | `/api/v1/pickups/{pickup_id}/accept` | Accept an offer (other pending offers expire) |
 | GET | `/api/v1/pickups/active` | List the collector's active/accepted jobs |
-| POST | `/api/v1/ussd/callback` | Africa's Talking USSD callback (registration + preset-location menus, plain-text menu) |
+| POST | `/api/v1/ussd_callback` | Africa's Talking USSD callback (registration + preset-location menus, plain-text menu) |
 | GET/POST | `/api/v1/voice/*` | Voice callbacks (register/accepted pickups via IVR) |
 | POST | `/api/v1/transactions` | Platform fee settlement on completed pickups |
 | GET | `/api/v1/impact/*` | Impact dashboard aggregates (summary, daily, by-material) |
@@ -389,7 +517,7 @@ Registered recycling hubs (recyclers/aggregators) publish **daily buy requests**
 
 ### Compliance Manifesto (EPR) Export
 
-PROs, recycling companies, and FG/EPR auditors authenticate with an API key (`X-API-Key` header) against `GET /api/v1/compliance/manifesto`. The response is a read-only, auditable export of every settled collection in a date range: transaction, registered collector, material, weight, value, carbon offset, and originating hub — the source-verifiable record EPR contracts require.
+PROs, recycling companies and FG/EPR auditors authenticate with an API key (`X-API-Key` header) against `GET /api/v1/compliance/manifesto`. The response is a read-only, auditable export of every settled collection in a date range: transaction, registered collector, material, weight, value, carbon offset and originating hub — the source-verifiable record EPR contracts require.
 
 ### USSD Registration & Location (feature phones)
 
@@ -416,7 +544,7 @@ Collectors keep their hex bucket fresh via `PATCH /api/v1/users/me/location`, wh
 
 **Guarantees:** a listing is only `offered` to collectors; as soon as one accepts (via **USSD** or **IVR**), the pickup becomes `accepted`, the listing moves to `scheduled`, and all other pending `offered` pickups are no longer surfaced — the listing is unavailable to every other picker.
 
-### POST /api/v1/analyze
+### `POST /api/v1/analyze`
 
 ```json
 // Request
@@ -433,7 +561,7 @@ Collectors keep their hex bucket fresh via `PATCH /api/v1/users/me/location`, wh
 
 The frontend maps `material_class` back onto the trade-rule slug. Returns `502` when Ollama is unreachable.
 
-### GET /api/v1/tts
+### `GET /api/v1/tts`
 
 ```
 /api/v1/tts?text=An+gano+Copper&lang=ha
@@ -450,29 +578,15 @@ cd backend
 pytest -v
 ```
 
-48 tests cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, pickups API, and user location updates.
+**62 tests** across 12 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings, pickups, settlement fees, SMS outbox, hubs, impact aggregates and user location updates.
 
 ```bash
 cd frontend
 npm run typecheck   # TypeScript strict checks
-npm run build       # Production PWA build
+npm run build       # Production PWA build (prebuild copies onnxruntime WASM)
 ```
 
----
-
-## Troubleshooting
-
-| Problem | Cause | Solution |
-|---|---|---|
-| `Microsoft Visual C++ 14.0 or greater is required` during `pip install` | You are using 32-bit Python or Python 3.14+. PyPI lacks pre-compiled wheels for these versions. | Uninstall 32-bit Python. Install Python 3.12 64-bit (x86-64). Delete your `.venv` folder, re-create it (`py -3.12 -m venv .venv`), and run `pip install -r requirements.txt`. |
-| Backend returns 502 on `/api/v1/analyze` | Ollama isn't running on port 11434 or the vision model isn't pulled. | Start it with `ollama run llava:13b` (or set `OLLAMA_VISION_MODEL`/`OLLAMA_BASE_URL`). If Ollama is off, the app falls back to manual material selection. |
-| Scan shows "Manual" with no AI result | No ONNX model bundled and no server reachable. | Bundle a model under `frontend/public/models/` for offline edge classification, or run Ollama. This is intentional — the app never fabricates results. |
-| `.venv\Scripts\activate` fails on PowerShell | Execution Policy blocking scripts. | Run in standard CMD (`cmd.exe`), or run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` in PowerShell. |
-| Camera button does nothing | Camera permissions blocked or unsupported mode. | Try selecting "Upload Image" instead. |
-| TTS sounds Chinese | No native Hausa voice installed in local browser OS. | Google TTS proxy (backend) handles native voices — ensure the backend is running. |
-| Scans show "Pending" forever | Backend offline or internet disconnected. | The sync button manually triggers upload once connected. |
-| `pip install asyncpg` fails | Missing C++ tools on Windows. | Use SQLite (default in local development config). |
-| `npm install` hangs / ETARGET error | Corrupted npm cache. | Clear cache: `npm cache clean --force && npm install`. |
+CI runs both pipelines on every push and pull request to `main` (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
 ---
 
@@ -500,25 +614,32 @@ cd backend
 docker compose up
 ```
 
-This starts three containers: backend (FastAPI), frontend (Vite), and PostgreSQL.
+Production images ship as `backend/Dockerfile.prod` and `frontend/Dockerfile` (multi-stage, nginx fronting the built PWA).
 
 ---
 
 ## Project Structure
 
 ```
-IntelliScrap/
+inteliscrap-AI/
 ├── backend/                          # Member 1 (Backend Lead)
 │   ├── app/
 │   │   ├── main.py                   # FastAPI entry, lifespan, router aggregation
 │   │   ├── config.py                 # Pydantic settings from environment (incl. Ollama + dispatch)
 │   │   ├── database.py               # Async SQLAlchemy engine + session factory
-│   │   ├── models.py                 # ORM: User, ScrapScan, PriceMatrix, Listing, Pickup, SmsOutbox
+│   │   ├── models.py                 # ORM: User, ScrapScan, PriceMatrix, Listing, Pickup, SmsOutbox, Hub…
 │   │   ├── schemas.py                # Pydantic v2 request/response models
+│   │   ├── seed.py / seed_demo.py    # Demo data seeding
+│   │   ├── core/
+│   │   │   ├── deps.py               # Shared dependencies (DB session, current user)
+│   │   │   ├── security.py           # JWT issuing + verification
+│   │   │   └── partner_auth.py       # API-key auth for compliance exports
 │   │   ├── api/
 │   │   │   ├── analyze.py            # POST /api/v1/analyze (Ollama vision proxy)
 │   │   │   ├── auth.py               # OTP login + JWT
+│   │   │   ├── compliance.py         # EPR compliance export (X-API-Key)
 │   │   │   ├── health.py             # GET /health
+│   │   │   ├── hubs.py               # Hub register / daily requests / subscriptions
 │   │   │   ├── impact.py             # Impact dashboard aggregates
 │   │   │   ├── listings.py           # Scrap listings + auto-dispatch
 │   │   │   ├── materials.py          # Material categories
@@ -538,21 +659,21 @@ IntelliScrap/
 │   │   │   ├── price_service.py      # Price matrix upsert logic
 │   │   │   ├── sync_service.py       # Conflict resolution (timestamp wins)
 │   │   │   ├── user_service.py       # User CRUD + H3 index
-│   │   │   └── ussd_handler.py       # USSD state machine: register, hub location, main menu
+│   │   │   ├── ussd_handler.py       # USSD state machine: register, hub location, main menu
+│   │   │   └── auth · hub · impact · listing · pickup · settlement · compliance ·
+│   │   │       messaging · ivr · voice services
 │   │   └── middleware/
 │   │       └── cors.py               # CORS configuration
-│   ├── tests/
+│   ├── tests/                        # 62 async tests (pytest + pytest-asyncio)
 │   │   ├── conftest.py               # Async test fixtures (SQLite)
-│   │   ├── test_health.py
-│   │   ├── test_sync.py              # Idempotency + conflict tests
-│   │   ├── test_matching.py          # H3 dispatch + accept-lock tests
-│   │   ├── test_auth.py              # OTP flow tests
-│   │   └── test_ussd.py              # Registration + hub-location USSD tests
+│   │   └── test_{health,sync,matching,auth,ussd,listings,pickups,
+│   │             settlement,outbox,hubs,impact,users}.py
 │   ├── alembic/                      # Database migrations
 │   ├── requirements.txt
-│   ├── pyproject.toml
-│   ├── Dockerfile
-│   └── Dockerfile.dev
+│   ├── pyproject.toml                # deps + Ruff + pytest config
+│   ├── schema.sql
+│   ├── Dockerfile / Dockerfile.dev / Dockerfile.prod
+│   └── run.sh
 │
 ├── frontend/                         # Member 2 (Frontend/PWA Architect)
 │   ├── src/
@@ -560,18 +681,25 @@ IntelliScrap/
 │   │   ├── App.tsx                   # Router + AppProvider
 │   │   ├── index.css                 # Tailwind + component classes (dark mode, skeleton)
 │   │   ├── types/index.ts            # All TypeScript interfaces (incl. VisionAnalysis.source)
+│   │   ├── lib/                      # cn.ts, nav.ts, demoData.ts
 │   │   ├── services/
 │   │   │   ├── analysis.ts           # Fallback chain: ONNX → server → manual
 │   │   │   ├── db.ts                 # Dexie.js IndexedDB schema
 │   │   │   ├── sync.ts               # API sync client
 │   │   │   ├── pickups.ts            # Offers/accept/active API client
-│   │   │   └── camera.ts             # WebRTC + file upload utilities
+│   │   │   ├── camera.ts             # WebRTC + file upload utilities
+│   │   │   └── auth · hubs · impact · listings · market · materials ·
+│   │   │       compliance · location · language clients
 │   │   ├── vision/
-│   │   │   └── visionEngine.ts       # On-device ONNX classifier + scrap classes
+│   │   │   ├── visionEngine.ts       # On-device ONNX classifier + scrap classes
+│   │   │   ├── visionEngineRuntime.ts# transformers.js zero-shot CLIP path
+│   │   │   └── visionHeuristic.ts    # Lightweight heuristic classifier
 │   │   ├── hooks/
 │   │   │   ├── useVision.ts          # Analysis hook (progress + error)
 │   │   │   ├── useAudioTTS.ts        # TTS with backend proxy fallback
-│   │   │   └── useSync.ts            # Scan sync orchestration
+│   │   │   ├── useSync.ts            # Scan sync orchestration
+│   │   │   ├── useDashboardData.ts   # Dashboard aggregates
+│   │   │   └── useTranslation.ts     # en / ha / pcm phrase lookup
 │   │   ├── store/
 │   │   │   ├── appStore.ts           # Context definition
 │   │   │   └── AppProvider.tsx       # useReducer state (language, theme, scans)
@@ -580,25 +708,21 @@ IntelliScrap/
 │   │   │   ├── HistoryPage.tsx       # Past scans with sync status
 │   │   │   ├── PickupsPage.tsx       # Collector offers with skeletons
 │   │   │   ├── MyPickupsPage.tsx     # Accepted jobs
-│   │   │   └── SettingsPage.tsx      # Language, voice test, about, dark mode
+│   │   │   ├── MarketPage.tsx        # Reclaim-brand marketplace
+│   │   │   ├── SettingsPage.tsx      # Language, voice test, about, dark mode
+│   │   │   ├── auth/LoginPage.tsx    # OTP login
+│   │   │   └── dashboard/            # Collector · Household · Hub · Partner ·
+│   │   │                             # Impact · SalesReport · Home dashboards
 │   │   ├── components/
-│   │   │   ├── Camera/
-│   │   │   │   └── CameraCapture.tsx # Camera + upload with fallbacks
-│   │   │   ├── Scanner/
-│   │   │   │   ├── ScanResult.tsx    # Material, hazards, price, TTS, source badge
-│   │   │   │   └── ManualMaterialSelect.tsx  # Honest manual picker
-│   │   │   ├── Pickup/
-│   │   │   │   ├── OfferCard.tsx     # Rich offer card (weight, value, hazards)
-│   │   │   │   ├── OfferCardSkeleton.tsx
-│   │   │   │   └── PostPickupForm.tsx# Post listing after scan
-│   │   │   ├── Layout/
-│   │   │   │   ├── AppShell.tsx      # Online/offline detection + layout
-│   │   │   │   ├── Header.tsx        # Brand, connectivity, language, theme toggle
-│   │   │   │   └── BottomNav.tsx     # Tab navigation
-│   │   │   └── UI/
-│   │   │       ├── LoadingSpinner.tsx
-│   │   │       ├── EmptyState.tsx    # Empty lists
-│   │   │       └── HazardBadge.tsx   # Color-coded hazard level badge
+│   │   │   ├── Camera/CameraCapture.tsx       # Camera + upload with fallbacks
+│   │   │   ├── Scanner/ScanResult.tsx         # Material, hazards, price, TTS, source badge
+│   │   │   ├── Scanner/ManualMaterialSelect.tsx  # Honest manual picker
+│   │   │   ├── Pickup/{OfferCard,OfferCardSkeleton,PostPickupForm}.tsx
+│   │   │   ├── layout/{AppShell,Header,BottomNav,Sidebar}.tsx
+│   │   │   ├── charts/               # Hand-rolled SVG charts: Area, Bar, Donut,
+│   │   │   │                         # Radial, Sparkline, BubbleCloud, BarList
+│   │   │   └── ui/                   # Button, Card, Table, Sheet, StatCard, Badge,
+│   │   │                             # Skeleton, SegmentedTabs, Toggle… (19 components)
 │   │   ├── locales/
 │   │   │   ├── en.json               # English phrases
 │   │   │   ├── ha.json               # Hausa hazard/safety/phrases dictionary
@@ -607,22 +731,77 @@ IntelliScrap/
 │   │       ├── formatters.ts         # Currency, confidence, date formatters
 │   │       └── offline.ts            # Online/offline hook
 │   ├── public/
-│   │   ├── icons/                    # PWA app icons (192x192, 512x512)
-│   │   └── models/                   # Optional bundled ONNX model + labels
+│   │   ├── models/                   # Optional bundled ONNX model + classes.json
+│   │   └── ort/ + ort-tjs/           # onnxruntime WASM runtime assets
 │   ├── vite.config.ts                # + VitePWA plugin + API proxy
 │   ├── tailwind.config.js            # Brand colors + darkMode class
 │   ├── tsconfig.json
 │   ├── package.json
 │   ├── nginx.conf                    # Production nginx config
-│   ├── Dockerfile                    # Multi-stage production build
-│   └── Dockerfile.dev
+│   └── Dockerfile / Dockerfile.dev
 │
-├── .github/workflows/
-│   └── ci.yml                        # GitHub Actions (backend tests + frontend build)
+├── training/                         # Edge model pipeline (MobileNetV4 → int8 ONNX)
+│   ├── train.py · verify_model.py · requirements.txt
+│   └── data/{train,val}/<slug>/      # 8 scrap classes
+├── ml/                               # Standalone training helpers + labels.json
+├── ngo-dashboard/                    # Static NGO dashboard prototype
+├── .github/workflows/ci.yml          # GitHub Actions (backend tests + frontend build)
 ├── docker-compose.yml                # Local dev orchestration
 ├── .gitignore
 └── README.md
 ```
+
+---
+
+## Troubleshooting
+
+| Problem | Cause | Solution |
+|---|---|---|
+| `Microsoft Visual C++ 14.0 or greater is required` during `pip install` | You are using 32-bit Python or Python 3.14+. PyPI lacks pre-compiled wheels for these versions. | Uninstall 32-bit Python. Install Python 3.12 64-bit (x86-64). Delete your `.venv` folder, re-create it (`py -3.12 -m venv .venv`), and run `pip install -r requirements.txt`. |
+| Backend returns 502 on `/api/v1/analyze` | Ollama isn't running on port 11434 or the vision model isn't pulled. | Start it with `ollama run llava:13b` (or set `OLLAMA_VISION_MODEL`/`OLLAMA_BASE_URL`). If Ollama is off, the app falls back to manual material selection. |
+| Scan shows "Manual" with no AI result | No ONNX model bundled and no server reachable. | Bundle a model under `frontend/public/models/` for offline edge classification, or run Ollama. This is intentional — the app never fabricates results. |
+| `.venv\Scripts\activate` fails on PowerShell | Execution Policy blocking scripts. | Run in standard CMD (`cmd.exe`), or run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process` in PowerShell. |
+| Camera button does nothing | Camera permissions blocked or unsupported mode. | Try selecting "Upload Image" instead. |
+| TTS sounds Chinese | No native Hausa voice installed in local browser OS. | Google TTS proxy (backend) handles native voices — ensure the backend is running. |
+| Scans show "Pending" forever | Backend offline or internet disconnected. | The sync button manually triggers upload once connected. |
+| `pip install asyncpg` fails | Missing C++ tools on Windows. | Use SQLite (default in local development config). |
+| `npm install` hangs / ETARGET error | Corrupted npm cache. | Clear cache: `npm cache clean --force && npm install`. |
+
+---
+
+## Charts & Analytics
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/chart/github/commits/Moses2411.svg?mode=dark&amp;title=Contribution+activity" />
+    <img alt="Contribution commits over time" src="https://shieldcn.dev/chart/github/commits/Moses2411.svg?mode=light&amp;title=Contribution+activity" />
+  </picture>
+</p>
+
+<p align="center"><sub>Lifetime contribution commits across the repository, rendered with shieldcn.</sub></p>
+
+---
+
+## Contributing
+
+Issues and pull requests are welcome. A good first step is to read the [analysis fallback chain](#analysis-fallback-chain) and the [project structure](#project-structure) so your change lands in the right layer.
+
+```bash
+# Backend
+cd backend && pip install -r requirements.txt && pytest -v
+
+# Frontend
+cd frontend && npm install && npm run typecheck && npm run build
+```
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/contributors/Moses2411/inteliscrap-AI.svg?mode=dark&amp;limit=12&amp;title=Contributors" />
+    <img alt="InteliScrap AI contributors" src="https://shieldcn.dev/contributors/Moses2411/inteliscrap-AI.svg?mode=light&amp;limit=12&amp;title=Contributors" />
+  </picture>
+</p>
+
+---
 
 ### Team Member Ownership
 
@@ -638,4 +817,6 @@ IntelliScrap/
 
 ## License
 
-Apache 2.0
+Released under the **Apache License 2.0**.
+
+<p align="center"><sub>Built with 🤍 for informal recyclers · badges & charts by <a href="https://shieldcn.dev">shieldcn</a></sub></p>
