@@ -158,6 +158,7 @@ class ListingCreate(BaseModel):
     address_text: Optional[str] = None
     contact_phone: Optional[str] = None
     auto_dispatch: bool = True
+    gtin: Optional[str] = None  # barcode/EAN captured at scan → own-brand attribution
 
 
 class ListingResponse(BaseModel):
@@ -336,6 +337,8 @@ class CompliancePartnerCreate(BaseModel):
     name: str
     partner_type: str = "pro"
     api_key: str
+    brand_id: Optional[str] = None  # bound brand scope → own-product attribution only
+    allow_category_aggregate: bool = False  # approved anonymized category totals
 
 
 class CompliancePartnerResponse(BaseModel):
@@ -343,9 +346,64 @@ class CompliancePartnerResponse(BaseModel):
     name: str
     partner_type: str
     is_active: bool
+    brand_id: Optional[str] = None
+    brand_name: Optional[str] = None
+    allow_category_aggregate: bool = False
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# Producer registers their own product catalog under a Brand; only identifiers
+# listed here (GTIN/EAN/SKU) map to that brand (own-product attribution rule).
+class BrandCatalogItem(BaseModel):
+    gtin: str
+    sku: Optional[str] = None
+    product: Optional[str] = None
+
+
+class BrandCreate(BaseModel):
+    name: str
+    catalog: list[BrandCatalogItem] = Field(default_factory=list)
+    owner_user_id: Optional[str] = None
+
+
+class BrandResponse(BaseModel):
+    id: str
+    name: str
+    owner_id: Optional[str] = None
+    catalog: list[BrandCatalogItem] = Field(default_factory=list)
+    is_active: bool = True
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ComplianceValidateResponse(BaseModel):
+    """Self/validate payload returned to the signup gate — proves a live
+    subscription (valid X-API-Key) and reveals exactly what the key grants:
+    own-brand detail + approved anonymized category aggregate."""
+
+    partner_id: str
+    partner_name: str
+    partner_type: str
+    is_active: bool
+    brand_id: Optional[str] = None
+    brand_name: Optional[str] = None
+    allow_category_aggregate: bool = False
+    scope: str = "all"  # own_brand | all
+    plan_label: str = "Compliance API"
+
+
+class CategoryAggregateItem(BaseModel):
+    """Anonymised category totals for benchmarking — no collector identity."""
+
+    material_slug: str
+    material_name: str
+    transaction_count: int
+    tonnage_kg: float
+    carbon_offset_kg_co2e: float
+    collector_income_naira: float
 
 
 class ManifestoItem(BaseModel):
@@ -359,6 +417,9 @@ class ManifestoItem(BaseModel):
     carbon_offset_kg_co2e: float
     hub: Optional[str] = None
     settled_at: Optional[str] = None
+    brand_id: Optional[str] = None
+    brand_name: Optional[str] = None
+    gtin: Optional[str] = None
 
 
 class ComplianceManifestoResponse(BaseModel):
@@ -366,8 +427,11 @@ class ComplianceManifestoResponse(BaseModel):
     partner_name: str
     partner_type: str
     generated_at: str
+    scope: str = "all"  # own_brand | all
+    allow_category_aggregate: bool = False
     total_transactions: int
     total_tonnage_kg: float
     total_carbon_offset_kg_co2e: float
     total_collector_income_naira: float
     items: list[ManifestoItem]
+    category_aggregate: Optional[list[CategoryAggregateItem]] = None

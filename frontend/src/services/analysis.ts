@@ -320,7 +320,7 @@ export async function analyzeScrapImage(image: Blob): Promise<VisionAnalysis> {
   // Lightweight heuristic (real analysis, works offline, very fast for low-end phones)
   try {
     const heuristic = await classifyHeuristicInline(image);
-    if (heuristic.top && heuristic.top.confidence > 0.5) {
+    if (heuristic.top && heuristic.top.confidence > 0.2) {
       return buildAnalysis(
         heuristic.top.material,
         heuristic.top.slug,

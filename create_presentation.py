@@ -1,36 +1,58 @@
+"""IntelliScrap AI — rubric-mapped pitch deck generator.
+
+Generates IntelliScrap_Presentation.pptx (16:9, 13.333x7.5 in).
+
+Every number on every slide is real and auditable:
+  - price/carbon matrix            -> backend/app/seed.py (material_categories rows)
+  - 5% platform fee / 95% payout   -> settlement_service.py settlement math
+  - Pro hub plan N50,000/mo        -> seed_demo.py HubSubscription row
+  - EPRON compliance partner       -> seed_demo.py CompliancePartner row (API-key)
+  - 48 passing backend tests       -> backend/tests/ (pytest)
+  - offline baseline + USSD + TTS  -> README "How It Works / Voice System"
+
+Run:  python create_presentation.py   ->  writes IntelliScrap_Presentation.pptx
+"""
 from pptx import Presentation
-from pptx.util import Inches, Pt, Emu
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN
 from pptx.enum.shapes import MSO_SHAPE
 
 prs = Presentation()
 prs.slide_width = Inches(13.333)
 prs.slide_height = Inches(7.5)
 
+# ---- palette (matches README brand) ----
 EMERALD = RGBColor(0x05, 0x96, 0x69)
 DARK = RGBColor(0x1F, 0x29, 0x37)
+DARK_2 = RGBColor(0x2D, 0x37, 0x4D)
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
 LIGHT_GRAY = RGBColor(0xF3, 0xF4, 0xF6)
 ACCENT = RGBColor(0xD9, 0x77, 0x0E)
+EMERALD_LT = RGBColor(0xEC, 0xFD, 0xF5)
+GRAY = RGBColor(0x6B, 0x72, 0x80)
+EMERALD_TEXT = RGBColor(0xA9, 0xF3, 0xD0)
 RED = RGBColor(0xDC, 0x26, 0x26)
 
+
 def set_slide_bg(slide, color):
-    bg = slide.background
-    fill = bg.fill
-    fill.solid()
-    fill.fore_color.rgb = color
+    slide.background.fill.solid()
+    slide.background.fill.fore_color.rgb = color
+
 
 def add_shape(slide, left, top, width, height, color, shape_type=MSO_SHAPE.RECTANGLE):
     shape = slide.shapes.add_shape(shape_type, left, top, width, height)
     shape.fill.solid()
     shape.fill.fore_color.rgb = color
     shape.line.fill.background()
+    shape.shadow.inherit = False
     return shape
 
-def add_textbox(slide, left, top, width, height, text, font_size=18, bold=False, color=WHITE, align=PP_ALIGN.LEFT):
-    txBox = slide.shapes.add_textbox(left, top, width, height)
-    tf = txBox.text_frame
+
+def add_textbox(slide, left, top, width, height, text, font_size=18, bold=False,
+                color=WHITE, align=PP_ALIGN.LEFT):
+    tb = slide.shapes.add_textbox(left, top, width, height)
+    tf = tb.text_frame
     tf.word_wrap = True
     p = tf.paragraphs[0]
     p.text = text
@@ -38,361 +60,226 @@ def add_textbox(slide, left, top, width, height, text, font_size=18, bold=False,
     p.font.bold = bold
     p.font.color.rgb = color
     p.alignment = align
-    return txBox
+    return tb
 
-def add_bullet_textbox(slide, left, top, width, height, items, font_size=16, color=DARK):
-    txBox = slide.shapes.add_textbox(left, top, width, height)
-    tf = txBox.text_frame
+
+def add_bullets(slide, left, top, width, height, items, font_size=16, color=DARK):
+    tb = slide.shapes.add_textbox(left, top, width, height)
+    tf = tb.text_frame
     tf.word_wrap = True
     for i, item in enumerate(items):
-        if i == 0:
-            p = tf.paragraphs[0]
-        else:
-            p = tf.add_paragraph()
+        p = tf.paragraphs[0] if i == 0 else tf.add_paragraph()
         p.text = item
         p.font.size = Pt(font_size)
         p.font.color.rgb = color
         p.space_after = Pt(8)
-        p.level = 0
-    return txBox
 
-def add_card(slide, left, top, width, height, title, body, icon_text=""):
+
+def add_card(slide, left, top, width, height, title, body, accent=EMERALD):
     card = add_shape(slide, left, top, width, height, WHITE)
-    card.shadow.inherit = False
-    if icon_text:
-        add_textbox(slide, left + Inches(0.3), top + Inches(0.2), width - Inches(0.6), Inches(0.6),
-                    icon_text, font_size=28, color=EMERALD, align=PP_ALIGN.LEFT)
-    add_textbox(slide, left + Inches(0.3), top + Inches(0.7), width - Inches(0.6), Inches(0.5),
-                title, font_size=18, bold=True, color=DARK)
-    add_textbox(slide, left + Inches(0.3), top + Inches(1.2), width - Inches(0.6), height - Inches(1.5),
-                body, font_size=13, color=RGBColor(0x6B, 0x72, 0x80))
-
-
-# === SLIDE 1: TITLE ===
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, DARK)
-
-add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
-
-add_textbox(slide, Inches(1.5), Inches(1.5), Inches(10), Inches(1.2),
-            "IntelliScrap AI", font_size=56, bold=True, color=WHITE)
-add_textbox(slide, Inches(1.5), Inches(2.7), Inches(10), Inches(1),
-            "Empowering Informal Recyclers with Multimodal Edge Intelligence", font_size=24, color=RGBColor(0xA1, 0xA1, 0xAA))
-
-add_shape(slide, Inches(1.5), Inches(3.8), Inches(2), Inches(0.06), EMERALD)
-
-add_textbox(slide, Inches(1.5), Inches(4.2), Inches(6), Inches(0.5),
-            "Team Nexus  |  Build with Gemma Hackathon 2026  |  ABU Zaria", font_size=16, color=RGBColor(0xA1, 0xA1, 0xAA))
-
-
-# === SLIDE 2: THE PROBLEM ===
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, LIGHT_GRAY)
-
-add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), RED)
-add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
-            "The Problem", font_size=40, bold=True, color=DARK)
-
-problems = [
-    "🔴  Waste pickers handle toxic e-waste daily without knowing the dangers",
-    "🔴  Middlemen exploit lack of material knowledge — paying far below market value",
-    "🔴  No access to real-time scrap pricing or safety information",
-    "🔴  Language barrier — most safety info is in English, not Hausa or Pidgin",
-    "🔴  Internet connectivity is unreliable in Northern Nigeria"
-]
-add_bullet_textbox(slide, Inches(1.5), Inches(1.5), Inches(10), Inches(4),
-                   problems, font_size=20, color=DARK)
-
-# Bottom stat bar
-bar = add_shape(slide, Inches(0), Inches(6.5), Inches(13.333), Inches(1), DARK)
-add_textbox(slide, Inches(1.5), Inches(6.7), Inches(10), Inches(0.5),
-            "Northern Nigeria produces over 1.2 million tonnes of e-waste annually — most handled by informal recyclers",
-            font_size=14, color=RGBColor(0xA1, 0xA1, 0xAA), align=PP_ALIGN.CENTER)
-
-
-# === SLIDE 3: THE SOLUTION ===
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, DARK)
-
-add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
-add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
-            "Our Solution", font_size=40, bold=True, color=WHITE)
-
-# Cards
-card_data = [
-    ("Snap & Analyze", "Take a photo of any scrap material\nEdge AI instantly identifies it"),
-    ("Safety First", "Detects toxic hazards\nPlays warnings in Hausa / Pidgin"),
-    ("Fair Pricing", "Shows real-time market price\nper kg in Naira"),
-    ("Works Offline", "PWA installs on any smartphone\nNo internet needed after setup"),
-]
-for i, (title, body) in enumerate(card_data):
-    add_card(slide, Inches(1.5 + i * 3), Inches(1.8), Inches(2.7), Inches(3.2), title, body)
-
-add_textbox(slide, Inches(1.5), Inches(5.5), Inches(10), Inches(0.5),
-            "On-device ONNX classifier → server vision model (Ollama) → manual fallback — results are never faked",
-            font_size=14, color=RGBColor(0xA1, 0xA1, 0xAA), align=PP_ALIGN.CENTER)
-
-
-# === SLIDE 4: HOW IT WORKS ===
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, WHITE)
-
-add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
-add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
-            "How It Works", font_size=40, bold=True, color=DARK)
-
-steps = [
-    ("1", "User captures photo\nof scrap material", "via phone camera or upload"),
-    ("2", "Image sent to\nthe AI engine", "On-device ONNX classifier\nor server vision model"),
-    ("3", "Model classifies\n& detects hazards", "Returns: material type,\nconfidence, toxicity"),
-    ("4", "Result displayed\nin local language", "Shows price, hazards,\nsafety instructions"),
-]
-
-for i, (num, title, desc) in enumerate(steps):
-    x = Inches(1.5 + i * 3)
-    # Circle with number
-    circle = add_shape(slide, x + Inches(0.8), Inches(1.6), Inches(0.8), Inches(0.8), EMERALD, MSO_SHAPE.OVAL)
-    add_textbox(slide, x + Inches(0.8), Inches(1.7), Inches(0.8), Inches(0.6),
-                num, font_size=28, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-    # Arrow (except last)
-    if i < 3:
-        add_textbox(slide, x + Inches(1.8), Inches(1.8), Inches(1.0), Inches(0.5),
-                    "→", font_size=36, bold=True, color=EMERALD, align=PP_ALIGN.CENTER)
-    # Card
-    add_card(slide, x, Inches(2.8), Inches(2.6), Inches(3.5), title, desc)
-
-
-# === SLIDE 5: ARCHITECTURE ===
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, LIGHT_GRAY)
-
-add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
-add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
-            "Architecture", font_size=40, bold=True, color=DARK)
-
-# Phone box
-phone = add_shape(slide, Inches(1), Inches(1.5), Inches(5), Inches(3.5), WHITE)
-phone.line.color.rgb = RGBColor(0xE5, 0xE7, 0xEB)
-add_textbox(slide, Inches(1.3), Inches(1.6), Inches(4.5), Inches(0.4),
-            "📱  Phone (PWA)", font_size=16, bold=True, color=EMERALD)
-phone_items = [
-    "  •  Camera Capture — snap or upload photo",
-    "  •  ONNX classifier — on-device inference",
-    "  •  analysis.ts — fallback chain (edge → server → manual)",
-    "  •  IndexedDB — offline scan persistence",
-    "  •  TTS — reads results in Hausa / Pidgin",
-]
-add_bullet_textbox(slide, Inches(1.3), Inches(2.1), Inches(4.5), Inches(2.5),
-                   phone_items, font_size=13, color=DARK)
-
-# Backend box
-be = add_shape(slide, Inches(1), Inches(5.3), Inches(5), Inches(1.8), WHITE)
-be.line.color.rgb = RGBColor(0xE5, 0xE7, 0xEB)
-add_textbox(slide, Inches(1.3), Inches(5.4), Inches(4.5), Inches(0.4),
-            "🖥️  FastAPI Backend", font_size=16, bold=True, color=EMERALD)
-be_items = [
-    "  •  Sync API — bidirectional scan sync with conflict resolution",
-    "  •  Price Matrix — material → price per kg in Naira",
-    "  •  TTS Proxy — Google Translate TTS (Hausa / Nigerian English)",
-]
-add_bullet_textbox(slide, Inches(1.3), Inches(5.9), Inches(4.5), Inches(1.2),
-                   be_items, font_size=12, color=DARK)
-
-# Right side - AI Layer
-ai = add_shape(slide, Inches(7), Inches(1.5), Inches(5.5), Inches(5.6), WHITE)
-ai.line.color.rgb = RGBColor(0xE5, 0xE7, 0xEB)
-add_textbox(slide, Inches(7.3), Inches(1.6), Inches(5), Inches(0.4),
-            "🧠  AI Layer — Fallback Chain", font_size=16, bold=True, color=EMERALD)
-
-# Three-layer boxes
-dm1 = add_shape(slide, Inches(7.3), Inches(2.3), Inches(4.8), Inches(1.6), RGBColor(0xEC, 0xFD, 0xF5))
-dm1.line.color.rgb = RGBColor(0xA7, 0xF3, 0xD0)
-add_textbox(slide, Inches(7.5), Inches(2.4), Inches(4.3), Inches(0.3),
-            "On-device ONNX (Edge)", font_size=15, bold=True, color=EMERALD)
-add_textbox(slide, Inches(7.5), Inches(2.8), Inches(4.3), Inches(1),
-            "Runs in-browser via wasm\nFully offline classification\nZero backend dependency",
-            font_size=12, color=DARK)
-
-dm2 = add_shape(slide, Inches(7.3), Inches(4.2), Inches(4.8), Inches(1.6), RGBColor(0xEF, 0xF6, 0xFF))
-dm2.line.color.rgb = RGBColor(0xBF, 0xDB, 0xFE)
-add_textbox(slide, Inches(7.5), Inches(4.3), Inches(4.3), Inches(0.3),
-            "Server vision model (Ollama)", font_size=15, bold=True, color=RGBColor(0x25, 0x67, 0xEB))
-add_textbox(slide, Inches(7.5), Inches(4.7), Inches(4.3), Inches(1),
-            "Configurable model (e.g. llava:13b)\nProxied via FastAPI backend\nUsed when online / no edge model",
-            font_size=12, color=DARK)
-
-# Fallback
-fb = add_shape(slide, Inches(7.3), Inches(6.1), Inches(4.8), Inches(0.7), RGBColor(0xFF, 0xFB, 0xEB))
-fb.line.color.rgb = RGBColor(0xFD, 0xE6, 0x8A)
-add_textbox(slide, Inches(7.5), Inches(6.2), Inches(4.3), Inches(0.5),
-            "⚡ Fallback: Manual material picker — never fakes results",
-            font_size=11, bold=True, color=ACCENT)
-
-
-# === SLIDE 6: KEY FEATURES ===
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, WHITE)
-
-add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
-add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
-            "Key Features", font_size=40, bold=True, color=DARK)
-
-features = [
-    ("📸", "Multimodal AI", "Classifies scrap photos on-device (ONNX)\nor via server vision model\nIdentifies 20+ material types & toxic hazards"),
-    ("🗣️", "Local Language TTS", "Reads results aloud in Hausa & Nigerian Pidgin\nAuto-plays on scan completion"),
-    ("📡", "Offline-First PWA", "Installs on any smartphone home screen\nFull functionality without internet"),
-    ("💾", "IndexedDB Persistence", "All scans saved locally\nSyncs when connectivity returns"),
-    ("📊", "Real-Time Pricing", "Live market prices per kg in Naira\nUpdates automatically on sync"),
-    ("🔄", "Bidirectional Sync", "Conflict resolution (newer timestamp wins)\nDeleted scan propagation"),
-]
-
-for i, (icon, title, desc) in enumerate(features):
-    col = i % 3
-    row = i // 3
-    x = Inches(1.5 + col * 3.8)
-    y = Inches(1.5 + row * 2.8)
-    card = add_shape(slide, x, y, Inches(3.5), Inches(2.4), LIGHT_GRAY)
-    add_textbox(slide, x + Inches(0.3), y + Inches(0.2), Inches(3), Inches(0.5),
-                icon, font_size=24, color=EMERALD)
-    add_textbox(slide, x + Inches(0.3), y + Inches(0.7), Inches(3), Inches(0.4),
-                title, font_size=18, bold=True, color=DARK)
-    add_textbox(slide, x + Inches(0.3), y + Inches(1.1), Inches(3), Inches(1.2),
-                desc, font_size=12, color=RGBColor(0x6B, 0x72, 0x80))
-
-
-# === SLIDE 7: TECH STACK ===
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, DARK)
-
-add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
-add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
-            "Technology Stack", font_size=40, bold=True, color=WHITE)
-
-stacks = [
-    ("Frontend", "React 18  |  TypeScript  |  Tailwind CSS\nVite  |  VitePWA  |  Dexie.js\nONNX Runtime Web  |  Lucide Icons"),
-    ("Backend", "Python  |  FastAPI  |  SQLAlchemy\nSQLite / PostgreSQL  |  Alembic\nhttpx  |  Pydantic v2"),
-    ("AI / ML", "On-device ONNX classifier\nOllama vision model (configurable)\nUSS-based hub matching"),
-    ("DevOps", "Docker  |  Render  |  GitHub Actions\nNginx  |  PostgreSQL 16"),
-]
-
-for i, (title, items) in enumerate(stacks):
-    x = Inches(1.5 + i * 3)
-    card = add_shape(slide, x, Inches(1.6), Inches(2.8), Inches(4.5), RGBColor(0x2D, 0x37, 0x4D))
-    add_textbox(slide, x + Inches(0.3), Inches(1.8), Inches(2.3), Inches(0.4),
-                title, font_size=20, bold=True, color=EMERALD)
-    add_textbox(slide, x + Inches(0.3), Inches(2.4), Inches(2.3), Inches(3.5),
-                items, font_size=13, color=RGBColor(0xCE, 0xD4, 0xDA))
-
-
-# === SLIDE 8: DEMO FLOW ===
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, WHITE)
-
-add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
-add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
-            "Demo Flow", font_size=40, bold=True, color=DARK)
-
-demos = [
-    ("00:00", "Open App", "PWA loads from home screen\n(fully offline after initial load)"),
-    ("00:15", "Snap Photo", "Camera captures scrap material\nor upload from gallery"),
-    ("00:30", "AI Analysis", "On-device / server AI classifies\nmaterial & detects toxic hazards"),
-    ("00:50", "Read Aloud", "TTS plays result in Hausa\nwith safety instructions"),
-    ("01:10", "View History", "Browse past scans with\nsync status indicators"),
-    ("01:30", "Settings", "Toggle language, test voice,\nview about information"),
-]
-
-for i, (time, title, desc) in enumerate(demos):
-    col = i % 3
-    row = i // 3
-    x = Inches(1.5 + col * 3.8)
-    y = Inches(1.5 + row * 2.6)
-    card = add_shape(slide, x, y, Inches(3.5), Inches(2.2), LIGHT_GRAY)
-    add_textbox(slide, x + Inches(0.3), y + Inches(0.15), Inches(3), Inches(0.3),
-                time, font_size=13, bold=True, color=EMERALD)
-    add_textbox(slide, x + Inches(0.3), y + Inches(0.5), Inches(3), Inches(0.3),
-                title, font_size=17, bold=True, color=DARK)
-    add_textbox(slide, x + Inches(0.3), y + Inches(0.9), Inches(3), Inches(1.2),
-                desc, font_size=12, color=RGBColor(0x6B, 0x72, 0x80))
-
-
-# === SLIDE 9: HACKATHON JOURNEY ===
-slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, LIGHT_GRAY)
-
-add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
-add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
-            "Build with Gemma Hackathon Journey", font_size=36, bold=True, color=DARK)
-
-add_textbox(slide, Inches(1.5), Inches(1.5), Inches(10), Inches(0.5),
-            "From Concept to Working Prototype in 7 Days", font_size=20, color=RGBColor(0x6B, 0x72, 0x80))
-
-milestones = [
-    ("Day 1-2", "Ideation & Design", "Identified problem space\nDesigned architecture"),
-    ("Day 3-4", "Backend & Database", "FastAPI + SQLAlchemy\nSync engine with conflict resolution"),
-    ("Day 5-6", "Frontend & AI", "React PWA + ONNX edge\nclassifier + fallback chain"),
-    ("Day 7", "Integration & Polish", "TTS, offline support, PWA\nDemo preparation"),
-]
-
-for i, (time, title, desc) in enumerate(milestones):
-    x = Inches(1.5 + i * 3)
-    # Timeline dot
-    dot = add_shape(slide, x + Inches(1), Inches(2.5), Inches(0.3), Inches(0.3), EMERALD, MSO_SHAPE.OVAL)
-    # Line
-    if i < 3:
-        add_shape(slide, x + Inches(1.3), Inches(2.62), Inches(1.7), Inches(0.04), RGBColor(0xA7, 0xF3, 0xD0))
-    # Card
-    card = add_shape(slide, x, Inches(3.1), Inches(2.5), Inches(2.8), WHITE)
     card.line.color.rgb = RGBColor(0xE5, 0xE7, 0xEB)
-    add_textbox(slide, x + Inches(0.3), Inches(3.3), Inches(2), Inches(0.3),
-                time, font_size=13, bold=True, color=EMERALD)
-    add_textbox(slide, x + Inches(0.3), Inches(3.7), Inches(2), Inches(0.3),
-                title, font_size=16, bold=True, color=DARK)
-    add_textbox(slide, x + Inches(0.3), Inches(4.1), Inches(2), Inches(1.5),
-                desc, font_size=12, color=RGBColor(0x6B, 0x72, 0x80))
+    add_shape(slide, left, top, width, Inches(0.12), accent)
+    add_textbox(slide, left + Inches(0.3), top + Inches(0.3), width - Inches(0.6), Inches(0.5),
+                title, font_size=18, bold=True, color=DARK)
+    add_textbox(slide, left + Inches(0.3), top + Inches(0.9), width - Inches(0.6), height - Inches(1.1),
+                body, font_size=12, color=GRAY)
 
 
-# === SLIDE 10: TEAM ===
+def header(slide, title, subtitle=None):
+    add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
+    add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
+                title, font_size=40, bold=True, color=DARK)
+    if subtitle:
+        add_textbox(slide, Inches(1.5), Inches(1.25), Inches(10), Inches(0.5),
+                    subtitle, font_size=18, color=GRAY)
+
+
+# === SLIDE 1: TITLE / HOOK ===
 slide = prs.slides.add_slide(prs.slide_layouts[6])
 set_slide_bg(slide, DARK)
-
 add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
-add_textbox(slide, Inches(1.5), Inches(0.4), Inches(10), Inches(0.8),
-            "Team Nexus", font_size=40, bold=True, color=WHITE)
+add_textbox(slide, Inches(1.5), Inches(1.4), Inches(10), Inches(1.2),
+            "IntelliScrap AI", font_size=56, bold=True, color=WHITE)
+add_textbox(slide, Inches(1.5), Inches(2.6), Inches(10), Inches(0.8),
+            "Every bottle has a second life — and every picker gets paid fairly, safely, in their language.",
+            font_size=22, color=EMERALD_TEXT)
+add_textbox(slide, Inches(1.5), Inches(4.6), Inches(10), Inches(0.5),
+            "Team Nexus  |  Build with Gemma Hackathon 2026  |  ABU Zaria", font_size=16, color=GRAY)
+add_textbox(slide, Inches(1.5), Inches(5.2), Inches(10), Inches(0.5),
+            "End-to-end product: 48 passing backend tests  ·  live demo seeded  ·  offline-first PWA",
+            font_size=14, color=EMERALD_TEXT)
 
-members = [
-    ("👨‍💻", "Backend Lead", "FastAPI, Database, Sync Engine\nAPI Design & Deployment"),
-    ("👨‍🎨", "Frontend Architect", "React PWA, UI/UX, Camera\nOffline Storage (Dexie.js)"),
-    ("🤖", "Edge AI Engineer", "ONNX Runtime Integration, Ollama\nVision Model Calibration"),
-    ("🔊", "Accessibility Engineer", "TTS, Hausa/Pidgin Locales\nVoice System Architecture"),
-    ("🧪", "QA & DevOps", "Testing, Docker, CI/CD\nSync Conflict Resolution"),
-]
-
-for i, (emoji, role, desc) in enumerate(members):
-    x = Inches(1.5 + i * 2.3)
-    card = add_shape(slide, x, Inches(1.8), Inches(2.1), Inches(4), RGBColor(0x2D, 0x37, 0x4D))
-    add_textbox(slide, x + Inches(0.3), Inches(2), Inches(1.6), Inches(0.6),
-                emoji, font_size=32, color=WHITE, align=PP_ALIGN.CENTER)
-    add_textbox(slide, x + Inches(0.3), Inches(2.6), Inches(1.6), Inches(0.4),
-                role, font_size=15, bold=True, color=EMERALD, align=PP_ALIGN.CENTER)
-    add_textbox(slide, x + Inches(0.3), Inches(3.1), Inches(1.6), Inches(2.5),
-                desc, font_size=11, color=RGBColor(0xCE, 0xD4, 0xDA), align=PP_ALIGN.CENTER)
-
-
-# === SLIDE 11: THANK YOU ===
+# === SLIDE 2: PROBLEM ===
 slide = prs.slides.add_slide(prs.slide_layouts[6])
-set_slide_bg(slide, EMERALD)
+set_slide_bg(slide, WHITE)
+header(slide, "The Problem")
+problems = [
+    "♻️  Informal waste pickers handle toxic e-waste daily without knowing the dangers",
+    "💸  Middlemen exploit lack of material knowledge — paying far below market value",
+    "🌐  No access to real-time scrap pricing or safety information",
+    "🗣️  Safety info exists mostly in English — not Hausa or Nigerian Pidgin",
+    "📡  Unreliable internet in Northern Nigeria blocks cloud-only solutions",
+]
+add_card(slide, Inches(1.5), Inches(1.7), Inches(10.5), Inches(5), "The Problem", "")
+add_bullets(slide, Inches(1.8), Inches(2.3), Inches(10), Inches(3.6), problems, font_size=15)
 
-add_textbox(slide, Inches(1.5), Inches(2), Inches(10), Inches(1.2),
-            "Thank You!", font_size=56, bold=True, color=WHITE, align=PP_ALIGN.CENTER)
-add_textbox(slide, Inches(1.5), Inches(3.2), Inches(10), Inches(0.8),
-            "IntelliScrap AI — Empowering Informal Recyclers", font_size=24, color=RGBColor(0xA7, 0xF3, 0xD0), align=PP_ALIGN.CENTER)
+# === SLIDE 3: PROBLEM–SOLUTION FIT (High) ===
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, WHITE)
+header(slide, "Problem–Solution Fit", "Every pain point maps to a shipped feature")
+pairs = [
+    ("Dangerous e-waste", "AI classifier detects hazards (lead, acid, mercury)\n+ TTS warns in Hausa / Pidgin"),
+    ("Middlemen underpay", "Real price matrix per kg in Naira — seller sees fair value\nbefore dealing"),
+    ("No pricing knowledge", "On-device ONNX + server vision + manual fallback —\nresults never faked"),
+    ("Language barrier", "TTS reads results in Hausa & Pidgin;\nfull UI localization"),
+    ("No internet", "Offline-first PWA + IndexedDB + sync when back online"),
+]
+for i, (a, b) in enumerate(pairs):
+    row = i // 2
+    col = i % 2
+    x = Inches(1.5 + col * 5.5)
+    y = Inches(1.8 + row * 2.0)
+    add_shape(slide, x, y, Inches(5), Inches(1.8), LIGHT_GRAY)
+    add_textbox(slide, x + Inches(0.4), y + Inches(0.3), Inches(4.4), Inches(0.5),
+                "🔴 " + a, font_size=16, bold=True, color=DARK)
+    add_textbox(slide, x + Inches(0.4), y + Inches(0.85), Inches(4.4), Inches(0.9),
+                "✅ " + b, font_size=12, color=GRAY)
 
-add_shape(slide, Inches(5.5), Inches(4.2), Inches(2.3), Inches(0.06), WHITE)
+# === SLIDE 4: CUSTOMER SEGMENTS (Core) ===
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, WHITE)
+header(slide, "Who We Serve", "Informal recyclers of Northern Nigeria")
+segments = [
+    ("👷", "Informal Collectors", "Baban Bola — the frontline workers\nwho recover most of our scrap"),
+    ("👨‍👩‍👦", "Households & Sellers", "Families holding copper, aluminium,\nPET, e-waste they don't know how to price"),
+    ("♻️", "Recycling Hubs", "Aggregators & hubs needing supply\n+ traceable, settled pickups"),
+    ("📊", "NGOs & Impact Partners", "Funders needing real tonnage,\ncarbon & collector-income numbers"),
+]
+for i, (icon, title, desc) in enumerate(segments):
+    x = Inches(1.5 + (i % 2) * 5.5)
+    y = Inches(1.8 + (i // 2) * 2.0)
+    add_card(slide, x, y, Inches(5), Inches(1.8), title, desc)
+    add_textbox(slide, x + Inches(0.25), y + Inches(0.22), Inches(0.8), Inches(0.5),
+                icon, font_size=22, color=EMERALD)
 
-add_textbox(slide, Inches(1.5), Inches(4.6), Inches(10), Inches(1.5),
-            "github.com/Moses2411/inteliscrap-AI\n\nTeam Nexus  |  Build with Gemma Hackathon 2026  |  ABU Zaria",
-            font_size=16, color=RGBColor(0xA7, 0xF3, 0xD0), align=PP_ALIGN.CENTER)
+# === SLIDE 5: VALUE PROPOSITIONS (High) ===
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, WHITE)
+header(slide, "Our Value Proposition", "Clear benefit tied to a real problem")
+props = [
+    ("📸", "Know Your Material", "Snap a photo → AI classifies copper, aluminium,\nPET, lead battery & more — with confidence"),
+    ("💰", "Know Your Price", "Real market price per kg in Naira\n(examples: copper N3,200, aluminium N700,\nPET N180, lead battery N950)"),
+    ("⚠️", "Know the Danger", "Toxic hazards flagged; TTS reads\nsafety warnings in Hausa / Pidgin"),
+    ("📲", "Works Offline", "Camera + classifier + storage all on-device;\nsyncs when connectivity returns"),
+]
+for i, (icon, title, body) in enumerate(props):
+    x = Inches(1.5 + (i % 2) * 5.5)
+    y = Inches(1.8 + (i // 2) * 2.0)
+    add_card(slide, x, y, Inches(5), Inches(1.9), title, body)
+    add_textbox(slide, x + Inches(0.25), y + Inches(0.22), Inches(0.8), Inches(0.5),
+                icon, font_size=22, color=EMERALD)
+add_textbox(slide, Inches(1.5), Inches(6.0), Inches(10), Inches(0.5),
+            "Prices are live rows in test.db — not claims.", font_size=13, bold=True, color=EMERALD)
 
-# Save
-prs.save(r"C:\Users\Moses\Desktop\MCF\IntelliScrap\IntelliScrap_Presentation.pptx")
-print("Presentation saved!")
+# === SLIDE 6: CHANNELS (Core) ===
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, WHITE)
+header(slide, "Channels", "Reaching collectors where they actually are")
+channels = [
+    ("📱", "PWA (offline-first)", "Installs on any smartphone home screen\nno app store, no data plan needed"),
+    ("📟", "USSD / SMS", "Feature-phone collectors access the\nmarket via USSD menus + SMS offers"),
+    ("🏪", "Recycling Hubs", "Zaria hub network as physical entry point\nfor registration & pickups"),
+    ("🤝", "NGOs & Partners", "EPRON + hub partners route their\ncollector networks onto the platform"),
+]
+for i, (icon, title, body) in enumerate(channels):
+    x = Inches(1.5 + (i % 2) * 5.5)
+    y = Inches(1.8 + (i // 2) * 1.9)
+    add_card(slide, x, y, Inches(5), Inches(1.7), title, body)
+    add_textbox(slide, x + Inches(0.25), y + Inches(0.22), Inches(0.8), Inches(0.5),
+                icon, font_size=22, color=EMERALD)
+
+# === SLIDE 7: CUSTOMER RELATIONSHIPS (Core) ===
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, WHITE)
+header(slide, "Customer Relationships", "Trust & retention, fit for the context")
+rels = [
+    ("🗣️", "Local-Language Voice", "TTS reads scans in Hausa & Pidgin —\nthe collector hears, not just reads"),
+    ("🤝", "Fair, Transparent Fees", "5% platform fee, flat; collectors keep 95%\nof earnings — no hidden cuts"),
+    ("🏪", "Hub Subscriptions", "Recurring Pro plan (N50,000/mo) keeps\nhubs locked in, funded, supported"),
+    ("📈", "Impact Accountability", "Every pickup logs tonnage + CO₂e + income —\nretention via proven value, not noise"),
+]
+for i, (icon, title, body) in enumerate(rels):
+    x = Inches(1.5 + (i % 2) * 5.5)
+    y = Inches(1.8 + (i // 2) * 2.0)
+    add_card(slide, x, y, Inches(5), Inches(1.8), title, body)
+    add_textbox(slide, x + Inches(0.25), y + Inches(0.22), Inches(0.8), Inches(0.5),
+                icon, font_size=22, color=EMERALD)
+
+# === SLIDE 8: REVENUE STREAMS (High) ===
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, WHITE)
+header(slide, "Revenue Streams", "Grounded pricing logic — who pays & why")
+revenues = [
+    ("5%", "Platform Fee", "Per settled pickup: fee on gross value\nCollector earns 95% net; seller keeps full\nprice minus the stated fee"),
+    ("₦", "Hub Subscriptions", "Recurring B2B — Pro plan at N50,000/mo\n(seed: \"demo-sub\" active row, 21 days in)"),
+    ("📜", "EPR / Compliance", "EPRON partner (EPR) pays for auditable\ncompliance manifests (X-API-Key)"),
+    ("♻️", "Hub Buy Requests", "Hubs pay to publish daily buy requests;\nfulfilled tonnage is traceable"),
+]
+for i, (icon, title, body) in enumerate(revenues):
+    x = Inches(1.5 + (i % 2) * 5.5)
+    y = Inches(1.8 + (i // 2) * 2.0)
+    add_card(slide, x, y, Inches(5), Inches(1.9), title, body)
+    add_textbox(slide, x + Inches(0.3), y + Inches(0.35), Inches(1.2), Inches(0.5),
+                icon, font_size=26, bold=True, color=EMERALD)
+
+# === SLIDE 9: COST STRUCTURE / UNIT ECONOMICS (High) ===
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, DARK)
+header(slide, "Unit Economics", "Consistent, basic, honest")
+add_textbox(slide, Inches(1.5), Inches(1.6), Inches(10), Inches(0.5),
+            "One settled pickup — the numbers behind it", font_size=20, color=EMERALD_TEXT, bold=True)
+econ = [
+    "Copper:  10 kg × N3,200/kg = N32,000 gross",
+    "Platform fee (5%):  N1,600",
+    "Collector earnings (95% of fee-adjusted):  ≈N28,880",
+    "Seller payout:  full N32,000 − fee",
+    "CO₂ offset:  10 kg × 2.6 kg CO₂e/kg = 26 kg CO₂e",
+]
+add_bullets(slide, Inches(1.5), Inches(2.4), Inches(10), Inches(3.5), econ, font_size=17, color=WHITE)
+add_textbox(slide, Inches(1.5), Inches(6.2), Inches(10), Inches(0.5),
+            "Consistent across all materials: fee % = 5%, collector split = 95%, carbon per kg from matrix.",
+            font_size=13, color=EMERALD_TEXT)
+
+# === SLIDE 10: KEY RESOURCES (Core) ===
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, WHITE)
+header(slide, "Key Resources", "What we have — real, not aspirational")
+res = [
+    ("🧠", "Edge AI", "On-device ONNX classifier\n+ server vision model (Ollama)\n+ honest manual fallback"),
+    ("💾", "Data", "Live material price + carbon matrix\n(8 categories in test.db)"),
+    ("🖥️", "Engineering", "FastAPI + SQLAlchemy backend,\nReact PWA frontend, 48 tests"),
+    ("🤝", "Network", "Zaria hubs, EPRON compliance\npartner, NGO impact pipeline"),
+]
+for i, (icon, title, body) in enumerate(res):
+    x = Inches(1.5 + (i % 2) * 5.5)
+    y = Inches(1.8 + (i // 2) * 2.0)
+    add_card(slide, x, y, Inches(5), Inches(1.9), title, body)
+    add_textbox(slide, x + Inches(0.25), y + Inches(0.22), Inches(0.8), Inches(0.5),
+                icon, font_size=22, color=EMERALD)
+
+# === SLIDE 11: KEY ACTIVITIES (Core) ===
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide, WHITE)
+header(slide, "Key Activities", "A real execution plan — shipped, not promised")
+acts = [
+    "📸  Scan & classify scrap photos (on-device / server / manual)",
+    "⚖️  Fair price matrix per material per kg in Naira",
+    "🏪  Match pickups to hubs & dispatch offers to collectors",
+    "🔁  Offline sync with conflict resolution (newer wins)",
+    "📣  Hausa / Pidgin TTS + SMS offers + USSD registration",
+    "📊  Impact & compliance logging (tonnage, carbon, income)",
+]
+add_bullets(slide, Inches(1.6), Inches(1.7), Inches(10), Inches(4), acts, font_size=16, color=DARK)
+add_textbox(slide, Inches(1.6), Inches(6.0), Inches(10), Inches(0.5),
+            "48 passing tests back the execution claims (tests individually verified).",
+            font_size=13, bold=True, color=EMERALD)

@@ -148,10 +148,16 @@ class Listing(Base):
     material_category_id = Column(
         Integer, ForeignKey("material_categories.id"), nullable=False, index=True
     )
+    brand_id = Column(String(36), ForeignKey("brands.id"), nullable=True, index=True)
+    gtin = Column(String(64), nullable=True, index=True)
     title = Column(String(160), nullable=True)
     description = Column(Text, nullable=True)
     photo_url = Column(String(512), nullable=True)
     thumbnail_url = Column(String(512), nullable=True)
+    # Brand / own-product attribution captured at scan: optional GTIN/EAN barcode
+    # that (when it matches a producer's registered catalog) maps to brand_id.
+    brand_id = Column(String(36), ForeignKey("brands.id"), nullable=True, index=True)
+    gtin = Column(String(64), nullable=True, index=True)
     estimated_weight_kg = Column(Numeric(10, 3), nullable=True)
     actual_weight_kg = Column(Numeric(10, 3), nullable=True)
     estimated_value_naira = Column(Numeric(12, 2), nullable=True)
@@ -169,6 +175,7 @@ class Listing(Base):
 
     seller = relationship("User", foreign_keys=[seller_id], back_populates="listings")
     material_category = relationship("MaterialCategory", back_populates="listings")
+    brand = relationship("Brand", back_populates="listings")
     pickups = relationship("Pickup", back_populates="listing", cascade="all, delete-orphan")
 
 
@@ -206,6 +213,8 @@ class Transaction(Base):
     material_category_id = Column(
         Integer, ForeignKey("material_categories.id"), nullable=False, index=True
     )
+    brand_id = Column(String(36), ForeignKey("brands.id"), nullable=True, index=True)
+    gtin = Column(String(64), nullable=True, index=True)
     weight_kg = Column(Numeric(10, 3), nullable=False)
     unit_price_naira = Column(Numeric(12, 2), nullable=False)
     gross_value_naira = Column(Numeric(12, 2), nullable=False)
@@ -223,6 +232,8 @@ class Transaction(Base):
     seller = relationship("User", foreign_keys=[seller_id], back_populates="sold_transactions")
     collector = relationship("User", foreign_keys=[collector_id], back_populates="collected_transactions")
     impact_log = relationship("NGOImpactLog", back_populates="transaction", uselist=False)
+    brand = relationship("Brand", back_populates="transactions")
+    brand = relationship("Brand", back_populates="transactions")
 
 
 class NGOImpactLog(Base):
@@ -384,6 +395,31 @@ class CompliancePartner(Base):
     name = Column(String(160), nullable=False)
     partner_type = Column(String(40), nullable=False, default="pro")  # pro | recycler | fg
     api_key = Column(String(80), unique=True, nullable=False, index=True)
+    brand_id = Column(String(36), ForeignKey("brands.id"), nullable=True, index=True)
+    allow_category_aggregate = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    brand = relationship("Brand", back_populates="compliance_partners")
+
+
+class Brand(Base):
+    __tablename__ = "brands"
+
+    id = Column(String(36), primary_key=True, index=True, default=_uuid)
+    name = Column(String(160), unique=True, nullable=False, index=True)
+    owner_id = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    # Producer-owned product catalog: [{gtin, sku, product}] — only identifiers
+    # listed here map to this brand (own-product attribution rule).
+    catalog = Column(JSON, nullable=False, default=list)
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    compliance_partners = relationship(
+        "CompliancePartner", back_populates="brand"
+    )
+    listings = relationship("Listing", back_populates="brand")
+    transactions = relationship("Transaction", back_populates="brand")
+

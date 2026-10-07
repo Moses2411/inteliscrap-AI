@@ -43,6 +43,12 @@ async def generate_manifesto(
         )
         .order_by(Transaction.settled_at.desc())
     )
+    if partner.brand_id is not None:
+        # Producer scope: attribution rule — only transactions carrying this
+        # producer's own brand (server-side brand_id, never client-supplied)
+        # appear in the manifesto. Other producers' flows never leave the
+        # server.
+        stmt = stmt.where(Transaction.brand_id == partner.brand_id)
     rows = (await db.execute(stmt)).all()
 
     items = []
