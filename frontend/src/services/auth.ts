@@ -49,14 +49,41 @@ export function authHeaders(): Record<string, string> {
   return headers;
 }
 
+export async function syncRoleFromServer(): Promise<UserRole | null> {
+  if (!getToken()) return null;
+  try {
+    const res = await fetch(`${API_BASE}/api/v1/auth/me`, { headers: authHeaders() });
+    if (!res.ok) return getRole();
+    const data: { role: string } = await res.json();
+    const role = data.role as UserRole;
+    setRole(role);
+    return role;
+  } catch {
+    return getRole();
+  }
+}
+
+export async function updateRole(role: UserRole): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/v1/users/me/role`, {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify({ role }),
+  });
+  if (!res.ok) throw new Error("Role update failed");
+  const data: { role: string } = await res.json();
+  setRole(data.role as UserRole);
+}
+
 export async function requestOtp(
   phoneNumber: string,
-  role: UserRole = "household",
+  role?: UserRole,
 ): Promise<{ otp?: string; debug: boolean }> {
+  const body: { phone_number: string; role?: UserRole } = { phone_number: phoneNumber };
+  if (role) body.role = role;
   const res = await fetch(`${API_BASE}/api/v1/auth/otp/request`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone_number: phoneNumber, role }),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error("OTP request failed");
   const data: { status: string; otp?: string; user_id: string } = await res.json();

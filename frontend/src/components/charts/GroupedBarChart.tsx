@@ -1,11 +1,7 @@
-import { useMemo, useRef, useState, useId, type MouseEvent as ReactMouseEvent } from "react";
+import { useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { motion } from "framer-motion";
 import { cn } from "../../lib/cn";
-
-export interface Series {
-  name: string;
-  values: number[];
-  color?: string;
-}
+import type { Series } from "./AreaChart";
 
 interface Props {
   labels: string[];
@@ -17,21 +13,8 @@ interface Props {
 
 const DEFAULT_COLORS = ["var(--c-brand)", "var(--c-sky)", "var(--c-gold)", "var(--c-violet)"];
 
-function smoothPath(pts: Array<[number, number]>): string {
-  if (pts.length < 2) return "";
-  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [x0, y0] = pts[i];
-    const [x1, y1] = pts[i + 1];
-    const mx = (x0 + x1) / 2;
-    d += ` C${mx},${y0.toFixed(1)} ${mx},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
-  }
-  return d;
-}
-
-/** Responsive multi-series area chart with hover tooltip. Pure SVG. */
-export function AreaChart({ labels, series, height = 240, formatValue, className }: Props) {
-  const gid = useId();
+/** Responsive grouped bar chart with hover tooltip. Pure SVG + framer-motion grow-in. */
+export function GroupedBarChart({ labels, series, height = 260, formatValue, className }: Props) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<number | null>(null);
 
@@ -42,21 +25,23 @@ export function AreaChart({ labels, series, height = 240, formatValue, className
   const padT = 14;
   const padB = 28;
 
-  const all = useMemo(() => series.flatMap((s) => s.values), [series]);
-  const maxV = Math.max(1, ...all) * 1.08;
-  const niceMax = niceCeil(maxV);
-  const ticks = useMemo(() => niceTicks(niceMax, 4), [niceMax]);
-
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
-  const xFor = (i: number) => padL + (labels.length <= 1 ? innerW / 2 : (i * innerW) / (labels.length - 1));
+
+  const all = useMemo(() => series.flatMap((s) => s.values), [series]);
+  const niceMax = niceCeil(Math.max(1, ...all) * 1.08);
+  const ticks = useMemo(() => niceTicks(niceMax, 4), [niceMax]);
   const yFor = (v: number) => padT + innerH * (1 - v / niceMax);
+
+  const groupW = labels.length > 0 ? innerW / labels.length : innerW;
+  const slotW = Math.min(groupW * 0.64, 48);
+  const barW = series.length > 0 ? Math.max(4, (slotW - (series.length - 1) * 4) / series.length) : 0;
 
   function onMove(e: ReactMouseEvent<HTMLDivElement>) {
     const rect = wrapRef.current?.getBoundingClientRect();
     if (!rect) return;
     const relX = ((e.clientX - rect.left) / rect.width) * W;
-    const idx = Math.round(((relX - padL) / innerW) * (labels.length - 1));
+    const idx = Math.floor((relX - padL) / groupW);
     setHover(Math.max(0, Math.min(labels.length - 1, idx)));
   }
 
@@ -97,7 +82,7 @@ export function AreaChart({ labels, series, height = 240, formatValue, className
           return (
             <text
               key={`${l}-${i}`}
-              x={xFor(i)}
+              x={padL + i * groupW + groupW / 2}
               y={H - 8}
               textAnchor="middle"
               fontSize={10.5}
@@ -109,51 +94,53 @@ export function AreaChart({ labels, series, height = 240, formatValue, className
           );
         })}
 
-        {/* series */}
-        {series.map((s, si) => {
-          const color = s.color ?? DEFAULT_COLORS[si % DEFAULT_COLORS.length];
-          const pts = s.values.map((v, i) => [xFor(i), yFor(v)] as [number, number]);
-          const line = smoothPath(pts);
-          const area = `${line} L${xFor(lastIdx).toFixed(1)},${padT + innerH} L${xFor(0).toFixed(1)},${padT + innerH} Z`;
-          return (
-            <g key={s.name}>
-              <defs>
-                <linearGradient id={`area-${gid}-${si}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity="0.26" />
-                  <stop offset="100%" stopColor={color} stopOpacity="0.02" />
-                </linearGradient>
-              </defs>
-              <path d={area} fill={`url(#area-${gid}-${si})`} />
-              <path d={line} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
-            </g>
-          );
-        })}
-
-        {/* hover guide */}
+        {/* hovered column highlight */}
         {hover != null && (
-          <g pointerEvents="none">
-            <line
-              x1={xFor(hover)}
-              x2={xFor(hover)}
-              y1={padT}
-              y2={padT + innerH}
-              stroke="var(--c-brand)"
-              strokeWidth={1}
-              strokeDasharray="3 4"
-            />
-            {series.map((s, si) => {
-              const color = s.color ?? DEFAULT_COLORS[si % DEFAULT_COLORS.length];
-              return (
-                <circle key={s.name} cx={xFor(hover)} cy={yFor(s.values[hover])} r={4.5} fill={color} stroke="white" strokeWidth={2} />
-              );
-            })}
-          </g>
+          <rect
+            x={padL + hover * groupW + 1}
+            y={padT}
+            width={Math.max(0, groupW - 2)}
+            height={innerH}
+            rx={8}
+            className="fill-slate-100 dark:fill-slate-800/60"
+          />
         )}
+
+        {/* grouped bars */}
+        {labels.map((_, i) => {
+          const cx = padL + i * groupW + groupW / 2;
+          const groupLeft = cx - slotW / 2;
+          return series.map((s, si) => {
+            const v = Math.max(0, s.values[i] ?? 0);
+            const x = groupLeft + si * (barW + 4);
+            const y = yFor(v);
+            const h = Math.max(0, padT + innerH - y);
+            const color = s.color ?? DEFAULT_COLORS[si % DEFAULT_COLORS.length];
+            return (
+              <motion.rect
+                key={`${i}-${si}`}
+                x={x}
+                width={barW}
+                rx={Math.min(4, barW / 2)}
+                fill={color}
+                initial={{ scaleY: 0, opacity: 0 }}
+                animate={{ scaleY: 1, opacity: 1 }}
+                transition={{ delay: 0.12 + i * 0.07 + si * 0.04, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                style={{ y, height: h, transformBox: "fill-box", transformOrigin: "50% 100%" }}
+              />
+            );
+          });
+        })}
       </svg>
 
       {/* tooltip */}
       {hover != null && (
-        <div className="pointer-events-none absolute z-10 -mt-32 ml-4 rounded-xl border border-slate-100 bg-white/95 px-3 py-2 text-xs shadow-card-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95">
+        <div
+          className="pointer-events-none absolute top-1 z-10 -translate-x-1/2 rounded-xl border border-slate-100 bg-white/95 px-3 py-2 text-xs shadow-card-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
+          style={{
+            left: `${Math.min(88, Math.max(12, ((padL + hover * groupW + groupW / 2) / W) * 100))}%`,
+          }}
+        >
           <p className="mb-1.5 font-bold text-slate-900 dark:text-white">{labels[hover]}</p>
           {series.map((s, si) => (
             <p key={s.name} className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
@@ -162,7 +149,7 @@ export function AreaChart({ labels, series, height = 240, formatValue, className
                 style={{ background: s.color ?? DEFAULT_COLORS[si % DEFAULT_COLORS.length] }}
               />
               <span className="font-semibold text-slate-800 dark:text-slate-200">
-                {formatValue ? formatValue(s.values[hover]) : compact(s.values[hover])}
+                {formatValue ? formatValue(s.values[hover] ?? 0) : compact(s.values[hover] ?? 0)}
               </span>
               <span className="text-slate-500 dark:text-slate-400">{s.name}</span>
             </p>

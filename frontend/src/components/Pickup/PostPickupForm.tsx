@@ -10,6 +10,9 @@ import {
 import { createListing } from "../../services/listings";
 import { getCategoryBySlug } from "../../services/materials";
 import { computeFairValue } from "../../services/language";
+import { formatPhoneDisplay } from "../../utils/formatters";
+import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import type { VisionAnalysis } from "../../types";
 
 interface Props {
@@ -112,22 +115,22 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
   if (posted) {
     return (
-      <div className="card border-l-4 border-l-brand-500 bg-brand-50 text-center ring-brand-200 dark:bg-brand-950/50 dark:ring-brand-900">
+      <Card className="border-l-4 border-l-brand-500 bg-brand-50 text-center ring-brand-200 dark:bg-brand-950/50 dark:ring-brand-900">
         <svg className="mx-auto h-10 w-10 text-brand-600 dark:text-brand-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <p className="mt-2 font-semibold text-brand-800 dark:text-brand-200">{t("posted_success")}</p>
-        <button onClick={onReset} className="btn-primary mt-4 w-full">
+        <Button fullWidth className="mt-4" onClick={onReset}>
           {t("scan_again")}
-        </button>
-      </div>
+        </Button>
+      </Card>
     );
   }
 
   if (!authenticated) {
     return (
       <form onSubmit={submitAuth} className="card space-y-3">
-        <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t("sign_in_title")}</h4>
+        <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("sign_in_title")}</h4>
         {!otpSent && (
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
             {ROLE_OPTIONS.map((opt) => (
@@ -137,14 +140,14 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
                 role="radio"
                 aria-checked={role === opt.value}
                 onClick={() => setRole(opt.value)}
-                className={`rounded-xl border px-3 py-2 text-left transition-colors ${
+                className={`rounded-xl border px-3 py-3 text-left transition-colors ${
                   role === opt.value
                     ? "border-brand-500 bg-brand-50 ring-1 ring-brand-200 dark:bg-brand-950/60 dark:ring-brand-900"
-                    : "border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+                    : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900"
                 }`}
               >
-                <span className="block text-sm font-semibold text-gray-900 dark:text-gray-100">{opt.label}</span>
-                <span className="block text-[11px] text-gray-500 dark:text-gray-400">{opt.hint}</span>
+                <span className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{opt.label}</span>
+                <span className="block text-[11px] text-slate-500 dark:text-slate-400">{opt.hint}</span>
               </button>
             ))}
           </div>
@@ -177,17 +180,17 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
             />
           </>
         )}
-        {error && <p className="text-xs font-medium text-red-600">{error}</p>}
-        <button className="btn-primary w-full" disabled={busy}>
+        {error && <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
+        <Button fullWidth disabled={busy}>
           {busy ? "…" : otpSent ? t("verify") : t("send_otp")}
-        </button>
+        </Button>
       </form>
     );
   }
 
   return (
     <form onSubmit={submitWeight} className="card space-y-3">
-      <h4 className="text-base font-semibold text-gray-900 dark:text-gray-100">{t("post_pickup")}</h4>
+      <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("post_pickup")}</h4>
       <input
         className="input text-lg"
         inputMode="decimal"
@@ -196,22 +199,26 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
         onChange={(e) => setWeight(e.target.value)}
         required
       />
-      <label className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5 dark:border-gray-700 dark:bg-gray-800/60">
+      <label className="flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700 dark:bg-slate-800/60">
         <input
           type="checkbox"
           checked={sharePhone}
           onChange={(e) => setSharePhone(e.target.checked)}
           className="mt-0.5 h-4 w-4 accent-brand-600"
         />
-        <span className="text-xs leading-snug text-gray-600 dark:text-gray-300">
+        <span className="text-xs leading-snug text-slate-600 dark:text-slate-300">
           {t("share_phone_label")}
-          {phone && <span className="block font-semibold text-gray-800 dark:text-gray-200">{phone}</span>}
+          {phone && (
+            <span className="block font-semibold text-slate-800 dark:text-slate-200">
+              {formatPhoneDisplay(phone) ?? phone}
+            </span>
+          )}
         </span>
       </label>
-      {error && <p className="text-xs font-medium text-red-600">{error}</p>}
-      <button className="btn-primary w-full" disabled={busy}>
+      {error && <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
+      <Button fullWidth disabled={busy}>
         {busy ? t("posting") : t("confirm_post")}
-      </button>
+      </Button>
     </form>
   );
 }

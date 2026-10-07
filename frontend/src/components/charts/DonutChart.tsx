@@ -62,7 +62,7 @@ export function DonutChart({
             {centerValue ?? compact(total)}
           </span>
           {centerLabel && (
-            <span className="max-w-[90px] truncate text-[11px] font-medium text-slate-400 dark:text-slate-500">
+            <span className="max-w-[90px] truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">
               {centerLabel}
             </span>
           )}
@@ -78,7 +78,7 @@ export function DonutChart({
             </span>
             <span className="shrink-0 font-bold text-slate-800 dark:text-slate-100">
               {formatValue ? formatValue(seg.value) : compact(seg.value)}
-              <span className="ml-1 font-medium text-slate-400">({Math.round((seg.value / total) * 100)}%)</span>
+              <span className="ml-1 font-medium text-slate-500 dark:text-slate-400">({Math.round((seg.value / total) * 100)}%)</span>
             </span>
           </li>
         ))}

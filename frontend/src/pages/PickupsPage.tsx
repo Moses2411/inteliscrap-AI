@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   CheckCircle2,
@@ -81,7 +82,12 @@ export default function PickupsPage() {
   /* ── Accepted confirmation screen ───────────────────────────── */
   if (accepted) {
     return (
-      <div className="space-y-6 animate-fade-in">
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        className="space-y-6"
+      >
         <div className="flex flex-col items-center gap-4 pt-6 text-center">
           <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
             <CheckCircle2 className="h-8 w-8" />
@@ -124,13 +130,18 @@ export default function PickupsPage() {
         <Button variant="ghost" fullWidth onClick={() => setAccepted(null)}>
           {t("new_pickups")} <ArrowRight className="h-4 w-4" />
         </Button>
-      </div>
+      </motion.div>
     );
   }
 
   /* ── Offers board ───────────────────────────────────────────── */
   return (
-    <div className="space-y-6 animate-fade-in">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      className="space-y-6"
+    >
       <PageHeader
         title={t("new_pickups")}
         subtitle="Live offers dispatched to your hex ring"
@@ -141,10 +152,12 @@ export default function PickupsPage() {
         }
       />
 
-      <button
+      <motion.button
         onClick={refresh}
         disabled={locBusy}
-        className="group flex w-full items-center justify-between rounded-2xl border border-brand-200 bg-white px-4 py-3 text-left shadow-sm transition-all hover:shadow-md active:scale-[0.995] dark:border-brand-900 dark:bg-slate-900"
+        whileTap={{ scale: 0.985 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        className="group flex w-full items-center justify-between rounded-2xl border border-brand-200 bg-white px-4 py-3 text-left shadow-sm transition-shadow hover:shadow-md dark:border-brand-900 dark:bg-slate-900"
       >
         <span className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700 dark:text-brand-300">
           <RefreshCw className={`h-4 w-4 ${locBusy ? "animate-spin" : ""}`} aria-hidden="true" />
@@ -153,7 +166,7 @@ export default function PickupsPage() {
         <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 shadow-sm group-hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300">
           {distanceLabel(offers[0]?.distance_m)}
         </span>
-      </button>
+      </motion.button>
 
       {error && (
         <div className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 dark:bg-red-950/60 dark:text-red-300 dark:ring-red-900">
@@ -230,6 +243,6 @@ export default function PickupsPage() {
           );
         })}
       </ul>
-    </div>
+    </motion.div>
   );
 }

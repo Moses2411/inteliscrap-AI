@@ -10,6 +10,7 @@
   "nav_hub": "Hub",
   "nav_compliance": "Compliance",
   "nav_impact": "Impact",
+  "nav_report": "Report",
   "logout": "Log out",
   "scan": "Take Photo",
   "analyzing": "De analyzing...",
@@ -29,7 +30,6 @@
   "scrap_type": "Type of scrap",
   "weight_estimate": "Weight",
   "no_scans": "No scan history yet",
-
   "hazards": {
     "corrosive_acid": "Dis material get acid wey fit burn you skin. No touch am with bare hand.",
     "lead_poisoning": "Dis one get lead wey bad for body. No break am, no breathe the dust.",
@@ -47,7 +47,6 @@
     "pcb_contamination": "E get PCB wey fit cause cancer. No burn am for fire.",
     "biological_waste": "Na dirty waste from house or hospital. Wear glove before you handle."
   },
-
   "materials": {
     "copper": "Copper",
     "aluminum": "Aluminum",
@@ -67,7 +66,6 @@
     "rubber": "Rubber",
     "textile": "Cloth / Textile"
   },
-
   "header_scrap_type": "Type of scrap",
   "estimated_value": "Estimated Value",
   "read_aloud": "Read Am aloud",
@@ -103,7 +101,6 @@
   "placeholder_ha": "Sannu, yaya kake?",
   "placeholder_pcm": "How you dey?",
   "placeholder_en": "Type something here",
-
   "analyzing_desc": "Hold steady — we dey find the material and check today price.",
   "manual_fallback_hint": "If the AI model no dey, you fit pick the material yourself.",
   "manual_select_title": "Pick the material",
@@ -116,16 +113,13 @@
   "feature_works_offline": "E dey work offline",
   "how_it_works": "How e take work",
   "scans_save_desc": "Scans dey save for your device and go sync automatically when you connect back.",
-
   "scan_noun": "scan",
   "scan_noun_plural": "scans",
   "delete": "Delete",
   "settings_subtitle": "Manage your voice, language, and connection preferences wey you like",
-
   "hazard_safe": "Safe",
   "hazard_high_risk": "High Risk",
   "hazard_caution": "Careful o",
-
   "safety_instructions": {
     "default": "Wear hand glove before you touch. Wash your hand well after work.",
     "acid": "Wear glove and goggles. If acid touch your skin, wash with water and soap quick quick.",
@@ -135,5 +129,6 @@
     "asbestos": "No blow the dust. Make you wet am before you move am.",
     "sharp": "Use thick glove. Be careful of the sharp edges.",
     "general": "Dis material no get wahala. But still wash your hand after you touch am."
-  }
+  },
+  "close": "Close camera"
 }

@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Boxes,
   Building2,
@@ -20,6 +21,7 @@ import { Table, type Column } from "../../components/ui/Table";
 import { Sheet } from "../../components/ui/Sheet";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Skeleton } from "../../components/ui/Skeleton";
+import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { useHubData, useMarketData } from "../../hooks/useDashboardData";
 import { createHubRequest } from "../../services/hubs";
 import { formatKg, formatNaira, formatDateTime } from "../../utils/formatters";
@@ -97,7 +99,7 @@ export default function HubDashboard() {
       label: "Delivered",
       align: "right",
       render: (d) => (
-        <span className="text-xs text-slate-400">
+        <span className="text-xs text-slate-500 dark:text-slate-400">
           {d.delivered_at ? formatDateTime(d.delivered_at) : "—"}
         </span>
       ),
@@ -105,67 +107,77 @@ export default function HubDashboard() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title={data?.hub?.name ?? "Hub desk"}
-        subtitle={
-          data?.hub
-            ? `${data.hub.city} · ${data.hub.address_text ?? "address pending"}`
-            : "Manage daily buy requests, deliveries and subscriptions"
-        }
-        actions={
-          <div className="flex items-center gap-2">
-            {hub.isPreview && <PreviewPill />}
-            <Button variant="secondary" size="sm" onClick={hub.refresh}>
-              <RefreshCw className="h-3.5 w-3.5" />
-              Refresh
-            </Button>
-            <Button size="sm" onClick={() => { setSaved(false); setSheetOpen(true); }}>
-              <PackagePlus className="h-3.5 w-3.5" />
-              New buy request
-            </Button>
-          </div>
-        }
-      />
+    <PageMotion className="space-y-6">
+      <motion.div variants={pageItem}>
+        <PageHeader
+          title={data?.hub?.name ?? "Hub desk"}
+          subtitle={
+            data?.hub
+              ? `${data.hub.city} · ${data.hub.address_text ?? "address pending"}`
+              : "Manage daily buy requests, deliveries and subscriptions"
+          }
+          actions={
+            <div className="flex items-center gap-2">
+              {hub.isPreview && <PreviewPill />}
+              <Button variant="secondary" size="sm" onClick={hub.refresh}>
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh
+              </Button>
+              <Button size="sm" onClick={() => { setSaved(false); setSheetOpen(true); }}>
+                <PackagePlus className="h-3.5 w-3.5" />
+                New buy request
+              </Button>
+            </div>
+          }
+        />
+      </motion.div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          label="Open requests"
-          value={hub.loading ? "—" : openRequests.length}
-          icon={<PackagePlus className="h-5 w-5" />}
-          hint="today's demand"
-        />
-        <StatCard
-          label="Fulfilment"
-          value={hub.loading ? "—" : `${Math.round(fulfillment * 100)}%`}
-          icon={<CheckCircle2 className="h-5 w-5" />}
-          iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300"
-          hint={openRequests.length ? "across open requests" : "no open requests"}
-        >
-          {!hub.loading && openRequests.length > 0 && (
-            <div className="mt-3">
-              <ProgressBar value={fulfillment * 100} tone="green" />
-            </div>
-          )}
-        </StatCard>
-        <StatCard
-          label="Delivered to hub"
-          value={hub.loading ? "—" : formatKg(deliveredKg)}
-          icon={<Warehouse className="h-5 w-5" />}
-          iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
-          hint={`${deliveries.length} settled deliveries`}
-        />
-        <StatCard
-          label="Subscription"
-          value={hub.loading ? "—" : activeSub ? activeSub.plan_name : "None"}
-          icon={<Crown className="h-5 w-5" />}
-          iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
-          hint={activeSub?.next_billing_at ? `next billing ${formatDateTime(activeSub.next_billing_at)}` : "start Pro plan"}
-        />
-      </div>
+      <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <motion.div variants={pageItem} className="min-w-0">
+          <StatCard
+            label="Open requests"
+            value={hub.loading ? "—" : openRequests.length}
+            icon={<PackagePlus className="h-5 w-5" />}
+            hint="Today's demand"
+          />
+        </motion.div>
+        <motion.div variants={pageItem} className="min-w-0">
+          <StatCard
+            label="Fulfilment"
+            value={hub.loading ? "—" : `${Math.round(fulfillment * 100)}%`}
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300"
+            hint={openRequests.length ? "Across open requests" : "No open requests"}
+          >
+            {!hub.loading && openRequests.length > 0 && (
+              <div className="mt-3">
+                <ProgressBar value={fulfillment * 100} tone="green" />
+              </div>
+            )}
+          </StatCard>
+        </motion.div>
+        <motion.div variants={pageItem} className="min-w-0">
+          <StatCard
+            label="Delivered to hub"
+            value={hub.loading ? "—" : formatKg(deliveredKg)}
+            icon={<Warehouse className="h-5 w-5" />}
+            iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
+            hint={`${deliveries.length} settled deliveries`}
+          />
+        </motion.div>
+        <motion.div variants={pageItem} className="min-w-0">
+          <StatCard
+            label="Subscription"
+            value={hub.loading ? "—" : activeSub ? activeSub.plan_name : "None"}
+            icon={<Crown className="h-5 w-5" />}
+            iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
+            hint={activeSub?.next_billing_at ? `Next billing ${formatDateTime(activeSub.next_billing_at)}` : "Start Pro plan"}
+          />
+        </motion.div>
+      </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
+      <motion.div variants={pageItem} className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         {/* Demand board */}
         <div className="space-y-4 lg:col-span-3">
           <Card pad>
@@ -228,7 +240,9 @@ export default function HubDashboard() {
                         </span>
                       </div>
                       <ProgressBar value={pct} tone={filled ? "green" : "brand"} />
-                      {r.note && <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">📝 {r.note}</p>}
+                      {r.note && (
+                        <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400">“{r.note}”</p>
+                      )}
                     </li>
                   );
                 })}
@@ -285,15 +299,15 @@ export default function HubDashboard() {
             {activeSub ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">Plan</span>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Plan</span>
                   <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{activeSub.plan_name}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">Amount</span>
-                  <span className="text-sm font-bold">{formatNaira(activeSub.amount_naira)}<span className="text-[10px] text-slate-400">/{activeSub.cycle}</span></span>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Amount</span>
+                  <span className="text-sm font-bold">{formatNaira(activeSub.amount_naira)}<span className="text-[10px] text-slate-500 dark:text-slate-400">/{activeSub.cycle}</span></span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">Next billing</span>
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Next billing</span>
                   <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
                     {activeSub.next_billing_at ? formatDateTime(activeSub.next_billing_at) : "—"}
                   </span>
@@ -312,7 +326,7 @@ export default function HubDashboard() {
             )}
           </Card>
         </div>
-      </div>
+      </motion.div>
 
       {/* New buy request sheet */}
       <Sheet
@@ -395,12 +409,12 @@ export default function HubDashboard() {
             />
           </div>
 
-          <p className="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+          <p className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400">
             <Calendar className="h-3 w-3" />
             Buy requests power the live demand board for collectors.
           </p>
         </div>
       </Sheet>
-    </div>
+    </PageMotion>
   );
 }

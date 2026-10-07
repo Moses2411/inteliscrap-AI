@@ -41,7 +41,7 @@ export function SegmentedTabs<T extends string>({
             onClick={() => onChange(opt.value)}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-lg font-semibold transition-all duration-150",
-              size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm",
+              size === "sm" ? "min-h-[40px] px-3.5 py-2 text-xs" : "px-4 py-2.5 text-sm",
               active
                 ? "bg-white text-slate-900 shadow-sm dark:bg-slate-900 dark:text-white"
                 : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200",

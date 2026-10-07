@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from "react";
 import { startCamera, stopCamera, captureFrame, readFileAsBlob } from "../../services/camera";
 import { useTranslation } from "../../hooks/useTranslation";
+import { Button } from "../ui/Button";
 
 interface Props {
   onImageCapture: (blob: Blob) => void;
@@ -80,29 +81,21 @@ export default function CameraCapture({ onImageCapture, disabled }: Props) {
         />
 
         {!cameraActive && (
-          <div className="flex flex-col items-center justify-center gap-4 bg-gray-900 px-4 py-12">
-            <svg className="h-12 w-12 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <div className="flex flex-col items-center justify-center gap-4 bg-slate-900 px-4 py-12">
+            <svg className="h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z" />
             </svg>
             <div className="flex flex-col gap-2">
-              <button
-                onClick={activateCamera}
-                disabled={disabled}
-                className="btn-primary gap-2"
-              >
+              <Button onClick={activateCamera} disabled={disabled}>
                 {t("open_camera")}
-              </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={disabled}
-                className="btn-secondary gap-2"
-              >
+              </Button>
+              <Button variant="secondary" onClick={() => fileInputRef.current?.click()} disabled={disabled}>
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
                 </svg>
                 {t("upload_image")}
-              </button>
+              </Button>
             </div>
             <input
               ref={fileInputRef}
@@ -122,12 +115,13 @@ export default function CameraCapture({ onImageCapture, disabled }: Props) {
                 disabled={capturing || disabled}
                 className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg ring-4 ring-white/80"
               >
-                <div className="h-12 w-12 rounded-full border-2 border-gray-800" />
+                <div className="h-12 w-12 rounded-full border-2 border-slate-800" />
               </button>
             </div>
             <button
               onClick={deactivateCamera}
-              className="absolute right-3 top-3 rounded-full bg-black/50 p-2 text-white"
+              aria-label={t("close")}
+              className="absolute right-3 top-3 rounded-full bg-black/50 p-2.5 text-white"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -138,7 +132,7 @@ export default function CameraCapture({ onImageCapture, disabled }: Props) {
       </div>
 
       {error && (
-        <p className="text-center text-xs text-yellow-600">{error}</p>
+        <p className="text-center text-xs font-medium text-amber-600 dark:text-amber-400">{error}</p>
       )}
     </div>
   );
