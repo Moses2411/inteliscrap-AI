@@ -188,8 +188,12 @@ class ListingResponse(BaseModel):
 
 class OTPRequest(BaseModel):
     phone_number: str
-    role: Optional[UserRole] = UserRole.household
+    role: Optional[UserRole] = None
     full_name: Optional[str] = None
+
+
+class RoleUpdate(BaseModel):
+    role: UserRole
 
 
 class OTPVerify(BaseModel):

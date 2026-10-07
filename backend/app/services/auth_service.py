@@ -19,6 +19,11 @@ async def request_otp(db: AsyncSession, payload: OTPRequest) -> tuple[User, str 
         )
         db.add(user)
         await db.flush()
+    elif payload.role is not None and user.role != payload.role:
+        # An explicit role selection on the login screen applies to the
+        # existing account too — otherwise the client and server disagree
+        # about the caller's role and protected routes return 403.
+        user.role = payload.role
 
     otp = security.generate_otp()
     user.otp_code = otp
