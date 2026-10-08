@@ -22,17 +22,8 @@ export default function LandingFooter() {
         </div>
 
         <nav className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] font-semibold text-slate-600 dark:text-slate-300">
-          <a href="#why" className="transition-colors hover:text-brand-600 dark:hover:text-brand-400">
-            Why IntelliScrap
-          </a>
-          <a
-            href="#promises"
-            className="transition-colors hover:text-brand-600 dark:hover:text-brand-400"
-          >
-            Four promises
-          </a>
           <Link to="/login" className="transition-colors hover:text-brand-600 dark:hover:text-brand-400">
-            Log in
+            Get started
           </Link>
           <a
             href={GITHUB_URL}
@@ -46,7 +37,7 @@ export default function LandingFooter() {
       </div>
 
       <p className="pb-8 text-center text-[11px] font-medium text-slate-400 dark:text-slate-500">
-        © 2026 Team Nexus · Build with Gemma Hackathon 2026 · ABU Zaria
+        © 2026 Team Nexus · Built with 🤍 for informal recyclers · ABU Zaria
       </p>
     </footer>
   );

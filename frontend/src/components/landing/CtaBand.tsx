@@ -31,17 +31,17 @@ export default function CtaBand() {
           </h2>
           <p className="mx-auto mt-4 max-w-3xl text-sm leading-relaxed text-brand-100/90 sm:text-base">
             We built an offline-first, Hausa-first recyclable intelligence platform with the proof
-            to match — a price matrix, an honest AI fallback, USSD reach, and a
+            to match a price matrix, an honest AI fallback, USSD reach, and a
             compliance/impact engine the market is legally obliged to buy.
           </p>
           <p className="mt-6 text-lg font-extrabold text-gold-300 sm:text-xl">
             Back us. Partner with us. Pilot with us.
           </p>
-          <p className="mt-1.5 text-xs font-semibold text-brand-200">— Team Nexus, ABU Zaria</p>
+          <p className="mt-1.5 text-xs font-semibold text-brand-200">Team Nexus, ABU Zaria</p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button href="/login" variant="white" size="lg">
-              Open the app
+              Get started
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
             <a
