@@ -37,7 +37,7 @@ export default function CtaBand() {
           <p className="mt-6 text-lg font-extrabold text-gold-300 sm:text-xl">
             Back us. Partner with us. Pilot with us.
           </p>
-          <p className="mt-1.5 text-xs font-semibold text-brand-200">Team Nexus, ABU Zaria</p>
+          <p className="mt-1.5 text-xs font-semibold text-brand-200">IntelliScrap AI</p>
 
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button href="/login" variant="white" size="lg">

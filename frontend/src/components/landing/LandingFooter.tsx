@@ -28,7 +28,7 @@ export default function LandingFooter() {
       </div>
 
       <p className="pb-8 text-center text-[11px] font-medium text-slate-400 dark:text-slate-500">
-        © 2026 Team Nexus · Built with 🤍 for informal recyclers · ABU Zaria
+        © 2026 IntelliScrap AI · Built with 🤍 for informal recyclers · IntelliScrap AI
       </p>
     </footer>
   );
