@@ -1,10 +1,10 @@
 import { motion } from "framer-motion";
-import { ArrowRight, GitFork } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+
 import { Card } from "../ui/Card";
 import { Button } from "../ui/Button";
 import { pageItem } from "../ui/PageMotion";
 
-const GITHUB_URL = "https://github.com/Moses2411/inteliscrap-AI";
 
 export default function CtaBand() {
   return (

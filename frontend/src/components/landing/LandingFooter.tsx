@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Recycle } from "lucide-react";
 
-const GITHUB_URL = "https://github.com/Moses2411/inteliscrap-AI";
 
 export default function LandingFooter() {
   return (
