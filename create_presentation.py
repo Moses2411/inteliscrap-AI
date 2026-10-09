@@ -101,7 +101,7 @@ add_shape(slide, Inches(0), Inches(0), Inches(0.3), Inches(7.5), EMERALD)
 add_textbox(slide, Inches(1.5), Inches(1.4), Inches(10), Inches(1.2),
             "IntelliScrap AI", font_size=56, bold=True, color=WHITE)
 add_textbox(slide, Inches(1.5), Inches(2.6), Inches(10), Inches(0.8),
-            "Every bottle has a second life — and every picker gets paid fairly, safely, in their language.",
+            "Every kilogram of scrap, fairly valued — and every picker gets paid fairly, safely, in their language.",
             font_size=22, color=EMERALD_TEXT)
 add_textbox(slide, Inches(1.5), Inches(4.6), Inches(10), Inches(0.5),
             "Team Nexus  |  Build with Gemma Hackathon 2026  |  ABU Zaria", font_size=16, color=GRAY)

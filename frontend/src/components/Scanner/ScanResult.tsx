@@ -112,7 +112,7 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
       <Card className={`space-y-3 ${levelStyle ? `border-l-4 ${levelStyle.accent}` : ""}`}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">{t("material")}</h3>
+            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">{t("material")}</h2>
             {sourceTag && (
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                 {t(sourceTag)}
@@ -137,7 +137,7 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
 
       {result.toxicity_hazards && result.toxicity_hazards.length > 0 && (
         <Card className="space-y-2 border-l-4 border-red-400 dark:border-red-600">
-          <h4 className="text-sm font-semibold text-red-700 dark:text-red-400">{t("hazards_detected")}</h4>
+          <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">{t("hazards_detected")}</h3>
           <ul className="space-y-1">
             {result.toxicity_hazards.map((h, i) => {
               const hazardKey = `hazards.${h}` as const;

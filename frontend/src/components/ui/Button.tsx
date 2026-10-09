@@ -58,10 +58,10 @@ export function Button(props: Props) {
   const { loading = false, disabled, children, ...btnProps } = rest as ButtonProps & { children?: React.ReactNode };
   return (
     <button
+      {...btnProps}
       className={classes(props)}
       disabled={disabled || loading}
       aria-busy={loading}
-      {...btnProps}
     >
       {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
       {children}

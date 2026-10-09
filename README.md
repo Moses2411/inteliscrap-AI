@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <strong>Offline-first PWA that identifies scrap materials, flags hazards and pays fair prices — on-device AI, in Hausa, Nigerian Pidgin and English.</strong>
+  <strong>Offline-first PWA that identifies scrap materials, flags hazards and pays fair prices — on-device AI, covering Nigeria's major official and regional languages.</strong>
 </p>
 
 <!-- Status & metrics -->
@@ -106,7 +106,7 @@
 
 InteliScrap AI is an **offline-first Progressive Web Application (PWA)** that helps informal waste recyclers (*Baban Bola*), laboratory cleaners and office cleaners across Northern Nigeria identify scrap materials, detect hazardous substances and determine fair market prices — all without internet access.
 
-The app runs an on-device ONNX image classifier straight from the browser: snap a photo, get the material type, its safety hazards and a fair price in **Hausa, Nigerian Pidgin or English**. When the on-device model is unavailable and the phone is online, the backend calls a vision model over **Ollama**. If neither is reachable, the app honestly asks the collector to select the material manually — it **never fabricates** a result.
+The app runs an on-device ONNX image classifier straight from the browser: snap a photo, get the material type, its safety hazards and a fair price — covering Nigeria's major official and regional languages. When the on-device model is unavailable and the phone is online, the backend calls a vision model over **Ollama**. If neither is reachable, the app honestly asks the collector to select the material manually — it **never fabricates** a result.
 
 ### Core Problem
 

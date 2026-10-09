@@ -1,12 +1,11 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { CloudOff } from "lucide-react";
 import { useOnlineStatus } from "../../utils/offline";
 import { useApp } from "../../store/appStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import BottomNav from "./BottomNav";
-import Header from "./Header";
-import Sidebar from "./Sidebar";
+import Sidebar, { MobileMenuButton } from "./Sidebar";
 
 interface Props {
   children: ReactNode;
@@ -16,6 +15,7 @@ export default function AppShell({ children }: Props) {
   const { setOnline } = useApp();
   const { t } = useTranslation();
   const online = useOnlineStatus();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setOnline(online);
@@ -23,12 +23,21 @@ export default function AppShell({ children }: Props) {
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <Sidebar />
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-xl focus:bg-brand-600 focus:px-4 focus:py-2.5 focus:text-sm focus:font-bold focus:text-white focus:shadow-card-lg"
+      >
+        {t("skip_to_content")}
+      </a>
+      <MobileMenuButton onClick={() => setMobileMenuOpen(true)} expanded={mobileMenuOpen} />
+      <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header />
-
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-4 sm:px-6 md:pb-12 lg:px-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-16 sm:px-6 md:pb-12 md:pt-4 lg:px-8"
+        >
           {!online && (
             <div
               role="status"

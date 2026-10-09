@@ -33,7 +33,7 @@ export function DonutChart({
   return (
     <div className={cn("flex flex-col items-center gap-5 sm:flex-row sm:justify-center", className)}>
       <div className="relative shrink-0" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="-rotate-90">
+        <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
           <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={thickness} className="stroke-slate-100 dark:stroke-slate-800" />
           {segments.map((seg) => {
             const frac = seg.value / total;

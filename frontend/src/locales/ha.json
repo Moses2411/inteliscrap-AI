@@ -158,5 +158,9 @@
     "sharp": "Ka yi amfani da safar hannu masu kauri. Ka yi hattara da gefuna.",
     "general": "Wannan kayan ba shi da haɗari sosai. Amma ka wanke hannu bayan taɓa."
   },
-  "close": "Rufe kamara"
+  "close": "Rufe kamara",
+  "sidebar_search": "Nemi menu",
+  "collapse_sidebar": "Kasa baya",
+  "expand_sidebar": "Kwashe baya",
+  "skip_to_content": "Tsallaka zuwa manyan abin ciki"
 }

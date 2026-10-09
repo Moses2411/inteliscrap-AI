@@ -209,6 +209,7 @@ export default function SettingsPage() {
                   value={testText}
                   onChange={(e) => setTestText(e.target.value)}
                   placeholder={t(placeholderKey)}
+                  aria-label={t("test_voice")}
                 />
                 <Button onClick={playTest} disabled={!testText.trim() || playing} loading={playing}>
                   <Play className="h-4 w-4" /> Play

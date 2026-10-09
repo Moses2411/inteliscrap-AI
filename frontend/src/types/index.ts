@@ -57,6 +57,6 @@ export interface MaterialCategoryInfo {
 
 export type HazardLevel = "low" | "medium" | "high" | "critical";
 
-export type Language = "en" | "ha" | "pcm";
+export type Language = "en" | "ha" | "pcm" | "yo" | "ig";
 
 export type Theme = "light" | "dark";
