@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { MotionConfig } from "framer-motion";
 import LandingNav from "../components/landing/LandingNav";
 import HeroSection from "../components/landing/HeroSection";
-import ValueSection from "../components/landing/ValueSection";
 import CtaBand from "../components/landing/CtaBand";
 import LandingFooter from "../components/landing/LandingFooter";
 
@@ -21,7 +20,6 @@ export default function LandingPage() {
         <LandingNav />
         <main className="flex flex-col gap-12 pb-16 pt-6 sm:gap-16 sm:pt-8">
           <HeroSection />
-          <ValueSection />
           <CtaBand />
         </main>
         <LandingFooter />
