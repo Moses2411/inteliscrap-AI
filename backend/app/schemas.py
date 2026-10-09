@@ -414,6 +414,8 @@ class ManifestoItem(BaseModel):
     transaction_id: str
     collector_id: str
     collector_phone: str
+    seller_id: Optional[str] = None
+    seller_phone: Optional[str] = None
     material_slug: str
     material_name: str
     weight_kg: float

@@ -74,11 +74,14 @@ async def generate_manifesto(
         total_carbon += co
         total_income += float(txn.collector_earnings_naira)
 
+        seller = await db.get(User, txn.seller_id)
         items.append(
             {
                 "transaction_id": txn.id,
                 "collector_id": txn.collector_id,
                 "collector_phone": collector.phone_number if collector else "",
+                "seller_id": txn.seller_id,
+                "seller_phone": seller.phone_number if seller else "",
                 "material_slug": mat_slug,
                 "material_name": mat_name,
                 "weight_kg": w,
