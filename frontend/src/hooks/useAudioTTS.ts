@@ -2,13 +2,17 @@ import { useCallback, useRef, useState } from "react";
 import en from "../locales/en.json";
 import ha from "../locales/ha.json";
 import pcm from "../locales/pcm.json";
+import yo from "../locales/yo.json";
+import ig from "../locales/ig.json";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
 
 type HazardKey = keyof typeof ha.hazards;
 type SafetyKey = keyof typeof ha.safety_instructions;
 
-const LOCALE_MAP = { en, ha, pcm } as const;
+type Language = "en" | "ha" | "pcm" | "yo" | "ig";
+
+const LOCALE_MAP: Record<Language, typeof en> = { en, ha, pcm, yo, ig } as const;
 
 function determineSafetyKey(hazards: string[]): SafetyKey {
   if (hazards.includes("corrosive_acid") || hazards.includes("chemical_burns")) return "acid";
@@ -85,7 +89,7 @@ export function useAudioTTS() {
   const fallbackUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const speakReport = useCallback(
-    async (materialClass: string, nairaValue: number, hazards: string[] = [], language: "en" | "ha" | "pcm" = "en") => {
+    async (materialClass: string, nairaValue: number, hazards: string[] = [], language: Language = "en") => {
       if (playingRef.current) return;
       playingRef.current = true;
       cancelledRef.current = false;
@@ -106,6 +110,16 @@ export function useAudioTTS() {
           ? " Danger: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
         speechString = `We find ${materialClass}. The price nah ${nairaValue} Naira per kg.${hazardText}${locale.safety_instructions[safetyKey]}`;
+      } else if (language === "yo") {
+        const hazardText = hazards.length > 0
+          ? " Ẹ̀rọ: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
+          : "";
+        speechString = `A rí ${materialClass}. Kilo kan yóò jẹ́ naira ${nairaValue}.${hazardText}${locale.safety_instructions[safetyKey]}`;
+      } else if (language === "ig") {
+        const hazardText = hazards.length > 0
+          ? " Njọ: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
+          : "";
+        speechString = `A chọpụtara ${materialClass}. Ọnụahịa kilo kwesịrị ekwu naira ${nairaValue}.${hazardText}${locale.safety_instructions[safetyKey]}`;
       } else {
         const hazardText = hazards.length > 0
           ? " Hazards: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
@@ -113,7 +127,7 @@ export function useAudioTTS() {
         speechString = `Detected ${materialClass}. Estimated value is ${nairaValue} Naira per kg.${hazardText}${locale.safety_instructions[safetyKey]}`;
       }
 
-      const ttsLang = language === "ha" ? "ha" : language === "pcm" ? "en-NG" : "en";
+      const ttsLang = language === "ha" ? "ha" : language === "pcm" ? "en-NG" : language === "yo" ? "yo" : language === "ig" ? "ig" : "en";
 
       // Split into sentences so each chunk stays under Google TTS length limit
       const sentences = speechString.match(/[^.!?]+[.!?]+/g) || [speechString];
@@ -142,7 +156,7 @@ export function useAudioTTS() {
         if ("speechSynthesis" in window) {
           usingFallbackRef.current = true;
           const u = new SpeechSynthesisUtterance(speechString);
-          u.lang = ttsLang === "ha" ? "ha-NG" : "en-NG";
+          u.lang = ttsLang === "ha" ? "ha-NG" : ttsLang === "yo" ? "yo-NG" : ttsLang === "ig" ? "ig-NG" : "en-NG";
           u.rate = 0.85;
           u.onend = () => {
             playingRef.current = false;

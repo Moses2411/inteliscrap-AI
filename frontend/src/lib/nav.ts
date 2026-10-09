@@ -13,6 +13,15 @@ import {
 } from "lucide-react";
 import type { UserRole } from "../services/auth";
 
+export const ROLE_LABEL: Record<string, string> = {
+  household: "Seller",
+  collector: "Collector",
+  recycling_hub: "Recycling Hub",
+  ngo: "NGO Partner",
+  admin: "Admin",
+  partner: "EPR Partner",
+};
+
 export type Icon = FC<SVGProps<SVGSVGElement>>;
 
 export interface NavItem {

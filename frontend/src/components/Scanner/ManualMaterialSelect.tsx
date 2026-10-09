@@ -20,13 +20,12 @@ export default function ManualMaterialSelect({ onSelect, onRetry }: Props) {
         <p className="text-sm leading-relaxed text-amber-800 dark:text-amber-200">{t("manual_select_desc")}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2" role="list" aria-label={t("manual_select_title")}>
+      <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("manual_select_title")}>
         {SCRAP_CLASSES.map((cls) => {
           const rule = resolveTradeRule(cls.slug);
           return (
             <button
               key={cls.slug}
-              role="listitem"
               onClick={() => onSelect(cls.slug)}
               className="group flex min-h-[92px] flex-col items-start justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition-all hover:border-brand-400 hover:shadow-md active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900"
             >

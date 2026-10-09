@@ -38,6 +38,7 @@ export default function BottomNav() {
           <button
             onClick={() => navigate("/scan")}
             aria-label={t("nav_scan")}
+            aria-current={isActive("/scan") ? "page" : undefined}
             className={cn(
               "-mt-5 flex h-14 w-14 items-center justify-center rounded-2xl text-white shadow-card-lg transition-all duration-150 active:scale-95",
               isActive("/scan")
@@ -93,6 +94,7 @@ function Tab({
   return (
     <button
       onClick={onClick}
+      aria-current={active ? "page" : undefined}
       className={cn(
         "flex flex-col items-center gap-1 pb-1.5 pt-2 text-[10px] font-bold transition-colors",
         active

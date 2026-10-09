@@ -130,9 +130,25 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   if (!authenticated) {
     return (
       <form onSubmit={submitAuth} className="card space-y-3">
-        <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("sign_in_title")}</h4>
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("sign_in_title")}</h2>
         {!otpSent && (
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Account type">
+          <div
+            className="grid grid-cols-2 gap-2"
+            role="radiogroup"
+            aria-label="Account type"
+            onKeyDown={(e) => {
+              if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+              e.preventDefault();
+              const idx = ROLE_OPTIONS.findIndex((o) => o.value === role);
+              const delta = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+              const nextIdx = (idx + delta + ROLE_OPTIONS.length) % ROLE_OPTIONS.length;
+              const next = ROLE_OPTIONS[nextIdx];
+              if (next) {
+                setRole(next.value);
+                e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[nextIdx]?.focus();
+              }
+            }}
+          >
             {ROLE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -156,6 +172,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
           className="input"
           type="tel"
           placeholder={t("your_phone")}
+          aria-label={t("your_phone")}
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           autoComplete="tel"
@@ -174,13 +191,14 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
               inputMode="numeric"
               maxLength={6}
               placeholder={t("enter_otp")}
+              aria-label={t("enter_otp")}
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               required
             />
           </>
         )}
-        {error && <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
+        {error && <p role="alert" className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
         <Button fullWidth disabled={busy}>
           {busy ? "…" : otpSent ? t("verify") : t("send_otp")}
         </Button>
@@ -190,11 +208,12 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
   return (
     <form onSubmit={submitWeight} className="card space-y-3">
-      <h4 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("post_pickup")}</h4>
+      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("post_pickup")}</h2>
       <input
         className="input text-lg"
         inputMode="decimal"
         placeholder={t("estimated_weight")}
+        aria-label={t("estimated_weight")}
         value={weight}
         onChange={(e) => setWeight(e.target.value)}
         required
@@ -215,7 +234,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
           )}
         </span>
       </label>
-      {error && <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
+      {error && <p role="alert" className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
       <Button fullWidth disabled={busy}>
         {busy ? t("posting") : t("confirm_post")}
       </Button>

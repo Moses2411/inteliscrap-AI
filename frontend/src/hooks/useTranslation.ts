@@ -1,12 +1,14 @@
 import en from "../locales/en.json";
 import ha from "../locales/ha.json";
 import pcm from "../locales/pcm.json";
+import yo from "../locales/yo.json";
+import ig from "../locales/ig.json";
 import { useApp } from "../store/appStore";
 import type { Language } from "../types";
 
 type Locale = Record<string, unknown>;
 
-const LOCALE_MAP: Record<Language, Locale> = { en, ha, pcm };
+const LOCALE_MAP: Record<Language, Locale> = { en, ha, pcm, yo, ig };
 
 function deepGet(obj: Locale, fallback: Locale, path: string): string {
   const keys = path.split(".");

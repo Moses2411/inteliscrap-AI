@@ -102,6 +102,7 @@ export default function CameraCapture({ onImageCapture, disabled }: Props) {
               type="file"
               accept="image/*"
               className="hidden"
+              aria-label={t("upload_image")}
               onChange={handleFilePick}
             />
           </div>
@@ -113,6 +114,7 @@ export default function CameraCapture({ onImageCapture, disabled }: Props) {
               <button
                 onClick={capture}
                 disabled={capturing || disabled}
+                aria-label={t("snap_scrap")}
                 className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-lg ring-4 ring-white/80"
               >
                 <div className="h-12 w-12 rounded-full border-2 border-slate-800" />
@@ -132,7 +134,7 @@ export default function CameraCapture({ onImageCapture, disabled }: Props) {
       </div>
 
       {error && (
-        <p className="text-center text-xs font-medium text-amber-600 dark:text-amber-400">{error}</p>
+        <p role="alert" className="text-center text-xs font-medium text-amber-600 dark:text-amber-400">{error}</p>
       )}
     </div>
   );

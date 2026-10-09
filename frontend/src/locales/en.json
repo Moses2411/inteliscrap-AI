@@ -158,5 +158,9 @@
   "loading": "Loading...",
   "pickups_empty": "No new pickups right now. Keep your location on and check back soon.",
   "my_jobs_empty": "You have no active pickups yet. Accept a pickup to see it here.",
-  "close": "Close camera"
+  "close": "Close camera",
+  "sidebar_search": "Search menu",
+  "collapse_sidebar": "Collapse sidebar",
+  "expand_sidebar": "Expand sidebar",
+  "skip_to_content": "Skip to main content"
 }

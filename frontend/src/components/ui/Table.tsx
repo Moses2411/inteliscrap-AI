@@ -27,6 +27,7 @@ export function Table<T>({ columns, rows, rowKey, empty, dense, className }: Pro
             {columns.map((col) => (
               <th
                 key={col.key}
+                scope="col"
                 className={cn(
                   "whitespace-nowrap px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400",
                   dense ? "py-2" : "py-2.5",

@@ -66,8 +66,17 @@ export function ProgressRing({
   const c = 2 * Math.PI * r;
   const offset = c - (pct / 100) * c;
   return (
-    <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="-rotate-90">
+    <div
+      role="progressbar"
+      aria-valuenow={Math.round(pct)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuetext={`${Math.round(pct)}%${label ? `, ${label}` : ""}`}
+      aria-label={label}
+      className="relative inline-flex items-center justify-center"
+      style={{ width: size, height: size }}
+    >
+      <svg width={size} height={size} className="-rotate-90" aria-hidden="true">
         <circle
           cx={size / 2}
           cy={size / 2}
@@ -88,7 +97,7 @@ export function ProgressRing({
           className={cn("transition-[stroke-dashoffset] duration-700 ease-out", TONES[tone])}
         />
       </svg>
-      <span className="absolute text-xs font-bold text-slate-700 dark:text-slate-200">
+      <span aria-hidden="true" className="absolute text-xs font-bold text-slate-700 dark:text-slate-200">
         {label ?? `${Math.round(pct)}%`}
       </span>
     </div>

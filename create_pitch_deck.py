@@ -260,7 +260,7 @@ txt(s, MX, 2.8, 11.2, 0.95,
 rect(s, MX, 3.95, 2.2, 0.055, EMERALD)
 txt(s, MX, 4.2, 11.2, 0.75,
     "Empowering informal waste pickers — the Baban Bola of Northern Nigeria — with "
-    "multimodal edge intelligence in Hausa, Pidgin and English.",
+    "multimodal edge intelligence covering Nigeria's major official and regional languages.",
     size=15, color=FAINT, line_spacing=1.15)
 
 tags = [("OFFLINE-FIRST PWA", 0), ("EDGE AI · ZERO DATA COST", 1),
@@ -330,7 +330,7 @@ steps = [
     ("1", "Snap", "Capture dirty, broken scrap with any phone camera — no special kit needed."),
     ("2", "Edge AI", "Classification runs on-device — works fully offline with zero data cost."),
     ("3", "Safety + Price", "Hazard flags and a fair ₦/kg price from the live market matrix."),
-    ("4", "Local Voice", "Reads the result aloud in Hausa, Pidgin or English; one tap lists it for doorstep pickup."),
+    ("4", "Local Voice", "Reads the result aloud across Nigeria's major languages; one tap lists it for doorstep pickup."),
 ]
 for i, (num, t, d) in enumerate(steps):
     x = MX + i * 2.97
@@ -519,7 +519,7 @@ for i, (k, v) in enumerate(life):
 
 pillars = [
     ("🗣️", "Voice-first experience",
-     "TTS in Hausa, Pidgin & English with a visual-first UI — usable by non-readers."),
+     "TTS across Nigeria's major languages with a visual-first UI — usable by non-readers."),
     ("🔍", "Radical transparency",
      "Every result shows its source (edge / server / manual); we never fabricate."),
     ("⚖️", "Fairness loop",
@@ -840,7 +840,7 @@ rows = [
     ["Field accuracy on dirty / partial scrap", "High",
      "Community-labelled training data; edge + server dual path; honest manual fallback"],
     ["Low smartphone penetration & literacy", "High",
-     "USSD / SMS / IVR feature-phone path; voice-first UI in Hausa, Pidgin, English"],
+     "USSD / SMS / IVR feature-phone path; voice-first UI covering Nigeria's major languages"],
     ["Adoption & trust in the informal economy", "Med",
      "Co-design with Baban Bola; hub & community endorsement; visible price proof"],
     ["Scrap price volatility", "Med",

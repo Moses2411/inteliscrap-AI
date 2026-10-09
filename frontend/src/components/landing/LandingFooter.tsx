@@ -6,15 +6,15 @@ export default function LandingFooter() {
     <footer className="border-t border-slate-200 bg-white/60 dark:border-slate-800 dark:bg-slate-950/60">
       <div className="mx-auto flex max-w-5xl flex-col gap-5 px-4 py-8 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm">
             <Recycle className="h-4 w-4" aria-hidden="true" />
           </span>
           <div className="leading-tight">
-            <p className="text-[13px] font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <p className="whitespace-nowrap text-sm font-extrabold tracking-tight text-slate-900 dark:text-white">
               InteliScrap AI
             </p>
             <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-              Every bottle has a second life.
+              Circular economy marketplace
             </p>
           </div>
         </div>

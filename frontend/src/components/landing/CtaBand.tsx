@@ -27,7 +27,7 @@ export default function CtaBand() {
 
         <div className="relative">
           <h2 className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-            InteliScrap AI — Every bottle has a second life.
+            InteliScrap AI — Every kilogram of scrap, fairly valued.
           </h2>
           <p className="mx-auto mt-4 max-w-3xl text-sm leading-relaxed text-brand-100/90 sm:text-base">
             We built an offline-first, Hausa-first recyclable intelligence platform with the proof

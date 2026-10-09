@@ -57,7 +57,14 @@ export function GroupedBarChart({ labels, series, height = 260, formatValue, cla
 
   return (
     <div ref={wrapRef} className={cn("relative", className)} onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full"
+        role="img"
+        aria-label={series
+          .map((s) => `${s.name}: ${labels.map((l, i) => `${l} ${formatValue ? formatValue(s.values[i] ?? 0) : compact(s.values[i] ?? 0)}`).join(", ")}`)
+          .join(". ")}
+      >
         {/* grid + y labels */}
         {ticks.map((t) => (
           <g key={t}>

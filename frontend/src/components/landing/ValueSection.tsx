@@ -38,22 +38,12 @@ const PROBLEM_STATS = [
   },
 ];
 
-const OFFLINE = [
-  {
-    icon: WifiOff,
-    title: "Offline-first",
-    body: "AI classification runs on-device. No cloud required.",
-  },
-  {
-    icon: Languages,
-    title: "Hausa + Pidgin",
-    body: "Full UI & voice guides in local languages.",
-  },
-  {
-    icon: Phone,
-    title: "SMS outbox + IVR",
-    body: "Offers and pickups reach collectors even with zero data.",
-  },
+const LANG_CODES = [
+  { code: "EN", label: "English" },
+  { code: "HA", label: "Hausa" },
+  { code: "PCM", label: "Nigerian Pidgin" },
+  { code: "YO", label: "Yoruba" },
+  { code: "IG", label: "Igbo" },
 ];
 
 function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
@@ -189,24 +179,102 @@ export default function ValueSection() {
         </div>
       </motion.div>
 
-      {/* Offline / language layer */}
+      {/* Offline / language layer — asymmetric bento */}
       <motion.div variants={pageItem} id="offline" className="scroll-mt-24">
         <SectionHeading
           eyebrow="The unfair advantage"
           title="Built for where the phone actually is"
         />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {OFFLINE.map((o) => (
-            <Card key={o.title} hover className="h-full">
-              <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                <o.icon className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">{o.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                {o.body}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:auto-rows-[minmax(11rem,auto)] lg:grid-cols-6">
+          {/* Anchor — offline-first (dark, 4×2) */}
+          <Card gradient className="flex flex-col sm:col-span-2 lg:col-span-4 lg:row-span-2">
+            <div className="flex flex-1 flex-col">
+              <div className="flex items-center gap-2 text-xs font-semibold text-brand-200">
+                <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>No signal · still works</span>
+              </div>
+              <h3 className="mt-3 text-xl font-extrabold tracking-tight text-white sm:text-2xl">
+                Classification runs on the phone itself
+              </h3>
+              <p className="mt-2 max-w-md text-sm leading-relaxed text-brand-100/90">
+                The AI model is installed on the device. A collector in a market with no
+                bars still points the camera, still gets a material, a price and a
+                hazard flag.
               </p>
-            </Card>
-          ))}
+
+              {/* Mock scan result — the artifact the app actually produces */}
+              <div className="mt-auto pt-6">
+                <div className="rounded-2xl bg-white/10 p-3 ring-1 ring-white/15 backdrop-blur-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-bold text-white">PET bottle</span>
+                    <span className="rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold text-white">
+                      94% confidence
+                    </span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between gap-3 text-xs text-brand-100/80">
+                    <span>Fair price · ₦120/kg</span>
+                    <span className="font-semibold text-brand-200">on-device</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Languages (2×1) */}
+          <Card hover className="flex flex-col lg:col-span-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <Languages className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Full UI + voice guides</span>
+            </div>
+            <h3 className="mt-3 text-base font-bold text-slate-900 dark:text-white">
+              Hausa, Pidgin, Yoruba, Igbo
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+              Not a translated veneer — the whole flow speaks the language the seller
+              already speaks.
+            </p>
+            <div className="mt-auto flex flex-wrap gap-1.5 pt-4" aria-label="Supported languages">
+              {LANG_CODES.map((l) => (
+                <span
+                  key={l.code}
+                  title={l.label}
+                  className={
+                    l.code === "HA" || l.code === "PCM"
+                      ? "rounded-full bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-700 dark:bg-brand-950/70 dark:text-brand-300"
+                      : "rounded-full bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                  }
+                >
+                  {l.code}
+                </span>
+              ))}
+            </div>
+          </Card>
+
+          {/* SMS / IVR (2×1) */}
+          <Card hover className="flex flex-col lg:col-span-2">
+            <div className="flex items-center gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
+              <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+              <span>Any phone, zero data</span>
+            </div>
+            <h3 className="mt-3 text-base font-bold text-slate-900 dark:text-white">
+              Offers arrive by SMS and voice
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+              The outbox sends offers over SMS; missed them? An IVR call reads them out.
+            </p>
+            {/* Mock SMS bubble */}
+            <div className="mt-auto pt-4">
+              <div className="rounded-2xl rounded-tl-md bg-slate-100 p-3 dark:bg-slate-800/70">
+                <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                  SMS · IntelliScrap
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
+                  New offer: 12kg PET → ₦1,440. Collector Musa is 400m away. Reply YES to
+                  accept.
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
       </motion.div>
     </motion.section>

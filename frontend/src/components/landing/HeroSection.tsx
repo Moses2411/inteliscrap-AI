@@ -129,15 +129,15 @@ function ScoopedHeroCard({
         <div className="absolute bottom-0 left-0 w-full p-10 pb-28 sm:p-12 sm:pb-32 lg:p-14 lg:pb-32">
           <div className="max-w-[560px] drop-shadow-md lg:max-w-[55%]">
             <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl">
-              <span className="block">Every bottle has</span>
-              <span className="block">a second life.</span>
+              <span className="block">Every kilogram of</span>
+              <span className="block">scrap, fairly valued.</span>
             </h1>
             <p className="mt-4 text-sm leading-relaxed text-white/85 sm:text-base">
               On-device AI that tells a waste picker{" "}
               <span className="font-semibold text-white">
                 what a material is, what it&apos;s worth, and whether it will poison them
               </span>{" "}
-              in Hausa, Pidgin or English, with or without internet.
+              — covering Nigeria&apos;s major official and regional languages, with or without internet.
             </p>
           </div>
         </div>

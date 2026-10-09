@@ -135,6 +135,7 @@ export default function ScanPage() {
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
         className="space-y-4"
       >
+        <h1 className="sr-only">{t("material")}</h1>
         <ScanResult
           result={result}
           hazard_level={result.hazard_level}

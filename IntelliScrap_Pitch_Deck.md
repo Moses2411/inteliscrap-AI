@@ -34,8 +34,8 @@
 ## SLIDE 1 — Title / Hook
 **On-slide:**
 > # IntelliScrap AI
-> **Every bottle has a second life.**
-> On-device AI that tells a waste picker *what a material is, what it's worth, and whether it will poison them* — in Hausa, Pidgin or English, with or without internet.
+> **Every kilogram of scrap, fairly valued.**
+> On-device AI that tells a waste picker *what a material is, what it's worth, and whether it will poison them* — covering Nigeria's major official and regional languages, with or without internet.
 > Team Nexus • Build with Gemma Hackathon 2026 • ABU Zaria
 
 **Speaker notes (20 s):** "In Northern Nigeria, the people who recover our waste — the *Baban Bola* — work blind. They touch lead batteries and e-waste without knowing the danger, and middlemen price their ignorance into every kilogram. We built IntelliScrap: an offline-first app that snaps a photo of scrap, names the material, gives the fair price in Naira per kg, reads the hazard warning aloud in Hausa or Pidgin — and proves the carbon and income impact of every single transaction. This is the demo you're about to see, live on a phone."
@@ -377,7 +377,7 @@
 
 ## SLIDE 27 — The tagline & call to action
 **On-slide:**
-> **IntelliScrap AI — Every bottle has a second life.**
+> **IntelliScrap AI — Every kilogram of scrap, fairly valued.**
 > We built an offline-first, Hausa-first recyclable intelligence platform with the proof to match — a price matrix, an honest AI fallback, USSD reach, and a compliance/impact engine the market is legally obliged to buy.
 > **Back us. Partner with us. Pilot with us.** — Team Nexus, ABU Zaria.
 
