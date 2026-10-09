@@ -296,7 +296,7 @@ class HubDeliveryResponse(BaseModel):
     id: str
     hub_id: str
     request_id: str
-    transaction_id: str
+
     material_category_id: int
     weight_kg: float
     hub_price_naira: float
@@ -411,11 +411,10 @@ class CategoryAggregateItem(BaseModel):
 
 
 class ManifestoItem(BaseModel):
-    transaction_id: str
-    collector_id: str
-    collector_phone: str
     seller_id: Optional[str] = None
     seller_phone: Optional[str] = None
+    collector_id: Optional[str] = None
+    collector_phone: Optional[str] = None
     material_slug: str
     material_name: str
     weight_kg: float

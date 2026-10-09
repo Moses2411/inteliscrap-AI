@@ -77,7 +77,7 @@ async def generate_manifesto(
         seller = await db.get(User, txn.seller_id)
         items.append(
             {
-                "transaction_id": txn.id,
+
                 "collector_id": txn.collector_id,
                 "collector_phone": collector.phone_number if collector else "",
                 "seller_id": txn.seller_id,
