@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { Recycle } from "lucide-react";
 
-
 export default function LandingFooter() {
   return (
     <footer className="border-t border-slate-200 bg-white/60 dark:border-slate-800 dark:bg-slate-950/60">
@@ -26,10 +25,6 @@ export default function LandingFooter() {
           </Link>
         </nav>
       </div>
-
-      <p className="pb-8 text-center text-[11px] font-medium text-slate-400 dark:text-slate-500">
-        © 2026 IntelliScrap AI · Built with 🤍 for informal recyclers · IntelliScrap AI
-      </p>
     </footer>
   );
 }
