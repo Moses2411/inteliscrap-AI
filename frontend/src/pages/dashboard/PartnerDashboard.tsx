@@ -65,20 +65,6 @@ export default function PartnerDashboard() {
   }, [data]);
 
   const columns: Column<ManifestoItem>[] = [
-    {
-      key: "txn",
-      label: "Transaction",
-      render: (row) => (
-        <span className="font-mono text-xs font-semibold text-slate-600 dark:text-slate-300">{row.transaction_id}</span>
-      ),
-    },
-    {
-      key: "collector",
-      label: "Collector",
-      render: (row) => (
-        <span className="font-semibold text-slate-800 dark:text-slate-100">{row.collector_phone}</span>
-      ),
-    },
     { key: "material", label: "Material", render: (row) => row.material_name },
     {
       key: "weight",
@@ -114,7 +100,7 @@ export default function PartnerDashboard() {
         title="EPR compliance manifest"
         subtitle="Auditable, source-verifiable export of every settled collection for PROs & regulators."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {compliance.isPreview && <PreviewPill />}
             <Button variant="secondary" size="sm" onClick={compliance.refresh}>
               <RefreshCw className="h-3.5 w-3.5" /> Refresh
@@ -126,8 +112,8 @@ export default function PartnerDashboard() {
         }
       />
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* KPI row - mobile responsive */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           label="Settled transactions"
           value={compliance.loading || !data ? "—" : data.total_transactions.toLocaleString()}
@@ -155,10 +141,11 @@ export default function PartnerDashboard() {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
+      {/* Responsive grid: table full width on mobile, sidebar on desktop */}
+      <div className="grid gap-6 lg:grid-cols-4">
         {/* Manifest table */}
         <Card pad className="lg:col-span-3">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-3 flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-sm font-bold text-slate-900 dark:text-white">Manifest items</h2>
             {data && (
               <Badge tone="green">
@@ -183,8 +170,8 @@ export default function PartnerDashboard() {
           )}
         </Card>
 
-        {/* API key */}
-        <Card pad className="lg:col-span-2">
+        {/* API key panel */}
+        <Card pad className="lg:col-span-1">
           <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
             <KeyRound className="h-4 w-4 text-brand-600 dark:text-brand-400" />
             Compliance API key
@@ -198,7 +185,7 @@ export default function PartnerDashboard() {
             id="api-key"
             type="password"
             className="input"
-            placeholder="paste API key…"
+            placeholder="paste API key"
             value={key}
             onChange={(e) => setKey(e.target.value)}
             autoComplete="off"
@@ -211,7 +198,7 @@ export default function PartnerDashboard() {
           )}
           {keySaved && (
             <p className="mt-2 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
-              Key verified — manifest loaded ✓
+              Key verified — manifest loaded
             </p>
           )}
 
@@ -222,7 +209,7 @@ export default function PartnerDashboard() {
           <div className={cn("mt-4 rounded-xl bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-500 dark:bg-slate-800/60 dark:text-slate-400")}>
             <p className="font-bold text-slate-600 dark:text-slate-300">Did you know?</p>
             This endpoint is read-only and satisfies EPR audit contracts — every row links a
-            collector, material, weight, value and originating hub.
+            material, weight, value and originating hub.
           </div>
         </Card>
       </div>
