@@ -21,7 +21,7 @@ import { pageItem, pageStagger } from "../ui/PageMotion";
 import { cn } from "../../lib/cn";
 import type { ComponentType, ReactNode } from "react";
 
-type LucideIcon = ComponentType<{ className?: string;[key: string]: any }>;
+type LucideIcon = ComponentType<{ className?: string; [key: string]: any }>;
 
 const PROBLEM_STATS = [
   {
@@ -33,102 +33,45 @@ const PROBLEM_STATS = [
   {
     value: "30–50%",
     label: "Middleman underpay",
-    hint: "No material knowledge → exploited",
+    hint: "Sellers lose margin to informal brokers",
     icon: <TrendingDown className="h-5 w-5" />,
   },
   {
-    value: "Zero",
-    label: "Safety data in the field",
-    hint: "Lead & e-waste handled blind",
+    value: "1 in 5",
+    label: "Burnt at dumpsites",
+    hint: "Toxic smoke harms communities",
     icon: <ShieldAlert className="h-5 w-5" />,
   },
 ];
 
-/* ── Promises bento data ── */
-const CATEGORIES = ["PET", "Aluminium", "Copper", "Lead battery", "E-waste", "Glass", "Cardboard", "Iron"];
-
-/** Naira per kg. Bars are scaled against the highest price (copper). */
-const PRICES = [
-  { name: "Copper", price: 3200 },
-  { name: "Lead battery", price: 950 },
-  { name: "Aluminium", price: 700 },
-  { name: "PET", price: 180 },
+const CATEGORIES = [
+  "PET",
+  "HDPE",
+  "PP",
+  "LDPE",
+  "PS",
+  "Aluminium",
+  "Steel",
+  "Mixed",
 ];
-const MAX_PRICE = Math.max(...PRICES.map((p) => p.price));
 
-const TONES = {
-  brand: "bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300",
-  gold: "bg-gold-50 text-gold-700 dark:bg-gold-950/80 dark:text-gold-300",
-  rose: "bg-rose-50 text-rose-600 dark:bg-rose-950/80 dark:text-rose-300",
-  sky: "bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300",
-  slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-} as const;
-type Tone = keyof typeof TONES;
-
-/** A bento cell: h-full + flex-col so a visual pinned with `mt-auto` fills the cell. */
-function Tile({ className, children }: { className?: string; children: ReactNode }) {
-  return (
-    <Card hover className={cn("flex h-full flex-col", className)}>
-      {children}
-    </Card>
-  );
-}
-
-function IconChip({ icon: Icon, tone }: { icon: LucideIcon; tone: Tone }) {
-  return (
-    <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", TONES[tone])}>
-      <Icon className="h-5 w-5" aria-hidden="true" />
-    </span>
-  );
-}
-
-function TileHead({ icon, tone, tag }: { icon: LucideIcon; tone: Tone; tag: string }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <IconChip icon={icon} tone={tone} />
-      <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold", TONES[tone])}>{tag}</span>
-    </div>
-  );
-}
-
-function Chip({ children, tone = "slate" }: { children: ReactNode; tone?: Tone }) {
-  return (
-    <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-semibold", TONES[tone])}>{children}</span>
-  );
-}
-
-const OFFLINE: Array<{ icon: typeof WifiOff; title: string; body: ReactNode }> = [
+const OFFLINE = [
   {
     icon: WifiOff,
-    title: "Offline-first PWA",
-    body: "Installs to the home screen; camera, classifier and IndexedDB sync all work with no internet.",
+    title: "Offline-first",
+    body: "AI classification runs on-device. No cloud required.",
   },
   {
     icon: Languages,
-    title: "Local-language TTS",
-    body: "Hazards & prices read aloud in Hausa (Wurin da nake aiki) and Nigerian Pidgin not just English.",
+    title: "Hausa + Pidgin",
+    body: "Full UI & voice guides in local languages.",
   },
   {
     icon: Phone,
-    title: "USSD registration",
-    body: (
-      <>
-        A collector on a feature phone registers by dialing{" "}
-        <code className="kbd font-bold">*347*101#</code> no smartphone, no app store, no data
-        plan.
-      </>
-    ),
-  },
-  {
-    icon: MessageSquare,
     title: "SMS outbox + IVR",
     body: "Offers and pickups reach collectors even with zero data.",
   },
 ];
-
-/** Cumulative public-repo commits (source: github.com/Moses2411, last 12 months). */
-const COMMIT_LABELS = ["Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct"];
-const COMMIT_VALUES = [2, 8, 8, 8, 9, 9, 9, 78, 132, 168, 168, 173];
 
 function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
   return (
@@ -143,6 +86,30 @@ function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) 
   );
 }
 
+function TileHead({ icon: Icon, tone, tag }: { icon: LucideIcon; tone: "brand" | "gold" | "sky"; tag: string }) {
+  const toneClasses = {
+    brand: "bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300",
+    gold: "bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300",
+    sky: "bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300",
+  };
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl", toneClasses[tone])}>
+        <Icon className="h-5 w-5" aria-hidden="true" />
+      </span>
+      <span className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500 dark:text-slate-400">{tag}</span>
+    </div>
+  );
+}
+
+function Tile({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <Card hover className={cn("relative flex flex-col h-full overflow-hidden", className)}>
+      {children}
+    </Card>
+  );
+}
+
 export default function ValueSection() {
   return (
     <motion.section
@@ -152,7 +119,7 @@ export default function ValueSection() {
       variants={pageStagger}
       className="mx-auto flex w-full max-w-5xl flex-col gap-12 px-4 sm:px-6"
     >
-      {/* ── The problem ── */}
+      {/* The problem */}
       <motion.div variants={pageItem} id="why" className="scroll-mt-24">
         <SectionHeading eyebrow="The problem" title="The numbers that shouldn't be true" />
         <div className="grid gap-4 sm:grid-cols-3">
@@ -162,91 +129,63 @@ export default function ValueSection() {
         </div>
       </motion.div>
 
-      {/* ── Four promises — bento: 6 (×2 rows) | 6 / 3 + 3, every row sums to 12 ── */}
+      {/* Three promises (bento) - removed "Know the material" */}
       <motion.div variants={pageItem} id="promises" className="scroll-mt-24">
         <SectionHeading
           eyebrow="Value proposition"
-          title="One app, four promises each tied to a real problem"
+          title="Three promises each tied to a real problem"
         />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:auto-rows-[minmax(11rem,auto)] lg:grid-cols-12">
-          {/* 1 · Know the material — 6 cols × 2 rows */}
-          <Tile className="sm:col-span-2 lg:col-span-6 lg:row-span-2">
-            <TileHead icon={Camera} tone="brand" tag="Fairness" />
-            <h3 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Know the material</h3>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-              Photo → on-device ONNX classifier (or server vision) identifies the material from 8
-              categories with a confidence score.
-            </p>
-
-            <div className="mt-auto pt-6">
-              <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
-                <div className="flex items-center justify-between text-xs font-semibold text-slate-600 dark:text-slate-300">
-                  <span>Confidence shown with every result</span>
-                  <Check className="h-4 w-4 text-brand-600 dark:text-brand-300" aria-hidden="true" />
-                </div>
-                <div className="mt-2 h-2 rounded-full bg-slate-200 dark:bg-slate-700">
-                  <div className="h-full w-[88%] rounded-full bg-brand-600 dark:bg-brand-300" />
-                </div>
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                {CATEGORIES.map((c) => (
-                  <span
-                    key={c}
-                    className="rounded-lg bg-slate-100 px-2 py-2 text-center text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-                  >
-                    {c}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </Tile>
-
-          {/* 2 · Know the price — 6 cols */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:auto-rows-[minmax(11rem,auto)] lg:grid-cols-6">
+          {/* 1 – Know the price – 6 cols */}
           <Tile className="sm:col-span-2 lg:col-span-6">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
               <div className="sm:w-[42%]">
                 <TileHead icon={Banknote} tone="gold" tag="Fair income" />
                 <h3 className="mt-4 text-base font-bold text-slate-900 dark:text-white">Know the price</h3>
                 <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-                  Real-time price matrix per kg in Naira.
+                  Live market prices per kg from recycling hubs — no middleman markup.
                 </p>
               </div>
-              <ul className="flex-1 space-y-3">
-                {PRICES.map((p) => (
-                  <li key={p.name} className="flex items-center gap-3 text-xs">
-                    <span className="w-20 shrink-0 font-semibold text-slate-700 dark:text-slate-200">
-                      {p.name}
-                    </span>
-                    <div className="h-2.5 flex-1 rounded-full bg-slate-100 dark:bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-gold-700 dark:bg-gold-300"
-                        style={{ width: `${Math.max(6, Math.round((p.price / MAX_PRICE) * 100))}%` }}
-                      />
-                    </div>
-                    <span className="w-[4.5rem] shrink-0 text-right font-bold tabular-nums text-slate-900 dark:text-white">
-                      ₦{p.price.toLocaleString("en-NG")}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              <div className="sm:flex-1">
+                <div className="rounded-xl bg-slate-50 p-3 dark:bg-slate-800/60">
+                  <div className="flex items-center justify-between text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    <span>PET</span>
+                    <span className="text-brand-600 dark:text-brand-300">₦120/kg</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    <span>HDPE</span>
+                    <span className="text-brand-600 dark:text-brand-300">₦140/kg</span>
+                  </div>
+                  <div className="mt-1 flex items-center justify-between text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    <span>Aluminium</span>
+                    <span className="text-brand-600 dark:text-brand-300">₦850/kg</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </Tile>
 
-          {/* 3 · Know the danger — 3 cols */}
+          {/* 2 – Know the risk – 3 cols */}
           <Tile className="lg:col-span-3">
-            <TileHead icon={ShieldAlert} tone="rose" tag="Safety" />
-            <h3 className="mt-4 text-base font-bold text-slate-900 dark:text-white">Know the danger</h3>
+            <TileHead icon={ShieldCheck} tone="sky" tag="Trust" />
+            <h3 className="mt-4 text-base font-bold text-slate-900 dark:text-white">Know the risk</h3>
             <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
-              E-waste &amp; lead batteries flagged hazardous; TTS reads the warnings aloud.
+              Built-in safety cards flag hazardous items (batteries, medical, chemical) and
+              show handling instructions.
             </p>
-            <div className="mt-auto flex flex-wrap items-center gap-1.5 pt-5">
-              <Volume2 className="h-4 w-4 text-rose-600 dark:text-rose-300" aria-hidden="true" />
-              <Chip tone="rose">Hausa · ha-NG</Chip>
-              <Chip tone="rose">Pidgin · en-NG</Chip>
-            </div>
+            <dl className="mt-auto space-y-1.5 pt-5 text-xs">
+              <div className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                <dt className="text-slate-500 dark:text-slate-400">Battery detected</dt>
+                <dd className="font-bold text-red-600 dark:text-red-400">High risk</dd>
+              </div>
+              <div className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
+                <dt className="text-slate-500 dark:text-slate-400">Medical waste</dt>
+                <dd className="font-bold text-red-600 dark:text-red-400">Do not handle</dd>
+              </div>
+            </dl>
           </Tile>
 
-          {/* 4 · Know the truth — 3 cols */}
+          {/* 3 – Know the truth – 3 cols */}
           <Tile className="lg:col-span-3">
             <TileHead icon={ShieldCheck} tone="sky" tag="Trust" />
             <h3 className="mt-4 text-base font-bold text-slate-900 dark:text-white">Know the truth</h3>
@@ -267,7 +206,7 @@ export default function ValueSection() {
         </div>
       </motion.div>
 
-      {/* ── Offline / language layer ── */}
+      {/* Offline / language layer */}
       <motion.div variants={pageItem} id="offline" className="scroll-mt-24">
         <SectionHeading
           eyebrow="The unfair advantage"
@@ -286,39 +225,6 @@ export default function ValueSection() {
             </Card>
           ))}
         </div>
-      </motion.div>
-
-      {/* ── Contribution activity chart ── */}
-      <motion.div variants={pageItem} id="proof" className="scroll-mt-24">
-        <Card pad={false} className="overflow-hidden">
-          <div className="flex items-start justify-between gap-3 px-5 pt-4 sm:px-6 sm:pt-5">
-            <div className="flex items-center gap-3">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300">
-                <GitBranch className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
-                  Contribution activity
-                </p>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  <span className="font-bold text-slate-700 dark:text-slate-200">173</span>{" "}
-                  commits
-                </p>
-              </div>
-            </div>
-            <span className="hidden text-[11px] font-medium text-slate-400 sm:inline">
-              inteliscrap-AI · public
-            </span>
-          </div>
-
-          <div className="animate-chart-draw px-2 pb-4 pt-2 sm:px-4 sm:pb-5">
-            <AreaChart
-              labels={COMMIT_LABELS}
-              series={[{ name: "Commits", values: COMMIT_VALUES }]}
-              height={230}
-            />
-          </div>
-        </Card>
       </motion.div>
     </motion.section>
   );
