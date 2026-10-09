@@ -74,7 +74,7 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen bg-slate-50 dark:bg-slate-950">
       {/* Brand panel */}
-      <div className="relative hidden w-[46%] overflow-hidden bg-cover bg-center bg-no-repeat p-10 text-white lg:flex lg:flex-col lg:justify-between" style={{ backgroundImage: "url(/baban-bola.jpg)" }}>
+      <div className="relative hidden w-[46%] overflow-hidden bg-cover bg-center bg-no-repeat p-10 text-white lg:flex lg:flex-col lg:justify-between" style={{ backgroundImage: "linear-gradient(rgba(15,23,42,0.6), rgba(15,23,42,0.8)), url(/baban-bola.jpg)" }}>
         <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-2xl" />
         <div className="absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-gold-400/20 blur-3xl" />
 
@@ -108,7 +108,7 @@ export default function LoginPage() {
           </ul>
         </div>
 
-        <p className="relative text-xs text-brand-100">Proudly built for Northern Nigeria's informal recycling economy.</p>
+        <p className="relative text-xs text-brand-100">Proudly built for informal recycling economy.</p>
       </div>
 
       {/* Form */}
