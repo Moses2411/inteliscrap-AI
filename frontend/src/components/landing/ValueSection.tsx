@@ -1,22 +1,16 @@
 import { motion } from "framer-motion";
 import {
   Banknote,
-  Camera,
-  Check,
-  GitBranch,
   Languages,
-  MessageSquare,
   Phone,
   ShieldAlert,
   ShieldCheck,
   Trash2,
   TrendingDown,
-  Volume2,
   WifiOff,
 } from "lucide-react";
 import { Card } from "../ui/Card";
 import { StatCard } from "../ui/StatCard";
-import { AreaChart } from "../charts/AreaChart";
 import { pageItem, pageStagger } from "../ui/PageMotion";
 import { cn } from "../../lib/cn";
 import type { ComponentType, ReactNode } from "react";
@@ -42,17 +36,6 @@ const PROBLEM_STATS = [
     hint: "Toxic smoke harms communities",
     icon: <ShieldAlert className="h-5 w-5" />,
   },
-];
-
-const CATEGORIES = [
-  "PET",
-  "HDPE",
-  "PP",
-  "LDPE",
-  "PS",
-  "Aluminium",
-  "Steel",
-  "Mixed",
 ];
 
 const OFFLINE = [
