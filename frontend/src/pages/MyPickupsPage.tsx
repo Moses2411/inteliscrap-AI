@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   CalendarClock,
   MapPin,
@@ -45,7 +46,12 @@ export default function MyPickupsPage() {
   const totalValue = jobs.reduce((a, j) => a + (j.estimated_value_naira ?? 0), 0);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+      className="space-y-6"
+    >
       <PageHeader
         title={t("my_jobs")}
         subtitle={`${jobs.length} active job${jobs.length === 1 ? "" : "s"}${
@@ -135,6 +141,6 @@ export default function MyPickupsPage() {
           );
         })}
       </div>
-    </div>
+    </motion.div>
   );
 }

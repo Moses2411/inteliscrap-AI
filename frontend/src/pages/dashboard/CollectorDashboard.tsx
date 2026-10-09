@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import {
   ArrowRight,
   Banknote,
+  HardHat,
   Loader2,
   MapPin,
   Navigation,
@@ -23,10 +25,11 @@ import { AreaChart } from "../../components/charts/AreaChart";
 import { Sparkline } from "../../components/charts/Sparkline";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { fetchActivePickups, fetchOffers, type PickupJob, type PickupOffer } from "../../services/pickups";
 import { shareMyLocation } from "../../services/location";
 import { DEMO_JOBS, DEMO_OFFERS, DEMO_COLLECTOR_INCOME, previewEnabled } from "../../lib/demoData";
-import { formatCompactNaira, formatNaira } from "../../utils/formatters";
+import { formatCompactNaira, formatNaira, formatPhoneDisplay } from "../../utils/formatters";
 import { getSavedPhone } from "../../services/auth";
 import { cn } from "../../lib/cn";
 
@@ -107,67 +110,77 @@ export default function CollectorDashboard() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <PageHeader
-        title={`Hello, ${phone?.replace("+", "") ?? "Collector"} 👋`}
-        subtitle="Track offers, manage pickups and grow your earnings."
-        actions={
-          <div className="flex items-center gap-2">
-            {isPreview && <PreviewPill />}
-            <Button variant="secondary" size="sm" onClick={refreshLocation} loading={locBusy}>
-              {locBusy ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Navigation className="h-3.5 w-3.5" />
-              )}
-              Refresh location
-            </Button>
-          </div>
-        }
-      />
+    <PageMotion className="space-y-6">
+      <motion.div variants={pageItem}>
+        <PageHeader
+          title={`Hello, ${formatPhoneDisplay(phone) ?? "Collector"} 👋`}
+          subtitle="Track offers, manage pickups and grow your earnings."
+          actions={
+            <div className="flex items-center gap-2">
+              {isPreview && <PreviewPill />}
+              <Button variant="secondary" size="sm" onClick={refreshLocation} loading={locBusy}>
+                {locBusy ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Navigation className="h-3.5 w-3.5" />
+                )}
+                Refresh location
+              </Button>
+            </div>
+          }
+        />
+      </motion.div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
-          label="Earnings (30d)"
-          value={isPreview ? formatCompactNaira(153000) : "—"}
-          icon={<Wallet className="h-5 w-5" />}
-          trend={incomeDelta}
-          trendLabel="vs last month"
-        >
-          {isPreview && (
-            <div className="mt-3">
-              <Sparkline values={income} />
-            </div>
-          )}
-        </StatCard>
+      <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <motion.div variants={pageItem} className="min-w-0">
+          <StatCard
+            label="Earnings (30d)"
+            value={isPreview ? formatCompactNaira(153000) : "—"}
+            icon={<Wallet className="h-5 w-5" />}
+            trend={incomeDelta}
+            trendLabel="vs last month"
+          >
+            {isPreview && (
+              <div className="mt-3">
+                <Sparkline values={income} />
+              </div>
+            )}
+          </StatCard>
+        </motion.div>
 
-        <StatCard
-          label="Open offers"
-          value={loading ? "—" : offers.length}
-          icon={<Sparkles className="h-5 w-5" />}
-          iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
-          hint={offers.length ? "nearby demand" : "none right now"}
-        />
+        <motion.div variants={pageItem} className="min-w-0">
+          <StatCard
+            label="Open offers"
+            value={loading ? "—" : offers.length}
+            icon={<Sparkles className="h-5 w-5" />}
+            iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
+            hint={offers.length ? "Nearby demand" : "None right now"}
+          />
+        </motion.div>
 
-        <StatCard
-          label="Active jobs"
-          value={loading ? "—" : jobs.length}
-          icon={<Truck className="h-5 w-5" />}
-          iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
-          hint={jobs.length ? `${jobs.filter((j) => j.status === "scheduled").length} scheduled` : "no jobs yet"}
-        />
+        <motion.div variants={pageItem} className="min-w-0">
+          <StatCard
+            label="Active jobs"
+            value={loading ? "—" : jobs.length}
+            icon={<Truck className="h-5 w-5" />}
+            iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
+            hint={jobs.length ? `${jobs.filter((j) => j.status === "scheduled").length} scheduled` : "No jobs yet"}
+          />
+        </motion.div>
 
-        <StatCard
-          label="Job value"
-          value={loading ? "—" : formatCompactNaira(jobsValue)}
-          icon={<Banknote className="h-5 w-5" />}
-          iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300"
-          hint="locked in pickups"
-        />
-      </div>
+        <motion.div variants={pageItem} className="min-w-0">
+          <StatCard
+            label="Job value"
+            value={loading ? "—" : formatCompactNaira(jobsValue)}
+            icon={<Banknote className="h-5 w-5" />}
+            iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300"
+            hint="Locked in pickups"
+          />
+        </motion.div>
+      </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-5">
+      <motion.div variants={pageItem} className="grid gap-6 lg:grid-cols-5">
         {/* Offers */}
         <div className="space-y-4 lg:col-span-3">
           <Card pad>
@@ -205,9 +218,16 @@ export default function CollectorDashboard() {
               <ul className="space-y-2.5">
                 {offers.slice(0, 4).map((offer) => (
                   <li key={offer.pickup_id}>
-                    <button
+                    <motion.button
                       onClick={() => navigate("/pickups")}
-                      className="group flex w-full items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition-all hover:border-brand-200 hover:bg-brand-50/40 dark:border-slate-800 dark:hover:border-brand-900 dark:hover:bg-brand-950/30"
+                      initial="rest"
+                      animate="rest"
+                      whileHover="hover"
+                      variants={{
+                        rest: { backgroundColor: "rgba(0,0,0,0)" },
+                        hover: { backgroundColor: "rgba(5,150,105,0.06)", transition: { duration: 0.18 } },
+                      }}
+                      className="group flex w-full items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition-colors hover:border-brand-200 dark:border-slate-800 dark:hover:border-brand-900"
                     >
                       <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300">
                         <MapPin className="h-5 w-5" />
@@ -224,7 +244,7 @@ export default function CollectorDashboard() {
                       <span className="shrink-0 text-sm font-bold text-brand-600 dark:text-brand-400">
                         {offer.estimated_value_naira != null ? formatNaira(offer.estimated_value_naira) : "—"}
                       </span>
-                    </button>
+                    </motion.button>
                   </li>
                 ))}
               </ul>
@@ -253,7 +273,6 @@ export default function CollectorDashboard() {
         {/* Side panel */}
         <div className="space-y-4 lg:col-span-2">
           <Card pad className="relative overflow-hidden">
-            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-brand-500 via-brand-400 to-gold-400" />
             <div className="mb-3 flex items-center gap-2">
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">Earnings trend</h2>
               {isPreview ? (
@@ -298,20 +317,20 @@ export default function CollectorDashboard() {
               </div>
             </div>
             <Button
-              variant="secondary"
+              variant="white"
               size="sm"
               fullWidth
-              className="!mt-4 bg-white/95"
+              className="!mt-4"
               onClick={refreshLocation}
               loading={locBusy}
             >
-              {locBusy ? "Sharing location…" : "Refresh my location"}
+              Refresh my location
             </Button>
           </Card>
 
           <Card pad className={cn("flex items-start justify-between gap-3")}>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Tips</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tips</p>
               <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
                 Lead-acid batteries pay 3× steel per kg
               </p>
@@ -319,10 +338,15 @@ export default function CollectorDashboard() {
                 Always wear gloves — corrosive acid is a listed hazard.
               </p>
             </div>
-            <span className="text-xl" aria-hidden="true">🧤</span>
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/80 dark:text-amber-300"
+              aria-hidden="true"
+            >
+              <HardHat className="h-[18px] w-[18px]" />
+            </span>
           </Card>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </PageMotion>
   );
 }

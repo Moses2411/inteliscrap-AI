@@ -1,4 +1,4 @@
-import { authHeaders, getRole } from "./auth";
+import { authHeaders, getRole, syncRoleFromServer } from "./auth";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -27,10 +27,20 @@ async function requireCollector(): Promise<void> {
   if (getRole() !== "collector") throw new Error("Collector access required");
 }
 
+async function toJson(res: Response, fallback: string): Promise<never> {
+  if (res.status === 403) {
+    const role = await syncRoleFromServer();
+    throw new Error(
+      `Collector access required — your account role is "${role ?? "unknown"}". Switch workspace in Settings.`,
+    );
+  }
+  throw new Error(`${fallback}: ${res.statusText}`);
+}
+
 export async function fetchOffers(): Promise<PickupOffer[]> {
   await requireCollector();
   const res = await fetch(`${API_BASE}/api/v1/pickups/offers`, { headers: authHeaders() });
-  if (!res.ok) throw new Error(`Failed to load offers: ${res.statusText}`);
+  if (!res.ok) await toJson(res, "Failed to load offers");
   return res.json();
 }
 
@@ -40,13 +50,13 @@ export async function acceptOffer(pickupId: string): Promise<PickupJob> {
     method: "POST",
     headers: authHeaders(),
   });
-  if (!res.ok) throw new Error(`Accept failed: ${res.statusText}`);
+  if (!res.ok) await toJson(res, "Accept failed");
   return res.json();
 }
 
 export async function fetchActivePickups(): Promise<PickupJob[]> {
   await requireCollector();
   const res = await fetch(`${API_BASE}/api/v1/pickups/active`, { headers: authHeaders() });
-  if (!res.ok) throw new Error(`Failed to load pickups: ${res.statusText}`);
+  if (!res.ok) await toJson(res, "Failed to load pickups");
   return res.json();
 }

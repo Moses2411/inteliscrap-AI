@@ -93,7 +93,7 @@ export default function ImpactDashboard() {
           label="Total tonnage"
           value={impact.loading || !s ? "—" : formatKg(s.total_tonnage_kg)}
           icon={<Scale className="h-5 w-5" />}
-          hint="since inception"
+          hint="Since inception"
         />
         <StatCard
           label="Carbon offset"
@@ -107,14 +107,14 @@ export default function ImpactDashboard() {
           value={impact.loading || !s ? "—" : formatCompactNaira(s.total_collector_income_naira)}
           icon={<Banknote className="h-5 w-5" />}
           iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
-          hint="paid to informal recyclers"
+          hint="Paid to informal recyclers"
         />
         <StatCard
           label="Settled transactions"
           value={impact.loading || !s ? "—" : s.transactions_count.toLocaleString()}
           icon={<Coins className="h-5 w-5" />}
           iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300"
-          hint="verified pickups"
+          hint="Verified pickups"
         />
       </div>
 

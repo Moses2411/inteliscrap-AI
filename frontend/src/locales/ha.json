@@ -10,6 +10,7 @@
   "nav_hub": "Cibiyar",
   "nav_compliance": "Doka",
   "nav_impact": "Nasarar",
+  "nav_report": "Rahoto",
   "logout": "Fita",
   "scan": "Dauki Hoto",
   "analyzing": "Ana nazari...",
@@ -29,7 +30,6 @@
   "scrap_type": "Nau'in kayan",
   "weight_estimate": "Kimanin nauyi",
   "no_scans": "Babu tarihin daukar hoto har yanzu",
-
   "hazards": {
     "corrosive_acid": "Wannan kayan yana da ruwan acidi mai ƙuna. Kada ka taɓa shi da hannu.",
     "lead_poisoning": "Wannan kayan yana da gubar dalma. Kada ka karya shi, kada ka shaƙa ƙurarsa.",
@@ -47,7 +47,6 @@
     "pcb_contamination": "Yana da PCB mai cutar daji. Kada ka ƙona shi.",
     "biological_waste": "Sharar gida ce. Ka saka safar hannu kafin ka taɓa."
   },
-
   "materials": {
     "copper": "Jan ƙarfe (Copper)",
     "aluminum": "Aluminium",
@@ -67,7 +66,6 @@
     "rubber": "Roba (Rubber)",
     "textile": "Tufafi / Yadi"
   },
-
   "header_scrap_type": "Nau'in kayan",
   "estimated_value": "Kimanin Farashi",
   "read_aloud": "Karanta da Murya",
@@ -103,7 +101,6 @@
   "placeholder_ha": "Sannu, yaya kake?",
   "placeholder_pcm": "Yaya lafiya?",
   "placeholder_en": "Rubuta wani abu a nan",
-
   "analyzing_desc": "Yi haƙuri — muna gano kayan da kuma duba farashin yau.",
   "manual_fallback_hint": "Idan samfurin AI bai nan ba, za ka iya zaɓar kayan da hannu.",
   "manual_select_title": "Zaɓi kayan",
@@ -116,16 +113,13 @@
   "feature_works_offline": "Yana aiki ba tare da yanar gizo ba",
   "how_it_works": "Yadda ake aiki",
   "scans_save_desc": "Ana ajiye hotunan a na'urarka kuma za a aika su ta atomatik idan an haɗa da yanar gizo.",
-
   "scan_noun": "hoto",
   "scan_noun_plural": "hotuna",
   "delete": "Share",
   "settings_subtitle": "Sarrafa murya, harshe, da saitunan haɗin yanar gizo",
-
   "hazard_safe": "Lafiya",
   "hazard_high_risk": "Haɗari Mai Girma",
   "hazard_caution": "Yi Hattara",
-
   "sign_in_title": "Shiga don neman karɓa",
   "your_phone": "Lambar waya",
   "send_otp": "Aiko lamba",
@@ -140,7 +134,6 @@
   "posted_success": "An aika buƙatar! Za a sanar da mai karɓa kusa da kai.",
   "weight_invalid": "Shigar da nauyi daidai",
   "share_phone_label": "Zaɓi: raba lambar wayarka da mai karɓa domin ya iya tuntuɓar ka",
-
   "new_pickups": "Sabbin Buƙatun Karɓa",
   "my_jobs": "Aikina",
   "accept": "Karɓa",
@@ -155,7 +148,6 @@
   "loading": "Ana lodi...",
   "pickups_empty": "Babu sabon buƙata a yanzu. Ka bar wurinka a kunne, ka sake duba nan ba da jimawa ba.",
   "my_jobs_empty": "Ba ka da wani aiki a yanzu. Ka karɓi buƙata don ganinta a nan.",
-
   "safety_instructions": {
     "default": "Ka saka safar hannu kafin ka taɓa. Ka wanke hannu bayan aiki.",
     "acid": "Ka saka safar hannu da tabarau. Idan ruwan ya taɓa fata, ka wanke da ruwa da sabulu nan da nan.",
@@ -165,5 +157,6 @@
     "asbestos": "Kada ka hura ƙurar. Ka jika da ruwa kafin motsa shi.",
     "sharp": "Ka yi amfani da safar hannu masu kauri. Ka yi hattara da gefuna.",
     "general": "Wannan kayan ba shi da haɗari sosai. Amma ka wanke hannu bayan taɓa."
-  }
+  },
+  "close": "Rufe kamara"
 }

@@ -1,5 +1,6 @@
 import type { FC, SVGProps } from "react";
 import {
+  BarChart3,
   Camera,
   History,
   LayoutDashboard,
@@ -36,10 +37,14 @@ export function getNavForRole(role: UserRole | null): NavItem[] {
   }
   if (role === "recycling_hub") {
     items.push({ path: "/hub", labelKey: "nav_hub", icon: PieChart });
+    items.push({ path: "/report", labelKey: "nav_report", icon: BarChart3 });
     items.push({ path: "/compliance", labelKey: "nav_compliance", icon: Receipt });
   }
   if (role === "ngo" || role === "admin") {
     items.push({ path: "/impact", labelKey: "nav_impact", icon: PieChart });
+  }
+  if (role === "admin") {
+    items.push({ path: "/report", labelKey: "nav_report", icon: BarChart3 });
   }
   if (role === "partner" || role === "admin") {
     items.push({ path: "/compliance", labelKey: "nav_compliance", icon: Receipt });

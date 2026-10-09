@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { motion } from "framer-motion";
 import { CloudOff } from "lucide-react";
 import { useOnlineStatus } from "../../utils/offline";
 import { useApp } from "../../store/appStore";
@@ -37,9 +38,14 @@ export default function AppShell({ children }: Props) {
               {t("offline_banner")}
             </div>
           )}
-          <div key={online ? "online" : "offline"} className="animate-fade-in">
+          <motion.div
+            key={online ? "online" : "offline"}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          >
             {children}
-          </div>
+          </motion.div>
         </main>
       </div>
 

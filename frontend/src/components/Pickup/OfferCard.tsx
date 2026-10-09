@@ -17,9 +17,9 @@ export default function OfferCard({ offer, busy, busyId, distanceLabel, nairaSym
     <article className="card space-y-3 transition-all hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate font-semibold text-gray-900 dark:text-gray-100">{offer.material_name}</p>
+          <p className="truncate font-semibold text-slate-900 dark:text-slate-100">{offer.material_name}</p>
           {offer.created_at && (
-            <p className="text-xs text-gray-400 dark:text-gray-500">{new Date(offer.created_at).toLocaleString()}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(offer.created_at).toLocaleString()}</p>
           )}
         </div>
         {distanceLabel && (
@@ -31,12 +31,12 @@ export default function OfferCard({ offer, busy, busyId, distanceLabel, nairaSym
 
       <div className="flex flex-wrap gap-2 text-sm">
         {offer.estimated_weight_kg != null && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             {offer.estimated_weight_kg} kg
           </span>
         )}
         {offer.estimated_value_naira != null && (
-          <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+          <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
             {nairaSymbol}{offer.estimated_value_naira.toLocaleString()}
           </span>
         )}
@@ -56,7 +56,7 @@ export default function OfferCard({ offer, busy, busyId, distanceLabel, nairaSym
       )}
 
       {offer.address_text && (
-        <p className="truncate text-xs text-gray-500 dark:text-gray-400">{offer.address_text}</p>
+        <p className="truncate text-xs text-slate-500 dark:text-slate-400">{offer.address_text}</p>
       )}
 
       <button onClick={onAccept} disabled={busy} className="btn-primary w-full">

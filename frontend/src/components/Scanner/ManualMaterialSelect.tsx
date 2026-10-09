@@ -3,6 +3,7 @@ import { SCRAP_CLASSES } from "../../vision/visionEngine";
 import { resolveTradeRule } from "../../services/language";
 import { useTranslation } from "../../hooks/useTranslation";
 import HazardBadge from "../ui/HazardBadge";
+import { Button } from "../ui/Button";
 
 interface Props {
   onSelect: (slug: string) => void;
@@ -27,9 +28,9 @@ export default function ManualMaterialSelect({ onSelect, onRetry }: Props) {
               key={cls.slug}
               role="listitem"
               onClick={() => onSelect(cls.slug)}
-              className="group flex min-h-[92px] flex-col items-start justify-between gap-2 rounded-2xl border border-gray-200 bg-white p-3 text-left shadow-sm transition-all hover:border-brand-400 hover:shadow-md active:scale-[0.98] dark:border-gray-700 dark:bg-gray-900"
+              className="group flex min-h-[92px] flex-col items-start justify-between gap-2 rounded-2xl border border-slate-200 bg-white p-3 text-left shadow-sm transition-all hover:border-brand-400 hover:shadow-md active:scale-[0.98] dark:border-slate-700 dark:bg-slate-900"
             >
-              <span className="text-sm font-semibold text-gray-900 group-hover:text-brand-700 dark:text-gray-100 dark:group-hover:text-brand-300">
+              <span className="text-sm font-semibold text-slate-900 group-hover:text-brand-700 dark:text-slate-100 dark:group-hover:text-brand-300">
                 {rule.material}
               </span>
               <span className="flex items-center gap-2">
@@ -40,13 +41,10 @@ export default function ManualMaterialSelect({ onSelect, onRetry }: Props) {
         })}
       </div>
 
-      <button
-        onClick={onRetry}
-        className="btn-secondary w-full gap-2"
-      >
+      <Button variant="secondary" fullWidth onClick={onRetry}>
         <RotateCcw className="h-4 w-4" aria-hidden="true" />
         {t("scan_again")}
-      </button>
+      </Button>
     </div>
   );
 }

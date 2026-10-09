@@ -48,6 +48,7 @@ declare module "lucide-react" {
   export const CircleDollarSign: FC<P>;
   export const CircleX: FC<P>;
   export const ClipboardCheck: FC<P>;
+  export const ClipboardList: FC<P>;
   export const Clock: FC<P>;
   export const Clock3: FC<P>;
   export const CloudOff: FC<P>;
@@ -79,6 +80,8 @@ declare module "lucide-react" {
   export const Gauge: FC<P>;
   export const Gift: FC<P>;
   export const Globe: FC<P>;
+  export const GitBranch: FC<P>;
+  export const GitFork: FC<P>;
   export const Grid: FC<P>;
   export const Handshake: FC<P>;
   export const HardHat: FC<P>;

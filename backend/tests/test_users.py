@@ -33,3 +33,27 @@ async def test_update_location_requires_auth(client, test_session):
         json={"latitude": 11.0, "longitude": 7.0},
     )
     assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_update_role_persists_and_grants_collector_access(client, test_session):
+    headers, user = await _household_headers(test_session, phone="+2348070000003")
+
+    blocked = await client.get("/api/v1/pickups/offers", headers=headers)
+    assert blocked.status_code == 403
+
+    resp = await client.patch(
+        "/api/v1/users/me/role", json={"role": "collector"}, headers=headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["role"] == "collector"
+    assert user.role == UserRole.collector
+
+    allowed = await client.get("/api/v1/pickups/offers", headers=headers)
+    assert allowed.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_update_role_requires_auth(client, test_session):
+    resp = await client.patch("/api/v1/users/me/role", json={"role": "collector"})
+    assert resp.status_code == 401

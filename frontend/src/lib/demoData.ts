@@ -23,6 +23,13 @@ function daysAgo(n: number, hour = 10): string {
   return d.toISOString();
 }
 
+function monthsAgo(m: number, day = 12, hour = 11): string {
+  const d = new Date();
+  d.setMonth(d.getMonth() - m, day);
+  d.setHours(hour, 25, 0, 0);
+  return d.toISOString();
+}
+
 // ── Materials / price guide ─────────────────────────────────────────
 export const DEMO_MATERIALS: MaterialCategoryInfo[] = [
   { id: 1, slug: "copper", name: "Copper", price_per_kg_naira: 3850, is_hazardous: false },
@@ -265,6 +272,69 @@ export const DEMO_HUB_SUBSCRIPTIONS: HubSubscription[] = [
   { id: "sub_1", hub_id: "hub_demo", plan_name: "Pro", amount_naira: 25000, cycle: "monthly", started_at: daysAgo(30), next_billing_at: daysAgo(-1, 9), status: "active", created_at: daysAgo(30, 9) },
   { id: "sub_2", hub_id: "hub_demo", plan_name: "Pro", amount_naira: 25000, cycle: "monthly", started_at: daysAgo(60), next_billing_at: daysAgo(-30, 9), status: "paid", created_at: daysAgo(60, 9) },
 ];
+
+// ── Sales report (recycling hub) ────────────────────────────────────
+function materialPrice(materialId: number): number {
+  return DEMO_MATERIALS.find((m) => m.id === materialId)?.price_per_kg_naira ?? 200;
+}
+
+function materialName(materialId: number): string {
+  return DEMO_MATERIALS.find((m) => m.id === materialId)?.name ?? `Material ${materialId}`;
+}
+
+/** Deliveries spread across the last 6 months so the sales report has history. */
+export const DEMO_SALES_DELIVERIES: HubDelivery[] = (() => {
+  const rows: Array<[number, number, number, number, number]> = [
+    // [monthsBack, materialId, weightKg, day, hour]
+    [5, 1, 148, 9, 10], [5, 5, 320, 17, 14],
+    [4, 1, 162, 8, 11], [4, 3, 210, 15, 13], [4, 7, 460, 24, 9],
+    [3, 2, 190, 7, 12], [3, 1, 174, 16, 15], [3, 8, 130, 26, 10],
+    [2, 1, 205, 6, 11], [2, 5, 380, 14, 13], [2, 4, 96, 23, 16],
+    [1, 3, 240, 9, 12], [1, 1, 188, 18, 10], [1, 6, 150, 27, 14],
+    [0, 1, 226, 5, 11], [0, 8, 144, 11, 15], [0, 2, 205, 16, 12], [0, 5, 350, 22, 10],
+  ];
+  const today = new Date().getDate();
+  return rows.map(([monthsBack, materialId, weightKg, day, hour], i) => ({
+    id: `del_s${i + 1}`,
+    hub_id: "hub_demo",
+    request_id: `req_s${i + 1}`,
+    transaction_id: `txn_${9100 + i}`,
+    material_category_id: materialId,
+    weight_kg: weightKg,
+    hub_price_naira: Math.round(weightKg * materialPrice(materialId)),
+    delivered_at: monthsAgo(monthsBack, monthsBack === 0 ? Math.min(day, today) : day, hour),
+    created_at: monthsAgo(monthsBack, monthsBack === 0 ? Math.min(day, today) : day, hour + 1),
+  }));
+})();
+
+/** Supply requests spread across the last 6 months for the report's demand view. */
+export const DEMO_SALES_REQUESTS: HubRequest[] = (() => {
+  const rows: Array<[number, number, number, number, string]> = [
+    // [monthsBack, materialId, requestedKg, fulfilledKg, status]
+    [5, 1, 300, 300, "filled"], [5, 5, 400, 320, "open"],
+    [4, 7, 600, 460, "open"], [4, 3, 250, 210, "open"],
+    [3, 2, 220, 190, "open"], [3, 8, 200, 130, "open"],
+    [2, 4, 120, 96, "open"], [2, 1, 400, 385, "open"],
+    [1, 6, 300, 150, "open"], [1, 3, 300, 240, "open"],
+    [0, 1, 350, 226, "open"], [0, 5, 500, 350, "open"],
+    [0, 8, 180, 144, "open"], [0, 2, 260, 205, "open"],
+  ];
+  return rows.map(([monthsBack, materialId, requestedKg, fulfilledKg, status], i) => {
+    const day = monthsBack === 0 ? Math.min(3, new Date().getDate()) : 3;
+    return {
+      id: `req_s${i + 1}`,
+      hub_id: "hub_demo",
+      hub_name: DEMO_HUB.name,
+      material_category_id: materialId,
+      material_name: materialName(materialId),
+      requested_kg: requestedKg,
+      fulfilled_kg: fulfilledKg,
+      requested_on: monthsAgo(monthsBack, day, 9).slice(0, 10),
+      status,
+      created_at: monthsAgo(monthsBack, day, 9),
+    };
+  });
+})();
 
 // ── Impact (NGO / admin) ────────────────────────────────────────────
 export const DEMO_IMPACT_SUMMARY: ImpactSummary = {

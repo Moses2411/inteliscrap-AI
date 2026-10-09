@@ -15,7 +15,7 @@ export type Tone =
 
 const TONES: Record<Tone, string> = {
   brand: "bg-brand-50 text-brand-700 ring-brand-600/15 dark:bg-brand-950/80 dark:text-brand-300 dark:ring-brand-400/20",
-  gold: "bg-gold-50 text-gold-700 ring-gold-600/20 dark:bg-gold-950/60 dark:text-gold-300 dark:ring-gold-400/20",
+  gold: "bg-gold-100 text-gold-800 ring-gold-600/25 dark:bg-gold-950/70 dark:text-gold-300 dark:ring-gold-400/25",
   green: "bg-emerald-50 text-emerald-700 ring-emerald-600/15 dark:bg-emerald-950/80 dark:text-emerald-300 dark:ring-emerald-400/20",
   red: "bg-red-50 text-red-700 ring-red-600/15 dark:bg-red-950/80 dark:text-red-300 dark:ring-red-400/20",
   amber: "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-950/70 dark:text-amber-300 dark:ring-amber-400/20",
