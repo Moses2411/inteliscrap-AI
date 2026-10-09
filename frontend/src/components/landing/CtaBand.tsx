@@ -44,15 +44,6 @@ export default function CtaBand() {
               Get started
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </Button>
-            <a
-              href={GITHUB_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="btn h-12 bg-white/10 px-6 text-base text-white ring-1 ring-inset ring-white/30 hover:bg-white/20"
-            >
-              <GitFork className="h-4 w-4" aria-hidden="true" />
-              View on GitHub
-            </a>
           </div>
         </div>
       </Card>

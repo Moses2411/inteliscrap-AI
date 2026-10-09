@@ -25,14 +25,6 @@ export default function LandingFooter() {
           <Link to="/login" className="transition-colors hover:text-brand-600 dark:hover:text-brand-400">
             Get started
           </Link>
-          <a
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="transition-colors hover:text-brand-600 dark:hover:text-brand-400"
-          >
-            GitHub
-          </a>
         </nav>
       </div>
 
