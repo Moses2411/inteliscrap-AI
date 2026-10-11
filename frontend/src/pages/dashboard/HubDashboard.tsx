@@ -63,14 +63,16 @@ export default function HubDashboard() {
       await createHubRequest({
         material_category_id: Number(form.material_category_id),
         requested_kg: Number(form.requested_kg),
-        requested_on: new Date(form.requested_on).toISOString(),
+        requested_on: form.requested_on, // Send YYYY-MM-DD directly
         note: form.note || undefined,
       });
       setSaved(true);
       setTimeout(() => setSheetOpen(false), 600);
       hub.refresh();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Failed to publish request");
+      // Try to extract backend error message
+      const message = err instanceof Error ? err.message : "Failed to publish request";
+      setFormError(message);
     } finally {
       setSubmitting(false);
     }

@@ -96,6 +96,15 @@ export async function createHubRequest(payload: CreateHubRequestPayload): Promis
     headers: authHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error("Failed to create request");
+  if (!res.ok) {
+    let message = "Failed to create request";
+    try {
+      const errorData = await res.json();
+      message = errorData.detail || message;
+    } catch {
+      // Ignore JSON parse error, use default message
+    }
+    throw new Error(message);
+  }
   return res.json();
 }

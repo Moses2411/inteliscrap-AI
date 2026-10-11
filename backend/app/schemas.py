@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -332,7 +332,7 @@ class HubRecyclingRequestCreate(BaseModel):
     material_category_id: int
     requested_kg: float = Field(gt=0)
     note: Optional[str] = None
-    requested_on: datetime
+    requested_on: date
 
 
 class HubRecyclingRequestResponse(BaseModel):

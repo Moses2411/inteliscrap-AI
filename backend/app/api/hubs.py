@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,17 +79,12 @@ async def create_hub_request(
     if material is None:
         raise HTTPException(status_code=404, detail="Material category not found")
 
-    req_on = (
-        body.requested_on.date()
-        if isinstance(body.requested_on, datetime)
-        else body.requested_on
-    )
     req = await hub_service.create_request(
         db,
         hub,
         material_category_id=body.material_category_id,
         requested_kg=body.requested_kg,
-        requested_on=req_on,
+        requested_on=body.requested_on,
         note=body.note,
     )
     return HubRecyclingRequestResponse(

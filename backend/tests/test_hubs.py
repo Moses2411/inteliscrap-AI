@@ -22,13 +22,13 @@ async def _seed_hub(test_session):
     seller = User(
         id="hub-seller",
         phone_number="+2348060000001",
-        role=UserRole.household,
+        role=UserRole.seller,
         location_hub="GreenCycle Hub",
     )
     hub_owner = User(
         id="hub-owner",
         phone_number="+2348060000002",
-        role=UserRole.household,
+        role=UserRole.seller,
         location_hub="Zaria",
     )
     collector = User(
@@ -62,12 +62,12 @@ async def test_register_hub(client, test_session):
     user = User(
         id="reg-owner",
         phone_number="+2348060000020",
-        role=UserRole.household,
+        role=UserRole.seller,
         location_hub="Zaria",
     )
     test_session.add(user)
     await test_session.flush()
-    token = security.create_access_token("reg-owner", UserRole.household.value)
+    token = security.create_access_token("reg-owner", UserRole.seller.value)
     resp = await client.post(
         "/api/v1/hubs/register",
         json={
@@ -87,7 +87,7 @@ async def test_register_hub(client, test_session):
 @pytest.mark.asyncio
 async def test_register_hub_conflict(client, test_session):
     await _seed_hub(test_session)
-    token = security.create_access_token("hub-owner", UserRole.household.value)
+    token = security.create_access_token("hub-owner", UserRole.seller.value)
     resp = await client.post(
         "/api/v1/hubs/register",
         json={"name": "Duplicate Hub", "city": "Zaria"},

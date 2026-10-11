@@ -255,7 +255,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   }
 
   return (
-    <div className="card space-y-3">
+    <form onSubmit={submitListing} className="card space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("confirm_listing")}</h2>
         <span className="text-xs text-brand-600 dark:text-brand-400">{analysis.material_class}</span>
@@ -278,13 +278,13 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
       {error && <div className="text-sm font-semibold text-red-600 dark:text-red-400" role="alert">{error}</div>}
 
-      <Button fullWidth onSubmit={submitListing} loading={busy}>
+      <Button fullWidth type="submit" loading={busy}>
         {t("list_scrap")}
       </Button>
 
-      <Button variant="ghost" fullWidth onClick={onReset}>
+      <Button variant="ghost" fullWidth type="button" onClick={onReset}>
         {t("scan_again")}
       </Button>
-    </div>
+    </form>
   );
 }
