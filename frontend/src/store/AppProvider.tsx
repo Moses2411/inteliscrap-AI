@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, type ReactNode } from "react";
 import type { VisionAnalysis, Language, PriceMatrixEntry, ScrapScan, User, Theme } from "../types";
 import { AppContext, type AppState } from "./appStore";
+import { authHeaders } from "../services/auth";
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
 type Action =
   | { type: "SET_USER"; payload: User | null }
@@ -70,6 +73,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     root.classList.toggle("dark", state.theme === "dark");
     localStorage.setItem("theme", state.theme);
   }, [state.theme]);
+
+  // Fetch user from server on initialization if token exists
+  useEffect(() => {
+    const token = localStorage.getItem("inteliscrap_token");
+    if (token) {
+      fetch(`${API_BASE}/api/v1/auth/me`, { headers: authHeaders() })
+        .then((res) => {
+          if (res.ok) return res.json();
+          return null;
+        })
+        .then((user) => {
+          if (user) dispatch({ type: "SET_USER", payload: user });
+        })
+        .catch(() => {
+          localStorage.removeItem("inteliscrap_token");
+          localStorage.removeItem("inteliscrap_role");
+        });
+    }
+  }, []);
 
   const setUser = useCallback((user: User | null) => dispatch({ type: "SET_USER", payload: user }), []);
   const setOnline = useCallback((online: boolean) => dispatch({ type: "SET_ONLINE", payload: online }), []);

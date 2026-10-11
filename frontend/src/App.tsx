@@ -1,8 +1,8 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import AppShell from "./components/layout/AppShell";
 import { AppProvider } from "./store/AppProvider";
-import { getRole, getToken, syncRoleFromServer, type UserRole } from "./services/auth";
+import { getRole, type UserRole } from "./services/auth";
 import LoginPage from "./pages/auth/LoginPage";
 import LandingPage from "./pages/LandingPage";
 import ApexArcPage from "./pages/ApexArcPage";
@@ -108,15 +108,6 @@ function ShellRoutes() {
 }
 
 export default function App() {
-  const [, setRoleVersion] = useState(0);
-
-  // Reconcile the cached role with the server on boot so route guards and
-  // API calls never operate on a stale role (source of truth = backend).
-  useEffect(() => {
-    if (!getToken()) return;
-    syncRoleFromServer().then(() => setRoleVersion((v) => v + 1));
-  }, []);
-
   return (
     <AppProvider>
       <Routes>
