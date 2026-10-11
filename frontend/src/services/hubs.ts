@@ -108,3 +108,31 @@ export async function createHubRequest(payload: CreateHubRequestPayload): Promis
   }
   return res.json();
 }
+
+export interface RegisterHubPayload {
+  name: string;
+  address_text?: string;
+  latitude?: number;
+  longitude?: number;
+  city?: string;
+  contact_phone?: string;
+}
+
+export async function registerHub(payload: RegisterHubPayload): Promise<HubInfo> {
+  const res = await fetch(`${API_BASE}/api/v1/hubs/register`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let message = "Failed to register hub";
+    try {
+      const errorData = await res.json();
+      message = errorData.detail || message;
+    } catch {
+      // Ignore JSON parse error, use default message
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
