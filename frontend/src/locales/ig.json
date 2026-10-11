@@ -162,5 +162,8 @@
   "collapse_sidebar": "Mepụta sidebar",
   "expand_sidebar": "Nye sidebar ọsọ",
   "sidebar_search": "Chộta menu",
-  "skip_to_content": "Gawa n'ihu na isiokwu"
+  "skip_to_content": "Gawa n'ihu na isiokwu",
+  "confirm_listing": "Confirm Listing",
+  "list_scrap": "List Scrap",
+  "listing_confirm_desc": "Review and confirm your listing. The collector will weigh and confirm the final price at pickup."
 }

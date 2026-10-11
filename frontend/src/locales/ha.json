@@ -162,5 +162,8 @@
   "sidebar_search": "Nemi menu",
   "collapse_sidebar": "Kasa baya",
   "expand_sidebar": "Kwashe baya",
-  "skip_to_content": "Tsallaka zuwa manyan abin ciki"
+  "skip_to_content": "Tsallaka zuwa manyan abin ciki",
+  "confirm_listing": "Tabbatar da Rubutu",
+  "list_scrap": "Rubuta Kaya",
+  "listing_confirm_desc": "Duba kuma tabbatar da rubutunka. Mai auriya zai daurki da kuma yi tabbatar da farashin karshe a wannan auriya."
 }

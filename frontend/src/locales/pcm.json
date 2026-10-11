@@ -162,5 +162,8 @@
   "sidebar_search": "Find menu",
   "collapse_sidebar": "Close sidebar",
   "expand_sidebar": "Open sidebar",
-  "skip_to_content": "Go straight to main content"
+  "skip_to_content": "Go straight to main content",
+  "confirm_listing": "Confirm Listing",
+  "list_scrap": "List Scrap",
+  "listing_confirm_desc": "Check and confirm your listing. The collector go weigh and confirm the final price at pickup."
 }
