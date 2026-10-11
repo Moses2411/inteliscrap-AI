@@ -12,6 +12,7 @@ from app.api import (
     impact,
     listings,
     materials,
+    notifications,
     outbox,
     pickups,
     prices,
@@ -77,6 +78,7 @@ app.include_router(outbox.router)
 app.include_router(pickups.router)
 app.include_router(hubs.router)
 app.include_router(compliance.router)
+app.include_router(notifications.router)
 
 
 @app.get("/")

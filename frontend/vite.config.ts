@@ -24,6 +24,9 @@ export default defineConfig({
           { src: "icons/icon-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
+      // Use custom service worker template
+      swSrc: "public/sw-template.js",
+      filename: "sw.js",
       workbox: {
         maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],

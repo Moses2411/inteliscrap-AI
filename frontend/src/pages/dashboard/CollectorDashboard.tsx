@@ -9,8 +9,6 @@ import {
   MapPin,
   Navigation,
   PackageCheck,
-  RefreshCw,
-  Sparkles,
   Truck,
   Wallet,
 } from "lucide-react";
@@ -20,18 +18,16 @@ import { Card } from "../../components/ui/Card";
 import { Badge } from "../../components/ui/Badge";
 import { PreviewPill } from "../../components/ui/PreviewPill";
 import { Button } from "../../components/ui/Button";
-import { ActivityFeed, type ActivityItem } from "../../components/ui/ActivityFeed";
-import { AreaChart } from "../../components/charts/AreaChart";
-import { Sparkline } from "../../components/charts/Sparkline";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { fetchActivePickups, fetchOffers, type PickupJob, type PickupOffer } from "../../services/pickups";
 import { shareMyLocation } from "../../services/location";
 import { DEMO_JOBS, DEMO_OFFERS, DEMO_COLLECTOR_INCOME, previewEnabled } from "../../lib/demoData";
-import { formatCompactNaira, formatNaira, formatPhoneDisplay } from "../../utils/formatters";
+import { formatCompactNaira, formatPhoneDisplay } from "../../utils/formatters";
 import { getSavedPhone } from "../../services/auth";
 import { cn } from "../../lib/cn";
+import { initCollectorNotifications, notifyNewOffer, registerOffersSync } from "../../services/notifications";
 
 function distanceLabel(m?: number): string {
   if (m == null) return "";
@@ -67,6 +63,10 @@ export default function CollectorDashboard() {
 
   useEffect(() => {
     load();
+    // Initialize notifications for collector role
+    initCollectorNotifications();
+    // Register background sync for offers
+    registerOffersSync();
   }, [load]);
 
   async function refreshLocation() {
@@ -81,33 +81,32 @@ export default function CollectorDashboard() {
     }
   }
 
+  // Listen for new offers from background sync
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === "OFFERS_SYNCED" && event.data.offers) {
+        const newOffers = event.data.offers as PickupOffer[];
+        // Check for new offers not in current state
+        newOffers.forEach((offer) => {
+          if (!offers.some((o) => o.pickup_id === offer.pickup_id)) {
+            notifyNewOffer(offer);
+          }
+        });
+        setOffers(newOffers);
+      }
+      if (event.data.type === "PICKUPS_SYNCED" && event.data.pickups) {
+        setJobs(event.data.pickups);
+      }
+    };
+
+    navigator.serviceWorker.addEventListener("message", handleMessage);
+    return () => navigator.serviceWorker.removeEventListener("message", handleMessage);
+  }, [offers]);
+
   const jobsValue = jobs.reduce((acc, j) => acc + (j.estimated_value_naira ?? 0), 0);
   const income = DEMO_COLLECTOR_INCOME;
   const incomeDelta =
     income.length >= 2 ? ((income[income.length - 1] - income[income.length - 2]) / income[income.length - 2]) * 100 : 0;
-
-  const activities: ActivityItem[] = [
-    ...jobs
-      .filter((j) => j.status === "accepted")
-      .map((j) => ({
-        id: `a_${j.pickup_id}`,
-        tone: "brand" as const,
-        icon: <PackageCheck className="h-4 w-4" />,
-        title: `Offer accepted — ${j.material_name}`,
-        meta: `${j.estimated_weight_kg ?? "—"} kg · ${j.address_text ?? ""}`,
-        time: j.accepted_at ?? undefined,
-      })),
-    ...jobs
-      .filter((j) => j.status === "scheduled")
-      .map((j) => ({
-        id: `s_${j.pickup_id}`,
-        tone: "sky" as const,
-        icon: <Truck className="h-4 w-4" />,
-        title: `Scheduled pickup — ${j.material_name}`,
-        meta: j.address_text ?? "",
-        time: j.accepted_at ?? undefined,
-      })),
-  ];
 
   return (
     <PageMotion className="space-y-6">
@@ -116,7 +115,7 @@ export default function CollectorDashboard() {
           title={`Hello, ${formatPhoneDisplay(phone) ?? "Collector"} 👋`}
           subtitle="Track offers, manage pickups and grow your earnings."
           actions={
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {isPreview && <PreviewPill />}
               <Button variant="secondary" size="sm" onClick={refreshLocation} loading={locBusy}>
                 {locBusy ? (
@@ -141,212 +140,169 @@ export default function CollectorDashboard() {
             trend={incomeDelta}
             trendLabel="vs last month"
           >
-            {isPreview && (
-              <div className="mt-3">
-                <Sparkline values={income} />
-              </div>
-            )}
+
           </StatCard>
         </motion.div>
 
-        <motion.div variants={pageItem} className="min-w-0">
-          <StatCard
-            label="Open offers"
-            value={loading ? "—" : offers.length}
-            icon={<Sparkles className="h-5 w-5" />}
-            iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
-            hint={offers.length ? "Nearby demand" : "None right now"}
-          />
-        </motion.div>
-
-        <motion.div variants={pageItem} className="min-w-0">
+        <motion.div variants={pageItem}>
           <StatCard
             label="Active jobs"
-            value={loading ? "—" : jobs.length}
+            value={jobs.length}
             icon={<Truck className="h-5 w-5" />}
             iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
-            hint={jobs.length ? `${jobs.filter((j) => j.status === "scheduled").length} scheduled` : "No jobs yet"}
           />
         </motion.div>
 
-        <motion.div variants={pageItem} className="min-w-0">
+        <motion.div variants={pageItem}>
           <StatCard
-            label="Job value"
-            value={loading ? "—" : formatCompactNaira(jobsValue)}
+            label="Available offers"
+            value={offers.length}
+            icon={<PackageCheck className="h-5 w-5" />}
+            iconClass="bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300"
+          />
+        </motion.div>
+
+        <motion.div variants={pageItem}>
+          <StatCard
+            label="Jobs value"
+            value={formatCompactNaira(jobsValue)}
             icon={<Banknote className="h-5 w-5" />}
-            iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300"
-            hint="Locked in pickups"
+            iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
           />
         </motion.div>
       </motion.div>
 
-      <motion.div variants={pageItem} className="grid gap-6 lg:grid-cols-5">
-        {/* Offers */}
-        <div className="space-y-4 lg:col-span-3">
-          <Card pad>
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Offers near you</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Dispatched by hex-grid around your location
-                </p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/pickups")}>
-                View all <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
+      {/* Available offers */}
+      <motion.div variants={pageItem}>
+        <Card pad>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Available offers</h2>
+            {offers.length > 0 && (
+              <Badge tone="green">{offers.length} new</Badge>
+            )}
+          </div>
+          {loading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
             </div>
-
-            {loading ? (
-              <div className="space-y-3">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <Skeleton className="h-11 w-11" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-3.5 w-1/2" />
-                      <Skeleton className="h-3 w-1/3" />
+          ) : offers.length > 0 ? (
+            <div className="space-y-3">
+              {offers.map((offer) => (
+                <Card
+                  key={offer.pickup_id}
+                  hover
+                  className="border-l-4 border-brand-500 bg-brand-50/30 dark:bg-brand-950/30"
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-600 dark:bg-brand-900/50 dark:text-brand-300">
+                        <PackageCheck className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <p className="font-semibold text-slate-900 dark:text-white">{offer.material_name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {offer.estimated_weight_kg ? `${offer.estimated_weight_kg} kg` : "Weight TBD"} •
+                          {offer.estimated_value_naira ? ` ~₦${offer.estimated_value_naira.toLocaleString()}` : ""}
+                          {offer.distance_m ? ` • ${distanceLabel(offer.distance_m)}` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => navigate(`/pickups/${offer.pickup_id}/accept`)}
+                        className="whitespace-nowrap"
+                      >
+                        Accept
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : offers.length === 0 ? (
-              <EmptyState
-                icon={<Sparkles className="h-6 w-6" />}
-                title="No offers right now"
-                subtitle="Refresh your location to re-enter the dispatch ring."
-              />
-            ) : (
-              <ul className="space-y-2.5">
-                {offers.slice(0, 4).map((offer) => (
-                  <li key={offer.pickup_id}>
-                    <motion.button
-                      onClick={() => navigate("/pickups")}
-                      initial="rest"
-                      animate="rest"
-                      whileHover="hover"
-                      variants={{
-                        rest: { backgroundColor: "rgba(0,0,0,0)" },
-                        hover: { backgroundColor: "rgba(5,150,105,0.06)", transition: { duration: 0.18 } },
-                      }}
-                      className="group flex w-full items-center gap-3 rounded-xl border border-slate-100 p-3 text-left transition-colors hover:border-brand-200 dark:border-slate-800 dark:hover:border-brand-900"
-                    >
-                      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300">
-                        <MapPin className="h-5 w-5" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-bold text-slate-800 dark:text-slate-100">
-                          {offer.material_name}
-                        </span>
-                        <span className="block text-xs text-slate-500 dark:text-slate-400">
-                          {offer.estimated_weight_kg != null && `${offer.estimated_weight_kg} kg · `}
-                          {distanceLabel(offer.distance_m)}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-sm font-bold text-brand-600 dark:text-brand-400">
-                        {offer.estimated_value_naira != null ? formatNaira(offer.estimated_value_naira) : "—"}
-                      </span>
-                    </motion.button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-
-          <Card pad>
-            <div className="mb-1 flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">My pickups</h2>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/my-pickups")}>
-                Details <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
+                </Card>
+              ))}
             </div>
-            {activities.length ? (
-              <ActivityFeed items={activities} />
-            ) : (
-              <EmptyState
-                icon={<Truck className="h-6 w-6" />}
-                title="No active pickups"
-                subtitle="Accept an offer to start your first job."
-              />
-            )}
-          </Card>
-        </div>
-
-        {/* Side panel */}
-        <div className="space-y-4 lg:col-span-2">
-          <Card pad className="relative overflow-hidden">
-            <div className="mb-3 flex items-center gap-2">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Earnings trend</h2>
-              {isPreview ? (
-                <PreviewPill />
-              ) : (
-                <Badge tone="slate">lives after settlement</Badge>
-              )}
-            </div>
-
-            {isPreview ? (
-              <>
-                <p className="mb-2 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  {formatNaira(income[income.length - 1])}
-                  <span className="ml-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                    this week
-                  </span>
-                </p>
-                <AreaChart
-                  labels={["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8", "W9"]}
-                  series={[{ name: "Earnings", values: income, color: "var(--c-brand)" }]}
-                  height={170}
-                  formatValue={(v) => `₦${v.toLocaleString()}`}
-                />
-              </>
-            ) : (
-              <EmptyState
-                icon={<Banknote className="h-6 w-6" />}
-                title="Trends appear after settlements"
-                subtitle="Deliveries you complete are summarised into your weekly earnings chart."
-              />
-            )}
-          </Card>
-
-          <Card gradient pad>
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 text-white">
-                <RefreshCw className="h-5 w-5" />
-              </span>
-              <div>
-                <p className="text-sm font-bold text-white">Stay in the dispatch ring</p>
-                <p className="text-xs text-brand-100">Your location keeps offers coming</p>
-              </div>
-            </div>
-            <Button
-              variant="white"
-              size="sm"
-              fullWidth
-              className="!mt-4"
-              onClick={refreshLocation}
-              loading={locBusy}
-            >
-              Refresh my location
-            </Button>
-          </Card>
-
-          <Card pad className={cn("flex items-start justify-between gap-3")}>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Tips</p>
-              <p className="mt-1 text-sm font-semibold text-slate-800 dark:text-slate-100">
-                Lead-acid batteries pay 3× steel per kg
-              </p>
-              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                Always wear gloves — corrosive acid is a listed hazard.
-              </p>
-            </div>
-            <span
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-600 dark:bg-amber-950/80 dark:text-amber-300"
-              aria-hidden="true"
-            >
-              <HardHat className="h-[18px] w-[18px]" />
-            </span>
-          </Card>
-        </div>
+          ) : (
+            <EmptyState
+              icon={<PackageCheck className="h-6 w-6" />}
+              title="No offers available"
+              subtitle="New pickup offers will appear here when households nearby list scrap."
+            />
+          )}
+        </Card>
       </motion.div>
+
+      {/* Active pickups */}
+      <motion.div variants={pageItem}>
+        <Card pad>
+          <h2 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">Active pickups</h2>
+          {loading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : jobs.length > 0 ? (
+            <div className="space-y-3">
+              {jobs.map((job) => (
+                <Card key={job.pickup_id} hover>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
+                        job.status === "en_route" && "bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-300",
+                        job.status === "arrived" && "bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-300",
+                        job.status === "verified" && "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-300",
+                        job.status === "completed" && "bg-brand-100 text-brand-600 dark:bg-brand-900/50 dark:text-brand-300",
+                      )}>
+                        {job.status === "en_route" && <Truck className="h-5 w-5" />}
+                        {job.status === "arrived" && <MapPin className="h-5 w-5" />}
+                        {job.status === "verified" && <PackageCheck className="h-5 w-5" />}
+                        {job.status === "completed" && <HardHat className="h-5 w-5" />}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-slate-900 dark:text-white">{job.material_name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          {job.address_text ?? "Address not specified"} •
+                          {job.estimated_weight_kg ? `${job.estimated_weight_kg} kg` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        tone={
+                          job.status === "en_route" ? "sky" :
+                          job.status === "arrived" ? "amber" :
+                          job.status === "verified" ? "green" :
+                          job.status === "completed" ? "brand" : "slate"
+                        }
+                      >
+                        {job.status.replace("_", " ")}
+                      </Badge>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => navigate(`/pickups/${job.pickup_id}`)}
+                      >
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Truck className="h-6 w-6" />}
+              title="No active pickups"
+              subtitle="Accept an offer to start a pickup job."
+            />
+          )}
+        </Card>
+      </motion.div>
+
+      {/* Earnings chart (preview only) */}
+
     </PageMotion>
   );
 }
