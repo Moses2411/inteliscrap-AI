@@ -56,6 +56,7 @@ class UserCreate(BaseModel):
     phone_number: str
     full_name: Optional[str] = None
     location_hub: str = "Zaria"
+    address_text: Optional[str] = None
 
 
 class UserResponse(BaseModel):
@@ -63,7 +64,11 @@ class UserResponse(BaseModel):
     phone_number: str
     full_name: Optional[str] = None
     location_hub: str
+    address_text: Optional[str] = None
     role: str = UserRole.household.value
+    subscription_plan: str = "freemium"
+    subscription_status: str = "active"
+    subscription_expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -158,6 +163,60 @@ class ListingCreate(BaseModel):
     address_text: Optional[str] = None
     contact_phone: Optional[str] = None
     auto_dispatch: bool = True
+
+
+class ListingResponse(BaseModel):
+    id: str
+    seller_id: str
+    material_category_id: int
+    title: Optional[str] = None
+    description: Optional[str] = None
+    photo_url: Optional[str] = None
+    estimated_weight_kg: Optional[float] = None
+    actual_weight_kg: Optional[float] = None
+    estimated_value_naira: Optional[float] = None
+    final_value_naira: Optional[float] = None
+    confidence_score: float
+    toxicity_hazards: Optional[Any] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    address_text: Optional[str] = None
+    contact_phone: Optional[str] = None
+    status: str
+    expires_at: Optional[datetime] = None
+    is_large_quantity: bool = False
+    listing_fee_naira: float = 0
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SubscriptionPlanResponse(BaseModel):
+    plan: str
+    name: str
+    price_naira: int
+    cycle: str
+    features: list[str]
+    limits: dict
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SubscriptionStatusResponse(BaseModel):
+    plan: str
+    status: str
+    expires_at: Optional[datetime] = None
+    listings_today: int
+    daily_limit: int
+    max_weight_kg: Optional[float] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SubscriptionPurchaseRequest(BaseModel):
+    plan: str = "quarterly"
+    payment_method: PaymentMethod = PaymentMethod.mobile_money
+    payment_reference: Optional[str] = None
     gtin: Optional[str] = None  # barcode/EAN captured at scan → own-brand attribution
 
 
@@ -190,6 +249,7 @@ class OTPRequest(BaseModel):
     phone_number: str
     role: Optional[UserRole] = None
     full_name: Optional[str] = None
+    address_text: Optional[str] = None
 
 
 class RoleUpdate(BaseModel):

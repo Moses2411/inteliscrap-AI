@@ -2,6 +2,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 const TOKEN_KEY = "inteliscrap_token";
 const ROLE_KEY = "inteliscrap_role";
 const PHONE_KEY = "inteliscrap_phone";
+const ADDRESS_KEY = "inteliscrap_address";
 
 export type UserRole = "household" | "collector" | "admin" | "ngo" | "recycling_hub" | "partner";
 
@@ -25,6 +26,10 @@ export function getSavedPhone(): string | null {
   return localStorage.getItem(PHONE_KEY);
 }
 
+export function getSavedAddress(): string | null {
+  return localStorage.getItem(ADDRESS_KEY);
+}
+
 export function setToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token);
 }
@@ -37,9 +42,14 @@ export function setSavedPhone(phone: string): void {
   localStorage.setItem(PHONE_KEY, phone);
 }
 
+export function setSavedAddress(address: string): void {
+  localStorage.setItem(ADDRESS_KEY, address);
+}
+
 export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(ROLE_KEY);
+  localStorage.removeItem(ADDRESS_KEY);
 }
 
 export function authHeaders(): Record<string, string> {
@@ -77,9 +87,11 @@ export async function updateRole(role: UserRole): Promise<void> {
 export async function requestOtp(
   phoneNumber: string,
   role?: UserRole,
+  address?: string,
 ): Promise<{ otp?: string; debug: boolean }> {
-  const body: { phone_number: string; role?: UserRole } = { phone_number: phoneNumber };
+  const body: { phone_number: string; role?: UserRole; address_text?: string } = { phone_number: phoneNumber };
   if (role) body.role = role;
+  if (address) body.address_text = address;
   const res = await fetch(`${API_BASE}/api/v1/auth/otp/request`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -113,7 +125,7 @@ export async function ensureAuthenticated(): Promise<boolean> {
   const { otp, debug } = await requestOtp(phone);
 
   if (debug && otp) {
-    const auto = window.prompt(`Demo mode — your OTP is ${otp}\n(you can paste it or press Cancel to type manually, demo code ${"123456"} also works)`);
+    const auto = window.prompt(`Demo mode — your OTP is ${otp}\n(you can paste it or press Cancel to type manually, demo code 123456 also works)`);
     const code = auto && auto.trim() ? auto.trim() : otp;
     await verifyOtp(phone, code);
     return true;

@@ -4,10 +4,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models import Listing, ListingStatus, MaterialCategory, User
 from app.schemas import ListingCreate
-from app.services import matching_service
+from app.services import matching_service, subscription_service
 
 
 async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate) -> Listing:
+    # Check subscription limits
+    allowed, error = await subscription_service.can_create_listing(
+        db, seller, payload.estimated_weight_kg
+    )
+    if not allowed:
+        raise ValueError(error)
+
+    # Determine if this is a large quantity listing
+    is_large = False
+    listing_fee = 0
+    if payload.estimated_weight_kg and payload.estimated_weight_kg > 100:
+        is_large = True
+        # Freemium users pay a fee for large quantity (handled by subscription check above)
+        # Quarterly users have no fee
+
     listing = Listing(
         seller_id=seller.id,
         material_category_id=payload.material_category_id,
@@ -23,9 +38,14 @@ async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate)
         address_text=payload.address_text,
         contact_phone=payload.contact_phone,
         status=ListingStatus.active,
+        is_large_quantity=is_large,
+        listing_fee_naira=listing_fee,
     )
     db.add(listing)
     await db.flush()
+
+    # Increment listing count
+    await subscription_service.increment_listing_count(db, seller)
 
     if payload.auto_dispatch and listing.latitude is not None and listing.longitude is not None:
         material = await db.get(MaterialCategory, payload.material_category_id)
@@ -53,6 +73,15 @@ async def list_active(db: AsyncSession) -> list[Listing]:
                 [ListingStatus.active, ListingStatus.matched]
             )
         )
+        .order_by(Listing.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_user_listings(db: AsyncSession, user: User) -> list[Listing]:
+    result = await db.execute(
+        select(Listing)
+        .where(Listing.seller_id == user.id)
         .order_by(Listing.created_at.desc())
     )
     return list(result.scalars().all())

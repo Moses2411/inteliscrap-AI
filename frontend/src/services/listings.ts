@@ -1,4 +1,5 @@
 import { authHeaders } from "./auth";
+import { checkListingEligibility } from "./subscription";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -16,9 +17,31 @@ export interface CreateListingPayload {
   auto_dispatch?: boolean;
 }
 
+export interface ListingEligibility {
+  allowed: boolean;
+  error?: string;
+}
+
+export async function checkListingAllowed(estimatedWeightKg?: number): Promise<ListingEligibility> {
+  try {
+    const result = await checkListingEligibility(estimatedWeightKg);
+    return { allowed: result.allowed, error: result.error };
+  } catch {
+    // If check fails, allow but log warning
+    console.warn("Could not check listing eligibility, proceeding");
+    return { allowed: true };
+  }
+}
+
 export async function createListing(
   payload: CreateListingPayload,
 ): Promise<{ id: string; status: string }> {
+  // Check subscription eligibility first
+  const eligibility = await checkListingAllowed(payload.estimated_weight_kg);
+  if (!eligibility.allowed) {
+    throw new Error(eligibility.error || "Listing not allowed due to subscription limits");
+  }
+
   const res = await fetch(`${API_BASE}/api/v1/listings`, {
     method: "POST",
     headers: authHeaders(),

@@ -32,7 +32,39 @@ export interface User {
   phone_number: string;
   full_name?: string;
   location_hub: string;
+  address_text?: string;
+  role: string;
+  subscription_plan: string;
+  subscription_status: string;
+  subscription_expires_at?: string;
   created_at?: string;
+}
+
+export interface SubscriptionPlan {
+  plan: string;
+  name: string;
+  price_naira: number;
+  cycle: string;
+  features: string[];
+  limits: {
+    daily_listings: number;
+    max_weight_kg: number | null;
+  };
+}
+
+export interface SubscriptionStatus {
+  plan: string;
+  status: string;
+  expires_at?: string;
+  listings_today: number;
+  daily_limit: number;
+  max_weight_kg: number | null;
+}
+
+export interface SubscriptionPurchaseRequest {
+  plan: string;
+  payment_method: string;
+  payment_reference?: string;
 }
 
 export interface VisionAnalysis {

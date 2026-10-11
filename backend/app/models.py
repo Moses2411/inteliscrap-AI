@@ -43,6 +43,18 @@ class UserRole(str, enum.Enum):
     partner = "partner"
 
 
+class SubscriptionPlan(str, enum.Enum):
+    freemium = "freemium"
+    quarterly = "quarterly"
+
+
+class SubscriptionStatus(str, enum.Enum):
+    active = "active"
+    expired = "expired"
+    cancelled = "cancelled"
+    pending = "pending"
+
+
 class HubSubscriptionStatus(str, enum.Enum):
     active = "active"
     past_due = "past_due"
@@ -95,6 +107,7 @@ class User(Base):
     role = Column(_db_enum(UserRole), nullable=False, default=UserRole.household, index=True)
     language_pref = Column(String(8), nullable=False, default="ha")
     location_hub = Column(String(64), default="Zaria")
+    address_text = Column(String(320), nullable=True)  # Full address for pickup/delivery
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     h3_cell = Column(String(16), nullable=True, index=True)
@@ -104,6 +117,12 @@ class User(Base):
     is_active = Column(Boolean, nullable=False, default=True)
     last_seen_at = Column(DateTime, nullable=True)
     device_id = Column(String(64), nullable=True)
+    # Subscription fields
+    subscription_plan = Column(_db_enum(SubscriptionPlan), nullable=False, default=SubscriptionPlan.freemium, index=True)
+    subscription_status = Column(_db_enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.active, index=True)
+    subscription_expires_at = Column(DateTime, nullable=True)
+    listings_today = Column(Integer, nullable=False, default=0)
+    listings_today_date = Column(Date, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -116,6 +135,7 @@ class User(Base):
     collected_transactions = relationship(
         "Transaction", foreign_keys="Transaction.collector_id", back_populates="collector"
     )
+    subscriptions = relationship("UserSubscription", back_populates="user", cascade="all, delete-orphan")
 
 
 class MaterialCategory(Base):
@@ -170,6 +190,9 @@ class Listing(Base):
     contact_phone = Column(String(20), nullable=True)
     status = Column(_db_enum(ListingStatus), nullable=False, default=ListingStatus.active, index=True)
     expires_at = Column(DateTime, nullable=True)
+    # Subscription enforcement fields
+    is_large_quantity = Column(Boolean, nullable=False, default=False)  # > 100kg or subscription required
+    listing_fee_naira = Column(Numeric(12, 2), nullable=False, default=0)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -341,6 +364,30 @@ class HubSubscription(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     hub = relationship("RecyclingHub", backref="subscriptions")
+
+
+class UserSubscription(Base):
+    __tablename__ = "user_subscriptions"
+
+    id = Column(String(36), primary_key=True, index=True, default=_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    plan = Column(_db_enum(SubscriptionPlan), nullable=False)
+    amount_naira = Column(Numeric(12, 2), nullable=False)
+    cycle = Column(String(20), nullable=False, default="quarterly")
+    started_at = Column(DateTime, nullable=False, server_default=func.now())
+    expires_at = Column(DateTime, nullable=False)
+    status = Column(
+        _db_enum(SubscriptionStatus),
+        nullable=False,
+        default=SubscriptionStatus.active,
+        index=True,
+    )
+    payment_method = Column(_db_enum(PaymentMethod), nullable=True)
+    payment_reference = Column(String(120), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="subscriptions")
 
 
 class HubRecyclingRequest(Base):
