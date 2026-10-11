@@ -9,19 +9,15 @@ from app.services import matching_service, subscription_service
 
 async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate) -> Listing:
     # Check subscription limits
-    allowed, error = await subscription_service.can_create_listing(
-        db, seller, payload.estimated_weight_kg
-    )
+    allowed, error = await subscription_service.can_create_listing(db, seller)
     if not allowed:
         raise ValueError(error)
 
-    # Determine if this is a large quantity listing
+    # Determine if this is a large quantity listing (for tracking, not blocking)
     is_large = False
     listing_fee = 0
     if payload.estimated_weight_kg and payload.estimated_weight_kg > 100:
         is_large = True
-        # Freemium users pay a fee for large quantity (handled by subscription check above)
-        # Quarterly users have no fee
 
     listing = Listing(
         seller_id=seller.id,

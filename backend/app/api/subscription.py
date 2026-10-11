@@ -1,14 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.deps import get_current_user
 from app.database import get_db
-from app.core.auth import get_current_user
 from app.models import User
 from app.schemas import (
     SubscriptionPlanResponse,
     SubscriptionPurchaseRequest,
     SubscriptionStatusResponse,
-    UserResponse,
 )
 from app.services import subscription_service
 
@@ -51,12 +50,9 @@ async def purchase_subscription(
 
 @router.get("/check-listing", response_model=dict)
 async def check_listing_eligibility(
-    estimated_weight_kg: float | None = None,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Check if user can create a listing with given weight."""
-    allowed, error = await subscription_service.can_create_listing(
-        db, current_user, estimated_weight_kg
-    )
+    """Check if user can create a listing."""
+    allowed, error = await subscription_service.can_create_listing(db, current_user)
     return {"allowed": allowed, "error": error}

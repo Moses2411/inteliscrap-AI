@@ -59,7 +59,6 @@ async def get_user_subscription_status(db: AsyncSession, user: User) -> Subscrip
 async def can_create_listing(
     db: AsyncSession,
     user: User,
-    estimated_weight_kg: float | None = None,
 ) -> tuple[bool, str | None]:
     """
     Check if user can create a listing based on subscription.
