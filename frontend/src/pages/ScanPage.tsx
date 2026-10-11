@@ -12,16 +12,14 @@ import { useVision } from "../hooks/useVision";
 import { useAudioTTS } from "../hooks/useAudioTTS";
 import { useTranslation } from "../hooks/useTranslation";
 import { useApp } from "../store/appStore";
+import { getRole } from "../services/auth";
 import { saveScanLocally } from "../services/db";
 import { getCategoryBySlug } from "../services/materials";
 import { resolveTradeRule } from "../services/language";
 import type { VisionAnalysis } from "../types";
 
 export default function ScanPage() {
-  const { user } = useApp();
-  const role = user?.role;
-  
-  // Only seller and collector can access scanning functionality
+  const role = getRole();
   if (role !== "seller" && role !== "collector") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -38,6 +36,10 @@ export default function ScanPage() {
     );
   }
 
+  return <ScanWorkspace />;
+}
+
+function ScanWorkspace() {
   const [result, setResult] = useState<VisionAnalysis | null>(null);
   const [estimated_value, setEstimatedValue] = useState(0);
   const [loading, setLoading] = useState(false);

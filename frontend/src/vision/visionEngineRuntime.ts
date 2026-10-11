@@ -5,6 +5,7 @@ type ScorePair = { label: string; score: number };
 type ZeroShotClassifier = (texts: string[], image: Blob) => Promise<ScorePair[]>;
 
 export const RUNTIME_MODEL_ID = "Xenova/clip-vit-base-patch16";
+export const RUNTIME_MODEL_REVISION = "342fdf2f67aded64d138ff074745fb4a5d2bba5f";
 export const RUNTIME_MIN_SCORE = 0.3;
 
 interface ScrapPrompt {
@@ -34,6 +35,7 @@ function getClassifier(): Promise<ZeroShotClassifier> {
       const wasm = tjsEnv.backends.onnx?.wasm;
       if (wasm) wasm.wasmPaths = "/ort-tjs/";
       return tjsPipeline("zero-shot-image-classification", RUNTIME_MODEL_ID, {
+        revision: RUNTIME_MODEL_REVISION,
         dtype: "q8",
         device: "wasm",
       }) as unknown as ZeroShotClassifier;
