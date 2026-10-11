@@ -34,14 +34,14 @@ function getCurrentPosition(): Promise<GeolocationCoordinates> {
 }
 
 const ROLE_OPTIONS: { value: UserRole; label: string; hint: string; requiresAddress: boolean }[] = [
-  { value: "household", label: "Household", hint: "I have scrap to sell", requiresAddress: true },
+  { value: "seller", label: "Seller", hint: "I have scrap to sell", requiresAddress: true },
   { value: "collector", label: "Collector", hint: "I pick up scrap", requiresAddress: true },
 ];
 
 export default function PostPickupForm({ analysis, onReset }: Props) {
   const { t } = useTranslation();
   const [authenticated, setAuthenticated] = useState(!!getRole());
-  const [role, setRole] = useState<UserRole>("household");
+  const [role, setRole] = useState<UserRole>("seller");
   const [phone, setPhone] = useState(getSavedPhone() ?? "");
   const [address, setAddress] = useState("");
   const [otpSent, setOtpSent] = useState(false);
@@ -90,7 +90,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
     setError(null);
     try {
       // Check subscription eligibility before creating listing
-      const eligibility = await checkListingAllowed(w);
+      const eligibility = await checkListingAllowed();
       if (!eligibility.allowed) {
         setSubscriptionError(eligibility.error || "Listing not allowed due to subscription limits");
         setCanList(false);
@@ -194,7 +194,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
           required
         />
 
-        {/* Address field for household and collector */}
+        {/* Address field for seller and collector */}
         {addressRequired && (
           <div>
             <label className="label" htmlFor="address">Pickup address</label>
@@ -238,7 +238,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
   if (!subscriptionChecked) {
     // Check subscription eligibility for typical weight
-    checkListingAllowed(50).then((result) => {
+    checkListingAllowed().then((result) => {
       setCanList(result.allowed);
       setSubscriptionError(result.error ?? null);
       setSubscriptionChecked(true);

@@ -14,7 +14,7 @@ import {
 import type { UserRole } from "../services/auth";
 
 export const ROLE_LABEL: Record<string, string> = {
-  household: "Seller",
+  seller: "Seller",
   collector: "Collector",
   recycling_hub: "Recycling Hub",
   ngo: "NGO Partner",
@@ -37,7 +37,7 @@ export function getNavForRole(role: UserRole | null): NavItem[] {
     { path: "/market", labelKey: "nav_market", icon: Store },
   ];
 
-  if (role === "household") items.push({ path: "/history", labelKey: "nav_history", icon: History });
+  if (role === "seller") items.push({ path: "/history", labelKey: "nav_history", icon: History });
   if (role === "collector") {
     items.push(
       { path: "/pickups", labelKey: "nav_offers", icon: LayoutPanelTop },
@@ -73,7 +73,7 @@ export interface PrimaryNavItem {
 /** The key role page surfaced as the 4th bottom-nav tab. */
 export function getPrimaryRolePage(role: UserRole | null): PrimaryNavItem | null {
   switch (role) {
-    case "household":
+    case "seller":
       return { path: "/history", labelKey: "nav_history", icon: History };
     case "collector":
       return { path: "/my-pickups", labelKey: "nav_jobs", icon: Truck };

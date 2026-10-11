@@ -63,12 +63,8 @@ export async function purchaseSubscription(request: SubscriptionPurchaseRequest)
   return res.json();
 }
 
-export async function checkListingEligibility(estimatedWeightKg?: number): Promise<CheckListingEligibilityResponse> {
-  const params = new URLSearchParams();
-  if (estimatedWeightKg !== undefined) {
-    params.set("estimated_weight_kg", String(estimatedWeightKg));
-  }
-  const res = await fetch(`${API_BASE}/api/v1/subscription/check-listing?${params.toString()}`, {
+export async function checkListingEligibility(): Promise<CheckListingEligibilityResponse> {
+  const res = await fetch(`${API_BASE}/api/v1/subscription/check-listing`, {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error("Failed to check eligibility");

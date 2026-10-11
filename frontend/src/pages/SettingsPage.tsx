@@ -37,7 +37,7 @@ const LANG_OPTIONS: { value: Language; label: string }[] = [
 ];
 
 const ROLE_OPTIONS: UserRole[] = [
-  "household",
+  "seller",
   "collector",
   "recycling_hub",
   "ngo",

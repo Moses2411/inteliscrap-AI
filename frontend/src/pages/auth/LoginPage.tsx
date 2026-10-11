@@ -16,7 +16,7 @@ import { Button } from "../../components/ui/Button";
 import { cn } from "../../lib/cn";
 
 const ROLES: Array<{ role: UserRole; label: string; blurb: string; icon: ReactNode; requiresAddress: boolean }> = [
-  { role: "household", label: "Household / Seller", blurb: "Sell scrap at fair prices", icon: <Home className="h-4 w-4" />, requiresAddress: true },
+  { role: "seller", label: "Seller", blurb: "Sell scrap at fair prices", icon: <Home className="h-4 w-4" />, requiresAddress: true },
   { role: "collector", label: "Collector", blurb: "Get offers & pick up scrap", icon: <Truck className="h-4 w-4" />, requiresAddress: true },
   { role: "recycling_hub", label: "Recycling Hub", blurb: "Buy material at scale", icon: <Factory className="h-4 w-4" />, requiresAddress: false },
   { role: "ngo", label: "NGO", blurb: "Track community impact", icon: <HeartHandshake className="h-4 w-4" />, requiresAddress: false },
@@ -29,7 +29,7 @@ export default function LoginPage() {
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } } | null)?.from?.pathname ?? "/dashboard";
 
-  const [role, setRole] = useState<UserRole>("household");
+  const [role, setRole] = useState<UserRole>("seller");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const [step, setStep] = useState<"role" | "otp">("role");
@@ -114,7 +114,7 @@ export default function LoginPage() {
               <ul className="space-y-3.5">
                 <li className="flex items-center gap-3 text-sm">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/15"><MapPin className="h-4 w-4" /></span>
-                  Address-based pickup for households & collectors
+                  Address-based pickup for sellers & collectors
                 </li>
                 <li className="flex items-center gap-3 text-sm">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/15"><Recycle className="h-4 w-4" /></span>
@@ -215,7 +215,7 @@ export default function LoginPage() {
                     />
                   </div>
 
-                  {/* Address field for household and collector */}
+                  {/* Address field for seller and collector */}
                   {addressRequired && (
                     <div>
                       <label className="label" htmlFor="address">Pickup address</label>

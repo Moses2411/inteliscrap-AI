@@ -30,7 +30,7 @@ function DashboardRoute() {
   const role = getRole();
   switch (role) {
     case "collector":
-    case "household":
+    case "seller":
       return <HomeDashboard />;
     case "recycling_hub":
       return <HubDashboard />;

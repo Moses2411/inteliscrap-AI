@@ -14,7 +14,7 @@ async def request_otp(db: AsyncSession, payload: OTPRequest) -> tuple[User, str 
     if user is None:
         user = User(
             phone_number=payload.phone_number,
-            role=payload.role or UserRole.household,
+            role=payload.role or UserRole.seller,
             full_name=payload.full_name,
             address_text=payload.address_text,
         )

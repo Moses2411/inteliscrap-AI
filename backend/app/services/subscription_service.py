@@ -19,7 +19,6 @@ from app.schemas import ListingCreate, SubscriptionPurchaseRequest, Subscription
 
 # Subscription constants
 FREEMIUM_DAILY_LIMIT = 4
-FREEMIUM_MAX_WEIGHT_KG = Decimal("100")  # Max 100kg per listing for freemium
 QUARTERLY_PRICE_NAIRA = Decimal("2500")  # ₦2,500 per quarter
 QUARTERLY_DAYS = 90
 
@@ -43,11 +42,9 @@ async def get_user_subscription_status(db: AsyncSession, user: User) -> Subscrip
             await db.flush()
 
     daily_limit = FREEMIUM_DAILY_LIMIT
-    max_weight = FREEMIUM_MAX_WEIGHT_KG
 
     if user.subscription_plan == SubscriptionPlan.quarterly:
         daily_limit = -1  # Unlimited
-        max_weight = None  # Unlimited
 
     return SubscriptionStatusResponse(
         plan=user.subscription_plan.value,
@@ -55,7 +52,7 @@ async def get_user_subscription_status(db: AsyncSession, user: User) -> Subscrip
         expires_at=user.subscription_expires_at,
         listings_today=user.listings_today,
         daily_limit=daily_limit,
-        max_weight_kg=float(max_weight) if max_weight else None,
+        max_weight_kg=None,  # No weight limit
     )
 
 
@@ -68,9 +65,9 @@ async def can_create_listing(
     Check if user can create a listing based on subscription.
     Returns (allowed, error_message).
     """
-    # Only household and collector can create listings
-    if user.role not in (UserRole.household, UserRole.collector):
-        return False, "Only households and collectors can create listings"
+    # Only seller and collector can create listings
+    if user.role not in (UserRole.seller, UserRole.collector):
+        return False, "Only sellers and collectors can create listings"
 
     # Reset daily counter if new day
     today = date.today()
@@ -87,13 +84,10 @@ async def can_create_listing(
             user.subscription_expires_at = None
             await db.flush()
 
-    # Freemium limits
+    # Freemium limits - only daily listing count
     if user.subscription_plan == SubscriptionPlan.freemium:
         if user.listings_today >= FREEMIUM_DAILY_LIMIT:
             return False, f"Daily listing limit reached ({FREEMIUM_DAILY_LIMIT}/day). Upgrade to quarterly plan for unlimited listings."
-
-        if estimated_weight_kg and Decimal(str(estimated_weight_kg)) > FREEMIUM_MAX_WEIGHT_KG:
-            return False, f"Listing weight exceeds freemium limit ({FREEMIUM_MAX_WEIGHT_KG}kg). Upgrade to quarterly plan for unlimited quantity."
 
     return True, None
 
@@ -151,13 +145,13 @@ async def get_subscription_plans() -> list[dict]:
             "cycle": "daily",
             "features": [
                 "Up to 4 listings per day",
-                "Maximum 100kg per listing",
+                "No weight restrictions",
                 "Basic price visibility",
                 "Standard support",
             ],
             "limits": {
                 "daily_listings": FREEMIUM_DAILY_LIMIT,
-                "max_weight_kg": float(FREEMIUM_MAX_WEIGHT_KG),
+                "max_weight_kg": None,
             },
         },
         {

@@ -65,7 +65,7 @@ class UserResponse(BaseModel):
     full_name: Optional[str] = None
     location_hub: str
     address_text: Optional[str] = None
-    role: str = UserRole.household.value
+    role: str = UserRole.seller.value
     subscription_plan: str = "freemium"
     subscription_status: str = "active"
     subscription_expires_at: Optional[datetime] = None

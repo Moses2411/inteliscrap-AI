@@ -35,7 +35,7 @@ def _db_enum(enum_cls: type[enum.Enum], length: int = 20) -> Enum:
 
 
 class UserRole(str, enum.Enum):
-    household = "household"
+    seller = "seller"
     collector = "collector"
     admin = "admin"
     ngo = "ngo"
@@ -104,7 +104,7 @@ class User(Base):
     id = Column(String(36), primary_key=True, index=True, default=_uuid)
     phone_number = Column(String(20), unique=True, nullable=False, index=True)
     full_name = Column(String(120), nullable=True)
-    role = Column(_db_enum(UserRole), nullable=False, default=UserRole.household, index=True)
+    role = Column(_db_enum(UserRole), nullable=False, default=UserRole.seller, index=True)
     language_pref = Column(String(8), nullable=False, default="ha")
     location_hub = Column(String(64), default="Zaria")
     address_text = Column(String(320), nullable=True)  # Full address for pickup/delivery

@@ -4,7 +4,7 @@ const ROLE_KEY = "inteliscrap_role";
 const PHONE_KEY = "inteliscrap_phone";
 const ADDRESS_KEY = "inteliscrap_address";
 
-export type UserRole = "household" | "collector" | "admin" | "ngo" | "recycling_hub" | "partner";
+export type UserRole = "seller" | "collector" | "admin" | "ngo" | "recycling_hub" | "partner";
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
@@ -12,7 +12,7 @@ export function getToken(): string | null {
 
 export function getRole(): UserRole | null {
   const role = localStorage.getItem(ROLE_KEY);
-  return role === "household" ||
+  return role === "seller" ||
     role === "collector" ||
     role === "admin" ||
     role === "ngo" ||

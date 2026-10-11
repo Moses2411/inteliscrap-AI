@@ -22,9 +22,9 @@ export interface ListingEligibility {
   error?: string;
 }
 
-export async function checkListingAllowed(estimatedWeightKg?: number): Promise<ListingEligibility> {
+export async function checkListingAllowed(): Promise<ListingEligibility> {
   try {
-    const result = await checkListingEligibility(estimatedWeightKg);
+    const result = await checkListingEligibility();
     return { allowed: result.allowed, error: result.error };
   } catch {
     // If check fails, allow but log warning
@@ -36,8 +36,8 @@ export async function checkListingAllowed(estimatedWeightKg?: number): Promise<L
 export async function createListing(
   payload: CreateListingPayload,
 ): Promise<{ id: string; status: string }> {
-  // Check subscription eligibility first
-  const eligibility = await checkListingAllowed(payload.estimated_weight_kg);
+  // Check subscription eligibility first (only daily count, no weight limit)
+  const eligibility = await checkListingAllowed();
   if (!eligibility.allowed) {
     throw new Error(eligibility.error || "Listing not allowed due to subscription limits");
   }

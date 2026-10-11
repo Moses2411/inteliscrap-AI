@@ -227,7 +227,7 @@ export default function CollectorDashboard() {
             <EmptyState
               icon={<PackageCheck className="h-6 w-6" />}
               title="No offers available"
-              subtitle="New pickup offers will appear here when households nearby list scrap."
+              subtitle="New pickup offers will appear here when sellers nearby list scrap."
             />
           )}
         </Card>

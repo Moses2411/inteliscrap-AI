@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/v1/hubs", tags=["hubs"])
 @router.post("/register", response_model=RecyclingHubResponse)
 async def register_hub(
     body: RecyclingHubCreate,
-    user: User = Depends(require_role(UserRole.admin, UserRole.household, UserRole.collector)),
+    user: User = Depends(require_role(UserRole.admin, UserRole.seller, UserRole.collector)),
     db: AsyncSession = Depends(get_db),
 ):
     existing = await hub_service.get_hub_by_owner(db, user)
