@@ -17,7 +17,7 @@ import { cn } from "../../lib/cn";
 
 const ROLES: Array<{ role: UserRole; label: string; blurb: string; icon: ReactNode; requiresAddress: boolean }> = [
   { role: "seller", label: "Seller", blurb: "Sell scrap at fair prices", icon: <Home className="h-4 w-4" />, requiresAddress: true },
-  { role: "collector", label: "Collector", blurb: "Get offers & pick up scrap", icon: <Truck className="h-4 w-4" />, requiresAddress: true },
+  { role: "collector", label: "Collector", blurb: "Get offers & pick up scrap", icon: <Truck className="h-4 w-4" />, requiresAddress: false },
   { role: "recycling_hub", label: "Recycling Hub", blurb: "Buy material at scale", icon: <Factory className="h-4 w-4" />, requiresAddress: false },
   { role: "ngo", label: "NGO", blurb: "Track community impact", icon: <HeartHandshake className="h-4 w-4" />, requiresAddress: false },
   { role: "partner", label: "PRO / EPR Partner", blurb: "Compliance manifests", icon: <Landmark className="h-4 w-4" />, requiresAddress: false },

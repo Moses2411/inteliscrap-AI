@@ -34,7 +34,7 @@ function getCurrentPosition(): Promise<GeolocationCoordinates> {
 
 const ROLE_OPTIONS: { value: UserRole; label: string; hint: string; requiresAddress: boolean }[] = [
   { value: "seller", label: "Seller", hint: "I have scrap to sell", requiresAddress: true },
-  { value: "collector", label: "Collector", hint: "I pick up scrap", requiresAddress: true },
+  { value: "collector", label: "Collector", hint: "I pick up scrap", requiresAddress: false },
 ];
 
 export default function PostPickupForm({ analysis, onReset }: Props) {
