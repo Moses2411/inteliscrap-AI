@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock3, Coins, History, RefreshCw, Trash2 } from "lucide-react";
+import { CheckCircle2, Clock3, Coins, History, RefreshCw, Trash2, AlertTriangle } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
+import { StatCard } from "../components/ui/StatCard";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
@@ -14,6 +15,7 @@ import type { ScrapScan } from "../types";
 import { useSync } from "../hooks/useSync";
 import { useTranslation } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
+import { useApp } from "../store/appStore";
 
 const ACCENTS = [
   "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
@@ -30,150 +32,294 @@ function accentFor(label: string): string {
 }
 
 export default function HistoryPage() {
+  const { user } = useApp();
+  const role = user?.role;
+  
+  // Only sellers can access history
+  if (role !== "seller") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="text-center p-8">
+          <div className="mx-auto h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center mb-4">
+            <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Access Restricted</h2>
+          <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+            History is only available for Sellers.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const { t } = useTranslation();
   const { triggerSync } = useSync();
   const [scans, setScans] = useState<ScrapScan[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const loadScans = useCallback(() => {
-    getLocalScans()
-      .then(setScans)
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const [filter, setFilter] = useState<"all" | "synced" | "pending" | "deleted">("all");
+  const [grouped, setGrouped] = useState(false);
 
   useEffect(() => {
-    loadScans();
-  }, [loadScans]);
+    async function load() {
+      const data = await getLocalScans();
+      setScans(data);
+      setLoading(false);
+    }
+    load();
+  }, []);
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      if (!window.confirm(t("delete_confirm"))) return;
-      await softDeleteScan(id);
-      loadScans();
-    },
-    [loadScans, t],
+  const filtered = scans
+    .filter((s) => {
+      if (filter === "all") return true;
+      if (filter === "synced") return s.is_synced && !s.is_deleted;
+      if (filter === "pending") return !s.is_synced && !s.is_deleted;
+      if (filter === "deleted") return s.is_deleted;
+      return true;
+    })
+    .sort((a, b) => new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime());
+
+  const groupedScans = useMemo(
+    () =>
+      filtered.reduce((acc, scan) => {
+        const date = new Date(scan.captured_at).toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        });
+        (acc[date] ??= []).push(scan);
+        return acc;
+      }, {} as Record<string, ScrapScan[]>),
+    [filtered]
   );
 
-  const pendingCount = scans.filter((s) => !s.is_synced).length;
-  const totalValue = scans.reduce((a, s) => a + (s.estimated_naira_value || 0), 0);
+  const stats = useMemo(
+    () => ({
+      total: scans.length,
+      synced: scans.filter((s) => s.is_synced && !s.is_deleted).length,
+      pending: scans.filter((s) => !s.is_synced && !s.is_deleted).length,
+      deleted: scans.filter((s) => s.is_deleted).length,
+      value: scans
+        .filter((s) => !s.is_deleted)
+        .reduce((sum, s) => sum + s.estimated_naira_value, 0),
+    }),
+    [scans]
+  );
+
+  async function handleSync() {
+    await triggerSync();
+    const data = await getLocalScans();
+    setScans(data);
+  }
+
+  async function handleDelete(id: string) {
+    await softDeleteScan(id);
+    const data = await getLocalScans();
+    setScans(data);
+  }
 
   return (
     <PageMotion className="space-y-6">
       <motion.div variants={pageItem}>
         <PageHeader
           title={t("history")}
-          subtitle={`${scans.length} scan${scans.length === 1 ? "" : "s"} on this device`}
+          subtitle={t("history_subtitle")}
           actions={
-            <div className="flex items-center gap-2">
-              {pendingCount > 0 && <Badge tone="amber">{pendingCount} pending</Badge>}
-              <Button variant="secondary" size="sm" onClick={triggerSync}>
-                <RefreshCw className="h-3.5 w-3.5" />
-                {t("sync_now")}
-              </Button>
-            </div>
+            <Button variant="secondary" size="sm" onClick={handleSync} loading={loading}>
+              <RefreshCw className="h-3.5 w-3.5" /> Sync
+            </Button>
           }
         />
       </motion.div>
 
-      {/* Summary strip */}
-      <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 sm:max-w-md">
-        <motion.div variants={pageItem} className="min-w-0">
-          <Card pad className="flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Total scans</p>
-              <p className="mt-0.5 text-xl font-bold tabular-nums text-slate-900 dark:text-white">{scans.length}</p>
-            </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300" aria-hidden="true">
-              <History className="h-4 w-4" />
-            </span>
-          </Card>
-        </motion.div>
-        <motion.div variants={pageItem} className="min-w-0">
-          <Card pad className="flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Estimated value</p>
-              <p className="mt-0.5 truncate text-xl font-bold tabular-nums text-brand-600 dark:text-brand-400">{formatNaira(totalValue)}</p>
-            </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300" aria-hidden="true">
-              <Coins className="h-4 w-4" />
-            </span>
-          </Card>
-        </motion.div>
+      <motion.div variants={pageStagger} className="grid grid-cols-4 gap-3">
+        <StatCard
+          label={t("total_scans")}
+          value={stats.total}
+          icon={<History className="h-5 w-5" />}
+          iconClass="bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300"
+        />
+        <StatCard
+          label={t("synced")}
+          value={stats.synced}
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300"
+        />
+        <StatCard
+          label={t("pending_sync")}
+          value={stats.pending}
+          icon={<Clock3 className="h-5 w-5" />}
+          iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
+        />
+        <StatCard
+          label={t("estimated_value")}
+          value={formatNaira(stats.value)}
+          icon={<Coins className="h-5 w-5" />}
+          iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
+        />
       </motion.div>
 
-      {/* List */}
-      {loading ? (
-        <div className="space-y-2.5">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-[72px] w-full" />
-          ))}
+      <motion.div variants={pageItem} className="space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("filter")}:</label>
+          <div className="flex gap-1.5 bg-slate-100 rounded-xl p-1 dark:bg-slate-800">
+            {(["all", "synced", "pending", "deleted"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors",
+                  filter === f
+                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-200 dark:text-slate-900"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100",
+                )}
+              >
+                {t(f)}
+              </button>
+            ))}
+          </div>
+          <label className="ml-auto flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-400">
+            <input
+              type="checkbox"
+              checked={grouped}
+              onChange={(e) => setGrouped(e.target.checked)}
+              className="h-4 w-4 rounded border-slate-300 text-brand-600"
+            />
+            {t("group_by_date")}
+          </label>
         </div>
-      ) : scans.length === 0 ? (
-        <EmptyState
-          icon={<History className="h-6 w-6" />}
-          title={t("no_scans_yet")}
-          subtitle={t("no_scans_hint")}
-        />
-      ) : (
-        <motion.ul variants={pageStagger} className="space-y-2.5">
-          {scans.map((scan) => (
-            <motion.li key={scan.id} variants={pageItem}>
-              <Card hover className="flex items-center gap-3 !p-3.5">
-                <span
-                  className={cn(
-                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold",
-                    accentFor(scan.material_class),
-                  )}
-                  aria-hidden="true"
-                >
-                  {scan.material_class.slice(0, 2).toUpperCase()}
-                </span>
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{scan.material_class}</p>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                    <Clock3 className="h-3 w-3 shrink-0" aria-hidden="true" />
-                    <span className="truncate">{formatDateTime(scan.captured_at)}</span>
-                    <span aria-hidden="true">·</span>
-                    <span className="shrink-0">{formatConfidence(scan.confidence_score)}</span>
-                  </div>
+        {loading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            icon={<History className="h-6 w-6" />}
+            title={t("no_scans_yet")}
+            subtitle={t("no_scans_yet_desc")}
+          />
+        ) : grouped ? (
+          <motion.div variants={pageStagger} className="space-y-6">
+            {Object.entries(groupedScans).map(([date, dayScans]) => (
+              <Card key={date} className="overflow-hidden">
+                <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">{date}</p>
                 </div>
-
-                <div className="flex shrink-0 items-center gap-2">
-                  <div className="text-right">
-                    <p className="text-sm font-bold tabular-nums text-brand-600 dark:text-brand-400">
-                      {formatNaira(scan.estimated_naira_value)}
-                    </p>
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-1 text-[10px] font-semibold",
-                        scan.is_synced
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : "text-amber-600 dark:text-amber-400",
-                      )}
+                <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {dayScans.map((scan) => (
+                    <div
+                      key={scan.id}
+                      className="px-4 py-3 flex items-center justify-between gap-3"
                     >
-                      {scan.is_synced ? (
-                        <CheckCircle2 className="h-2.5 w-2.5" aria-hidden="true" />
-                      ) : (
-                        <Clock3 className="h-2.5 w-2.5" aria-hidden="true" />
-                      )}
-                      {scan.is_synced ? t("synced") : t("pending")}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleDelete(scan.id)}
-                    className="btn-icon hover:!bg-red-50 hover:!text-red-500 dark:hover:!bg-red-950"
-                    aria-label={`${t("delete")} ${scan.material_class}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span
+                          className={cn(
+                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                            accentFor(scan.material_class),
+                          )}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-medium text-slate-900 dark:text-white truncate">
+                            {scan.material_class}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {formatConfidence(scan.confidence_score)} •
+                            {formatNaira(scan.estimated_naira_value)}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge
+                          tone={
+                            scan.is_deleted
+                              ? "slate"
+                              : scan.is_synced
+                              ? "green"
+                              : "amber"
+                          }
+                        >
+                          {scan.is_deleted
+                            ? t("deleted")
+                            : scan.is_synced
+                            ? t("synced")
+                            : t("pending")}
+                        </Badge>
+                        {!scan.is_deleted && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete(scan.id)}
+                            className="text-red-600 hover:text-red-700 dark:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </Card>
-            </motion.li>
-          ))}
-        </motion.ul>
-      )}
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div variants={pageStagger} className="space-y-3">
+            {filtered.map((scan) => (
+              <Card key={scan.id} hover className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span
+                    className={cn(
+                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                      accentFor(scan.material_class),
+                    )}
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 dark:text-white truncate">
+                      {scan.material_class}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {formatDateTime(scan.captured_at)} • {formatConfidence(scan.confidence_score)} •
+                      {formatNaira(scan.estimated_naira_value)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge
+                    tone={
+                      scan.is_deleted
+                        ? "slate"
+                        : scan.is_synced
+                        ? "green"
+                        : "amber"
+                    }
+                  >
+                    {scan.is_deleted
+                      ? t("deleted")
+                      : scan.is_synced
+                      ? t("synced")
+                      : t("pending")}
+                  </Badge>
+                  {!scan.is_deleted && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(scan.id)}
+                      className="text-red-600 hover:text-red-700 dark:text-red-400"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            ))}
+          </motion.div>
+        )}
+      </motion.div>
     </PageMotion>
   );
 }

@@ -37,7 +37,9 @@ export function getNavForRole(role: UserRole | null): NavItem[] {
     { path: "/market", labelKey: "nav_market", icon: Store },
   ];
 
-  if (role === "seller") items.push({ path: "/history", labelKey: "nav_history", icon: History });
+  if (role === "seller") {
+    items.push({ path: "/history", labelKey: "nav_history", icon: History });
+  }
   if (role === "collector") {
     items.push(
       { path: "/pickups", labelKey: "nav_offers", icon: LayoutPanelTop },
@@ -59,7 +61,11 @@ export function getNavForRole(role: UserRole | null): NavItem[] {
     items.push({ path: "/compliance", labelKey: "nav_compliance", icon: Receipt });
   }
 
-  items.push({ path: "/scan", labelKey: "nav_scan", icon: Camera });
+  // Only seller and collector get scan functionality
+  if (role === "seller" || role === "collector") {
+    items.push({ path: "/scan", labelKey: "nav_scan", icon: Camera });
+  }
+
   items.push({ path: "/settings", labelKey: "nav_settings", icon: Settings });
   return items;
 }
