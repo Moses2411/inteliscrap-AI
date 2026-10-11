@@ -154,7 +154,6 @@ class ListingCreate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     photo_url: Optional[str] = None
-    estimated_weight_kg: Optional[float] = None
     estimated_value_naira: Optional[float] = None
     confidence_score: float = 0.0
     toxicity_hazards: Optional[list[str]] = None

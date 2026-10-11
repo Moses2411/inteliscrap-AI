@@ -29,7 +29,7 @@ def _demo_users() -> list[dict]:
             "id": "demo-seller",
             "phone_number": "+2348000000001",
             "full_name": "Amina Hauwa",
-            "role": UserRole.household,
+            "role": UserRole.seller,
             "location_hub": "Zaria",
         },
         {

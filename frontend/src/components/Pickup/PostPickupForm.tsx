@@ -9,7 +9,6 @@ import {
 } from "../../services/auth";
 import { createListing, checkListingAllowed } from "../../services/listings";
 import { getCategoryBySlug } from "../../services/materials";
-import { computeFairValue } from "../../services/language";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import type { VisionAnalysis } from "../../types";
@@ -45,7 +44,6 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   const [phone, setPhone] = useState(getSavedPhone() ?? "");
   const [address, setAddress] = useState("");
   const [otpSent, setOtpSent] = useState(false);
-  const [weight, setWeight] = useState("");
   const [posted, setPosted] = useState(false);
   const [sharePhone, setSharePhone] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -68,7 +66,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
         if (returnedOtp) console.log("Demo OTP:", returnedOtp);
         setOtpSent(true);
       } else {
-        await verifyOtp(phone, ""); // OTP handled by verifyOtp function
+        await verifyOtp(phone, "");
         setAuthenticated(true);
       }
     } catch (err) {
@@ -78,18 +76,12 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
     }
   }
 
-  async function submitWeight(e: FormEvent) {
+  async function submitListing(e: FormEvent) {
     e.preventDefault();
-    const cleaned = weight.replace(",", ".").replace(/[^\d.]/g, "");
-    const w = Number(cleaned);
-    if (!w || w <= 0) {
-      setError(t("weight_invalid"));
-      return;
-    }
     setBusy(true);
     setError(null);
     try {
-      // Check subscription eligibility before creating listing
+      // Check subscription eligibility
       const eligibility = await checkListingAllowed();
       if (!eligibility.allowed) {
         setSubscriptionError(eligibility.error || "Listing not allowed due to subscription limits");
@@ -110,8 +102,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
       await createListing({
         material_category_id: category.id,
-        estimated_weight_kg: Number(w.toFixed(3)),
-        estimated_value_naira: computeFairValue(w, category.price_per_kg_naira),
+        estimated_value_naira: category.price_per_kg_naira, // Use base price per kg as estimate
         confidence_score: analysis.confidence,
         toxicity_hazards: analysis.toxicity_hazards,
         latitude: coords?.latitude,
@@ -135,6 +126,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <p className="mt-2 font-semibold text-brand-800 dark:text-brand-200">{t("posted_success")}</p>
+        <p className="mt-1 text-sm text-brand-600 dark:text-brand-400">Collector will weigh and confirm price at pickup.</p>
         <Button fullWidth className="mt-4" onClick={onReset}>
           {t("scan_again")}
         </Button>
@@ -237,7 +229,6 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   }
 
   if (!subscriptionChecked) {
-    // Check subscription eligibility for typical weight
     checkListingAllowed().then((result) => {
       setCanList(result.allowed);
       setSubscriptionError(result.error ?? null);
@@ -254,7 +245,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
           </svg>
           <p className="mt-2 font-semibold text-amber-800 dark:text-amber-200">Subscription limit reached</p>
           <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">{subscriptionError}</p>
-          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Upgrade to Quarterly Pro (₦2,500/quarter) for unlimited listings and quantity.</p>
+          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Upgrade to Quarterly Pro (₦2,500/quarter) for unlimited listings.</p>
           <Button fullWidth className="mt-4" onClick={onReset}>
             {t("scan_again")}
           </Button>
@@ -264,19 +255,15 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   }
 
   return (
-    <form onSubmit={submitWeight} className="card space-y-3">
-      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("estimate_weight")}</h2>
-      <input
-        className="input text-center text-2xl font-bold"
-        type="number"
-        step="0.1"
-        min="0.1"
-        placeholder={t("weight_placeholder")}
-        value={weight}
-        onChange={(e) => setWeight(e.target.value)}
-        required
-      />
-      <p className="text-xs text-center text-slate-500 dark:text-slate-400">{t("weight_hint")}</p>
+    <div className="card space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("confirm_listing")}</h2>
+        <span className="text-xs text-brand-600 dark:text-brand-400">{analysis.material_class}</span>
+      </div>
+
+      <p className="text-sm text-slate-600 dark:text-slate-400">
+        {t("listing_confirm_desc")}
+      </p>
 
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={sharePhone} onChange={(e) => setSharePhone(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand-600" />
@@ -291,13 +278,13 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
       {error && <div className="text-sm font-semibold text-red-600 dark:text-red-400" role="alert">{error}</div>}
 
-      <Button fullWidth type="submit" loading={busy} disabled={!weight}>
+      <Button fullWidth onSubmit={submitListing} loading={busy}>
         {t("list_scrap")}
       </Button>
 
       <Button variant="ghost" fullWidth onClick={onReset}>
         {t("scan_again")}
       </Button>
-    </form>
+    </div>
   );
 }

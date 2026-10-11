@@ -13,19 +13,12 @@ async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate)
     if not allowed:
         raise ValueError(error)
 
-    # Determine if this is a large quantity listing (for tracking, not blocking)
-    is_large = False
-    listing_fee = 0
-    if payload.estimated_weight_kg and payload.estimated_weight_kg > 100:
-        is_large = True
-
     listing = Listing(
         seller_id=seller.id,
         material_category_id=payload.material_category_id,
         title=payload.title,
         description=payload.description,
         photo_url=payload.photo_url,
-        estimated_weight_kg=payload.estimated_weight_kg,
         estimated_value_naira=payload.estimated_value_naira,
         confidence_score=payload.confidence_score,
         toxicity_hazards=payload.toxicity_hazards,
@@ -34,8 +27,8 @@ async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate)
         address_text=payload.address_text,
         contact_phone=payload.contact_phone,
         status=ListingStatus.active,
-        is_large_quantity=is_large,
-        listing_fee_naira=listing_fee,
+        is_large_quantity=False,
+        listing_fee_naira=0,
     )
     db.add(listing)
     await db.flush()

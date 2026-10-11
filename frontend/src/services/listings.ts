@@ -6,7 +6,6 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 export interface CreateListingPayload {
   material_category_id: number;
   title?: string;
-  estimated_weight_kg?: number;
   estimated_value_naira?: number;
   confidence_score?: number;
   toxicity_hazards?: string[];
@@ -36,7 +35,7 @@ export async function checkListingAllowed(): Promise<ListingEligibility> {
 export async function createListing(
   payload: CreateListingPayload,
 ): Promise<{ id: string; status: string }> {
-  // Check subscription eligibility first (only daily count, no weight limit)
+  // Check subscription eligibility first
   const eligibility = await checkListingAllowed();
   if (!eligibility.allowed) {
     throw new Error(eligibility.error || "Listing not allowed due to subscription limits");
