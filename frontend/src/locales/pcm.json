@@ -116,6 +116,7 @@
   "manual_select_title": "Pick the material",
   "manual_select_desc": "AI no dey right now. Choose the scrap material you dey see so you fit still post pickup request.",
   "source_onnx": "Phone AI",
+  "source_clip": "CLIP for phone",
   "source_server": "Server AI",
   "source_manual": "Manual",
   "feature_instant_ai": "Instant AI ID",

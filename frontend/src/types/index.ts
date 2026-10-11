@@ -49,7 +49,7 @@ export interface VisionAnalysis {
   toxicity_hazards: string[];
   safety_instructions: string;
   hazard_level: HazardLevel;
-  source: "onnx" | "server" | "manual";
+  source: "clip" | "onnx" | "server" | "manual";
 }
 
 export interface MaterialCategoryInfo {

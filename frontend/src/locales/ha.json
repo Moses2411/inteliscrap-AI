@@ -106,6 +106,7 @@
   "manual_select_title": "Zaɓi kayan",
   "manual_select_desc": "AI ba ya nan a yanzu. Zaɓi kayan da kake gani domin kai buƙatar karɓa.",
   "source_onnx": "AI na na'ura",
+  "source_clip": "CLIP a na'ura",
   "source_server": "AI na uwar garken",
   "source_manual": "Da hannu",
   "feature_instant_ai": "Gane da AI nan take",

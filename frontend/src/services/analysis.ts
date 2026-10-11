@@ -1,5 +1,6 @@
 import type { VisionAnalysis } from "../types";
 import { classifyScrap } from "../vision/visionEngine";
+import { classifyScrapZeroShot, RUNTIME_MIN_SCORE } from "../vision/visionEngineRuntime";
 import { resolveTradeRule } from "./language";
 
 function rgbToHsl(r: number, g: number, b: number) {
@@ -298,22 +299,38 @@ async function classifyOnServer(blob: Blob): Promise<VisionAnalysis> {
   );
 }
 
-/** Run a real analysis: bundled ONNX classifier first, server vision model when online,
- *  then an on-device runtime model (transformers.js) when offline, and finally surface
- *  a manual selection when no model answers. Never fabricates results. */
+/** Prefer browser-based CLIP inference, then use the other configured analysis paths. */
 export async function analyzeScrapImage(image: Blob): Promise<VisionAnalysis> {
+  try {
+    const runtime = await classifyScrapZeroShot(image);
+    if (
+      runtime.top &&
+      runtime.top.materialSlug !== "other" &&
+      runtime.top.confidence >= RUNTIME_MIN_SCORE
+    ) {
+      return buildAnalysis(
+        runtime.top.material,
+        runtime.top.materialSlug,
+        runtime.top.confidence,
+        "clip",
+      );
+    }
+  } catch {
+    // CLIP unavailable or inference failed; fall through to other analysis paths.
+  }
+
   try {
     const edge = await classifyOnDevice(image);
     if (edge.material_slug !== "other") return edge;
   } catch {
-    // model file missing or inference failed — fall through to server
+    // Optional bundled ONNX model missing or inference failed.
   }
 
   if (navigator.onLine) {
     try {
       return await classifyOnServer(image);
     } catch {
-      // server unreachable or model offline — fall through
+      // Server unreachable or model offline; fall through to local heuristic.
     }
   }
 

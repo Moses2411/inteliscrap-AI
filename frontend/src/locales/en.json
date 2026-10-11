@@ -116,6 +116,7 @@
   "manual_select_title": "Pick the material",
   "manual_select_desc": "AI isn't available right now. Select the scrap material you see so you can still post a pickup request.",
   "source_onnx": "On-device AI",
+  "source_clip": "CLIP on-device",
   "source_server": "Server AI",
   "source_manual": "Manual",
   "feature_instant_ai": "Instant AI ID",

@@ -18,24 +18,53 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add missing columns to users table
-    op.add_column('users', sa.Column('address_text', sa.String(length=320), nullable=True))
-    op.add_column('users', sa.Column('subscription_plan', sa.Enum('freemium', 'quarterly', name='subscriptionplan', native_enum=False, length=20), nullable=False, server_default='freemium'))
-    op.add_column('users', sa.Column('subscription_status', sa.Enum('active', 'expired', 'cancelled', 'pending', name='subscriptionstatus', native_enum=False, length=20), nullable=False, server_default='active'))
-    op.add_column('users', sa.Column('subscription_expires_at', sa.DateTime(), nullable=True))
-    op.add_column('users', sa.Column('listings_this_week', sa.Integer(), nullable=False, server_default='0'))
-    op.add_column('users', sa.Column('listings_week_start', sa.Date(), nullable=True))
-    op.create_index(op.f('ix_users_subscription_plan'), 'users', ['subscription_plan'], unique=False)
-    op.create_index(op.f('ix_users_subscription_status'), 'users', ['subscription_status'], unique=False)
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns_by_table = {
+        "users": [
+            ("address_text", sa.String(320), True, None),
+            ("subscription_plan", sa.String(20), False, "freemium"),
+            ("subscription_status", sa.String(20), False, "active"),
+            ("subscription_expires_at", sa.DateTime(), True, None),
+            ("listings_this_week", sa.Integer(), False, "0"),
+            ("listings_week_start", sa.Date(), True, None),
+        ],
+        "transactions": [
+            ("brand_id", sa.String(36), True, None),
+            ("gtin", sa.String(64), True, None),
+        ],
+        "compliance_partners": [
+            ("allow_category_aggregate", sa.Boolean(), False, sa.false()),
+        ],
+    }
+    for table_name, columns in columns_by_table.items():
+        existing_columns = {
+            column["name"] for column in inspector.get_columns(table_name)
+        }
+        for name, column_type, nullable, server_default in columns:
+            if name not in existing_columns:
+                op.add_column(
+                    table_name,
+                    sa.Column(
+                        name,
+                        column_type,
+                        nullable=nullable,
+                        server_default=server_default,
+                    ),
+                )
 
-    # Add missing columns to transactions table
-    op.add_column('transactions', sa.Column('brand_id', sa.String(length=36), nullable=True))
-    op.add_column('transactions', sa.Column('gtin', sa.String(length=64), nullable=True))
-    op.create_index(op.f('ix_transactions_brand_id'), 'transactions', ['brand_id'], unique=False)
-    op.create_index(op.f('ix_transactions_gtin'), 'transactions', ['gtin'], unique=False)
-
-    # Add missing columns to compliance_partners table
-    op.add_column('compliance_partners', sa.Column('allow_category_aggregate', sa.Boolean(), nullable=False, server_default=sa.false()))
+    indexes_by_table = {
+        "users": ("subscription_plan", "subscription_status"),
+        "transactions": ("brand_id", "gtin"),
+    }
+    for table_name, column_names in indexes_by_table.items():
+        existing_indexes = {
+            index["name"] for index in sa.inspect(bind).get_indexes(table_name)
+        }
+        for column_name in column_names:
+            index_name = f"ix_{table_name}_{column_name}"
+            if index_name not in existing_indexes:
+                op.create_index(index_name, table_name, [column_name])
 
 
 def downgrade() -> None:

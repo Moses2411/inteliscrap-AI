@@ -794,6 +794,8 @@ cd backend && pip install -r requirements.txt && pytest -v
 cd frontend && npm install && npm run typecheck && npm run build
 ```
 
+The backend applies Alembic database migrations at startup to bring existing local SQLite databases up to date without deleting their data.
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/contributors/Moses2411/inteliscrap-AI.svg?mode=dark&amp;limit=12&amp;title=Contributors" />

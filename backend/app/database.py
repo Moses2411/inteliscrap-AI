@@ -1,3 +1,8 @@
+import asyncio
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
 
@@ -11,11 +16,13 @@ class Base(DeclarativeBase):
     pass
 
 
-async def init_db():
-    import app.models  # noqa: F401 — register all tables before create_all
+def _upgrade_database() -> None:
+    alembic_ini = Path(__file__).resolve().parents[1] / "alembic.ini"
+    command.upgrade(Config(str(alembic_ini)), "head")
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+
+async def init_db():
+    await asyncio.to_thread(_upgrade_database)
 
     from app.config import settings
     from app.seed import seed_material_categories
