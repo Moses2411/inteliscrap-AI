@@ -205,8 +205,8 @@ class SubscriptionStatusResponse(BaseModel):
     plan: str
     status: str
     expires_at: Optional[datetime] = None
-    listings_today: int
-    daily_limit: int
+    listings_this_week: int
+    weekly_limit: int
     max_weight_kg: Optional[float] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -9,7 +9,7 @@ export interface SubscriptionPlan {
   cycle: string;
   features: string[];
   limits: {
-    daily_listings: number;
+    weekly_listings: number;
     max_weight_kg: number | null;
   };
 }
@@ -18,8 +18,8 @@ export interface SubscriptionStatus {
   plan: string;
   status: string;
   expires_at?: string;
-  listings_today: number;
-  daily_limit: number;
+  listings_this_week: number;
+  weekly_limit: number;
   max_weight_kg: number | null;
 }
 

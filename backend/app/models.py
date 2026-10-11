@@ -121,8 +121,8 @@ class User(Base):
     subscription_plan = Column(_db_enum(SubscriptionPlan), nullable=False, default=SubscriptionPlan.freemium, index=True)
     subscription_status = Column(_db_enum(SubscriptionStatus), nullable=False, default=SubscriptionStatus.active, index=True)
     subscription_expires_at = Column(DateTime, nullable=True)
-    listings_today = Column(Integer, nullable=False, default=0)
-    listings_today_date = Column(Date, nullable=True)
+    listings_this_week = Column(Integer, nullable=False, default=0)
+    listings_week_start = Column(Date, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

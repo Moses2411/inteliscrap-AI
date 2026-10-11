@@ -18,18 +18,24 @@ from app.schemas import ListingCreate, SubscriptionPurchaseRequest, Subscription
 
 
 # Subscription constants
-FREEMIUM_DAILY_LIMIT = 4
+FREEMIUM_WEEKLY_LIMIT = 4
 QUARTERLY_PRICE_NAIRA = Decimal("2500")  # ₦2,500 per quarter
 QUARTERLY_DAYS = 90
 
 
+def _week_start(d: date) -> date:
+    """Return Monday of the week for a given date."""
+    return d - timedelta(days=d.weekday())
+
+
 async def get_user_subscription_status(db: AsyncSession, user: User) -> SubscriptionStatusResponse:
     """Get current subscription status for a user."""
-    # Reset daily counter if new day
+    # Reset weekly counter if new week
     today = date.today()
-    if user.listings_today_date != today:
-        user.listings_today = 0
-        user.listings_today_date = today
+    week_start = _week_start(today)
+    if user.listings_week_start != week_start:
+        user.listings_this_week = 0
+        user.listings_week_start = week_start
         await db.flush()
 
     # Check if quarterly subscription is still valid
@@ -41,7 +47,7 @@ async def get_user_subscription_status(db: AsyncSession, user: User) -> Subscrip
             user.subscription_expires_at = None
             await db.flush()
 
-    daily_limit = FREEMIUM_DAILY_LIMIT
+    daily_limit = FREEMIUM_WEEKLY_LIMIT
 
     if user.subscription_plan == SubscriptionPlan.quarterly:
         daily_limit = -1  # Unlimited
@@ -50,8 +56,8 @@ async def get_user_subscription_status(db: AsyncSession, user: User) -> Subscrip
         plan=user.subscription_plan.value,
         status=user.subscription_status.value,
         expires_at=user.subscription_expires_at,
-        listings_today=user.listings_today,
-        daily_limit=daily_limit,
+        listings_this_week=user.listings_this_week,
+        weekly_limit=daily_limit,
         max_weight_kg=None,  # No weight limit
     )
 
@@ -68,11 +74,12 @@ async def can_create_listing(
     if user.role not in (UserRole.seller, UserRole.collector):
         return False, "Only sellers and collectors can create listings"
 
-    # Reset daily counter if new day
+    # Reset weekly counter if new week
     today = date.today()
-    if user.listings_today_date != today:
-        user.listings_today = 0
-        user.listings_today_date = today
+    week_start = _week_start(today)
+    if user.listings_week_start != week_start:
+        user.listings_this_week = 0
+        user.listings_week_start = week_start
         await db.flush()
 
     # Check quarterly subscription validity
@@ -83,22 +90,32 @@ async def can_create_listing(
             user.subscription_expires_at = None
             await db.flush()
 
-    # Freemium limits - only daily listing count
+    # Freemium limits - weekly listing count
     if user.subscription_plan == SubscriptionPlan.freemium:
-        if user.listings_today >= FREEMIUM_DAILY_LIMIT:
-            return False, f"Daily listing limit reached ({FREEMIUM_DAILY_LIMIT}/day). Upgrade to quarterly plan for unlimited listings."
+        if user.listings_this_week >= FREEMIUM_WEEKLY_LIMIT:
+            # Calculate days until next Monday
+            days_until_reset = (7 - today.weekday()) % 7
+            if days_until_reset == 0:
+                days_until_reset = 7
+            reset_day = "Monday" if today.weekday() != 0 else "next Monday"
+            return False, (
+                f"Weekly listing limit reached ({FREEMIUM_WEEKLY_LIMIT}/week). "
+                f"Upgrade to Quarterly Pro (₦2,500/3 months) for unlimited listings, "
+                f"or wait until {reset_day} for the limit to reset."
+            )
 
     return True, None
 
 
 async def increment_listing_count(db: AsyncSession, user: User) -> None:
-    """Increment user's daily listing count."""
+    """Increment user's weekly listing count."""
     today = date.today()
-    if user.listings_today_date != today:
-        user.listings_today = 1
-        user.listings_today_date = today
+    week_start = _week_start(today)
+    if user.listings_week_start != week_start:
+        user.listings_this_week = 1
+        user.listings_week_start = week_start
     else:
-        user.listings_today += 1
+        user.listings_this_week += 1
     await db.flush()
 
 
@@ -141,15 +158,15 @@ async def get_subscription_plans() -> list[dict]:
             "plan": "freemium",
             "name": "Free",
             "price_naira": 0,
-            "cycle": "daily",
+            "cycle": "weekly",
             "features": [
-                "Up to 4 listings per day",
+                "Up to 4 listings per week",
                 "No weight restrictions",
                 "Basic price visibility",
                 "Standard support",
             ],
             "limits": {
-                "daily_listings": FREEMIUM_DAILY_LIMIT,
+                "weekly_listings": FREEMIUM_WEEKLY_LIMIT,
                 "max_weight_kg": None,
             },
         },
@@ -166,7 +183,7 @@ async def get_subscription_plans() -> list[dict]:
                 "Priority support",
             ],
             "limits": {
-                "daily_listings": -1,  # Unlimited
+                "weekly_listings": -1,  # Unlimited
                 "max_weight_kg": None,  # Unlimited
             },
         },

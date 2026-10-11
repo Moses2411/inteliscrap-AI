@@ -37,34 +37,9 @@ export interface User {
   subscription_plan: string;
   subscription_status: string;
   subscription_expires_at?: string;
+  listings_this_week?: number;
+  listings_week_start?: string;
   created_at?: string;
-}
-
-export interface SubscriptionPlan {
-  plan: string;
-  name: string;
-  price_naira: number;
-  cycle: string;
-  features: string[];
-  limits: {
-    daily_listings: number;
-    max_weight_kg: number | null;
-  };
-}
-
-export interface SubscriptionStatus {
-  plan: string;
-  status: string;
-  expires_at?: string;
-  listings_today: number;
-  daily_limit: number;
-  max_weight_kg: number | null;
-}
-
-export interface SubscriptionPurchaseRequest {
-  plan: string;
-  payment_method: string;
-  payment_reference?: string;
 }
 
 export interface VisionAnalysis {
@@ -92,3 +67,30 @@ export type HazardLevel = "low" | "medium" | "high" | "critical";
 export type Language = "en" | "ha" | "pcm" | "yo" | "ig";
 
 export type Theme = "light" | "dark";
+
+export interface SubscriptionPlan {
+  plan: string;
+  name: string;
+  price_naira: number;
+  cycle: string;
+  features: string[];
+  limits: {
+    weekly_listings: number;
+    max_weight_kg: number | null;
+  };
+}
+
+export interface SubscriptionStatus {
+  plan: string;
+  status: string;
+  expires_at?: string;
+  listings_this_week: number;
+  weekly_limit: number;
+  max_weight_kg: number | null;
+}
+
+export interface SubscriptionPurchaseRequest {
+  plan: string;
+  payment_method: string;
+  payment_reference?: string;
+}
