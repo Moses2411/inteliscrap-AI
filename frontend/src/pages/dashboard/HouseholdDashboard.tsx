@@ -34,7 +34,7 @@ export default function HouseholdDashboard() {
   }, []);
 
   const scannedValue = scans.reduce((acc, s) => acc + (s.estimated_naira_value || 0), 0);
-  const activeListings = market.data?.listings.filter((l) => l.status === "open" || l.status === "matched").length ?? 0;
+  const activeListings = market.data?.listings.filter((l) => l.status === "active" || l.status === "matched").length ?? 0;
   const topMaterials = [...(market.data?.materials ?? [])]
     .sort((a, b) => b.price_per_kg_naira - a.price_per_kg_naira)
     .slice(0, 5);

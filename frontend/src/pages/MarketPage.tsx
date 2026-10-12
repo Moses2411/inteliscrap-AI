@@ -58,7 +58,7 @@ export default function MarketPage() {
           if (query && !name.toLowerCase().includes(query) && !(l.address_text ?? "").toLowerCase().includes(query)) {
             return false;
           }
-          return l.status === "open" || l.status === "matched" || l.status === "scheduled";
+          return l.status === "active" || l.status === "matched" || l.status === "scheduled";
         })
         .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()),
     [listings, materials, query],
