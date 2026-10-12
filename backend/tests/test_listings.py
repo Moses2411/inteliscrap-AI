@@ -6,10 +6,10 @@ from app.models import MaterialCategory, Pickup, User, UserRole
 
 
 async def _household_headers(test_session, phone="+2348090000001"):
-    user = User(id=f"auth-{phone}", phone_number=phone, role=UserRole.household)
+    user = User(id=f"auth-{phone}", phone_number=phone, role=UserRole.seller)
     test_session.add(user)
     await test_session.flush()
-    token = security.create_access_token(user.id, UserRole.household.value)
+    token = security.create_access_token(user.id, UserRole.seller.value)
     return {"Authorization": f"Bearer {token}"}, user
 
 

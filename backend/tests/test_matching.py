@@ -27,7 +27,7 @@ async def _seed_collectors(test_session):
     seller = User(
         id="matching-seller",
         phone_number="+2348010000103",
-        role=UserRole.household,
+        role=UserRole.seller,
     )
     material = MaterialCategory(slug="copper", name="Copper", price_per_kg_naira=3200)
     test_session.add_all([near, far, seller, material])
@@ -58,6 +58,7 @@ async def test_latlng_to_h3_cell_consistent():
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(matching_service.h3 is None, reason="h3 not installed")
 async def test_h3_disk_includes_origin_and_neighbors():
     origin = matching_service.latlng_to_h3_cell(BASE_LAT, BASE_LON)
     assert origin is not None
@@ -71,7 +72,7 @@ async def test_h3_disk_includes_origin_and_neighbors():
 @pytest.mark.asyncio
 async def test_h3_matching_orders_by_proximity_across_rings(test_session):
     seller = User(
-        id="h3-seller", phone_number="+2348010000200", role=UserRole.household
+        id="h3-seller", phone_number="+2348010000200", role=UserRole.seller
     )
     closer = User(
         id="h3-closer",
@@ -107,7 +108,7 @@ async def test_h3_matching_orders_by_proximity_across_rings(test_session):
 @pytest.mark.asyncio
 async def test_h3_matching_excludes_beyond_radius(test_session):
     seller = User(
-        id="h3-seller2", phone_number="+2348010000210", role=UserRole.household
+        id="h3-seller2", phone_number="+2348010000210", role=UserRole.seller
     )
     far_away = User(
         id="h3-far2",
