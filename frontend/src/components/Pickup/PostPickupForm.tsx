@@ -94,10 +94,12 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
       if (!category) throw new Error("Material category not found");
 
       let coords: GeolocationCoordinates | null = null;
+      let geoError: string | null = null;
       try {
         coords = await getCurrentPosition();
-      } catch {
-        // location optional — listing can still be created without coordinates
+      } catch (err) {
+        geoError = "Could not get your location. Listing will be visible on the market but won't auto-dispatch to nearby collectors.";
+        console.warn("Geolocation failed:", err);
       }
 
       await createListing({
@@ -111,6 +113,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
         contact_phone: sharePhone ? phone : undefined,
         auto_dispatch: coords != null,
       });
+      if (geoError) setError(geoError);
       setPosted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");

@@ -9,6 +9,7 @@ import {
   MapPin,
   Navigation,
   PackageCheck,
+  Store,
   Truck,
   Wallet,
 } from "lucide-react";
@@ -22,7 +23,7 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { fetchActivePickups, fetchOffers, type PickupJob, type PickupOffer } from "../../services/pickups";
-import { shareMyLocation } from "../../services/location";
+import { shareMyLocation, getCurrentPosition } from "../../services/location";
 import { DEMO_JOBS, DEMO_OFFERS, DEMO_COLLECTOR_INCOME, previewEnabled } from "../../lib/demoData";
 import { formatCompactNaira, formatPhoneDisplay } from "../../utils/formatters";
 import { getSavedPhone } from "../../services/auth";
@@ -67,6 +68,26 @@ export default function CollectorDashboard() {
     initCollectorNotifications();
     // Register background sync for offers
     registerOffersSync();
+
+    // Auto-fetch location if not already set (for dispatch to work)
+    const ensureLocation = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? ""}/api/v1/auth/me`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("inteliscrap_token")}` },
+        });
+        if (res.ok) {
+          const user = await res.json();
+          if (!user.latitude || !user.longitude) {
+            // Try to get location silently
+            const coords = await getCurrentPosition().catch(() => null);
+            if (coords) await shareMyLocation();
+          }
+        }
+      } catch {
+        // Ignore - user can manually refresh location
+      }
+    };
+    ensureLocation();
   }, [load]);
 
   async function refreshLocation() {
@@ -227,7 +248,12 @@ export default function CollectorDashboard() {
             <EmptyState
               icon={<PackageCheck className="h-6 w-6" />}
               title="No offers available"
-              subtitle="New pickup offers will appear here when sellers nearby list scrap."
+              subtitle="New pickup offers will appear here when sellers nearby list scrap with location enabled."
+              action={
+                <Button variant="secondary" size="sm" onClick={() => navigate("/market?tab=listings")}>
+                  <Store className="h-3.5 w-3.5" /> Browse all listings on Market
+                </Button>
+              }
             />
           )}
         </Card>
