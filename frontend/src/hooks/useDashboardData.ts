@@ -327,5 +327,6 @@ export function useSalesReportData(): HookResult<SalesReportData> {
       return deriveSalesReport(deliveries, requests, materials);
     },
     () => deriveSalesReport(DEMO_SALES_DELIVERIES, DEMO_SALES_REQUESTS, DEMO_MATERIALS),
+    { fallbackOnError: false }, // Don't fall back to demo data — requires hub registration
   );
 }
