@@ -25,6 +25,7 @@ import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotio
 import { useHubData, useMarketData } from "../../hooks/useDashboardData";
 import { createHubRequest, registerHub } from "../../services/hubs";
 import { formatKg, formatNaira, formatDateTime } from "../../utils/formatters";
+import { syncRoleFromServer } from "../../services/auth";
 import { cn } from "../../lib/cn";
 
 export default function HubDashboard() {
@@ -98,6 +99,8 @@ export default function HubDashboard() {
         city: regForm.city.trim() || "Zaria",
         contact_phone: regForm.contact_phone.trim() || undefined,
       });
+      // Sync role from server (backend changes role to recycling_hub after registration)
+      await syncRoleFromServer();
       hub.refresh();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to register hub";
