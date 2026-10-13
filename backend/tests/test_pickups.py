@@ -36,7 +36,7 @@ async def _seed_offer(test_session, offer_id="pk-offer-1", phone="+2348060000001
     seller = User(
         id="pk-seller",
         phone_number="+2348060000003",
-        role=UserRole.household,
+        role=UserRole.seller,
     )
     material = MaterialCategory(slug="aluminum", name="Aluminum", price_per_kg_naira=700)
     test_session.add_all([collector, other, seller, material])
@@ -104,15 +104,15 @@ async def test_list_offers_returns_only_own(client, test_session):
 
 @pytest.mark.asyncio
 async def test_list_offers_requires_collector_role(client, test_session):
-    household = User(
-        id="pk-household", phone_number="+2348060000010", role=UserRole.household
+    seller_denied = User(
+        id="pk-household", phone_number="+2348060000010", role=UserRole.seller
     )
-    test_session.add(household)
+    test_session.add(seller_denied)
     await test_session.flush()
 
     resp = await client.get(
         "/api/v1/pickups/offers",
-        headers={"Authorization": f"Bearer {_token(household, UserRole.household)}"},
+        headers={"Authorization": f"Bearer {_token(seller_denied, UserRole.seller)}"},
     )
     assert resp.status_code == 403
 
@@ -210,7 +210,7 @@ async def test_dispatch_enqueues_new_offer_sms(client, test_session):
     sell_head = User(
         id="pk-dispatch-seller",
         phone_number="+2348060000020",
-        role=UserRole.household,
+        role=UserRole.seller,
     )
     test_session.add(sell_head)
     await test_session.flush()
@@ -223,7 +223,7 @@ async def test_dispatch_enqueues_new_offer_sms(client, test_session):
             "latitude": 11.0,
             "longitude": 7.0,
         },
-        headers={"Authorization": f"Bearer {_token(sell_head, UserRole.household)}"},
+        headers={"Authorization": f"Bearer {_token(sell_head, UserRole.seller)}"},
     )
     assert resp.status_code == 201
 
@@ -245,7 +245,7 @@ async def test_contact_phone_is_optional(client, test_session):
     sell_head = User(
         id="pk-opt-seller",
         phone_number="+2348060000030",
-        role=UserRole.household,
+        role=UserRole.seller,
     )
     test_session.add(sell_head)
     await test_session.flush()
@@ -259,7 +259,7 @@ async def test_contact_phone_is_optional(client, test_session):
             "longitude": 7.0,
             "auto_dispatch": False,
         },
-        headers={"Authorization": f"Bearer {_token(sell_head, UserRole.household)}"},
+        headers={"Authorization": f"Bearer {_token(sell_head, UserRole.seller)}"},
     )
     assert resp.status_code == 201
     assert resp.json()["contact_phone"] is None

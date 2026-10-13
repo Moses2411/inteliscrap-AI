@@ -94,17 +94,18 @@ export function ScannerModule({
   }, [torchOn, torchAvailable]);
 
   // ── Draw the bounding box overlay whenever a detection changes ─────────
+  // Always clear the canvas first so the overlay never lingers after the
+  // stream stops, the camera flips, or the scan card closes.
   useEffect(() => {
     const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
     const video = videoRef.current;
-    if (!canvas || !video || !ready) return;
-    if (!video.videoWidth) return;
+    if (!canvas || !ctx) return;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!active || !ready || !video || !video.videoWidth) return;
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!detection) return;
 
     const px = detection.x * canvas.width;
@@ -152,7 +153,7 @@ export function ScannerModule({
     ctx.fillStyle = "#a3e635";
     ctx.textBaseline = "middle";
     ctx.fillText(label, px + pad, barY + barH / 2);
-  }, [detection, ready]);
+  }, [detection, ready, active]);
 
   const capture = useCallback(async () => {
     const el = videoRef.current;
@@ -297,7 +298,7 @@ export function ScannerModule({
         <button
           type="button"
           onClick={capture}
-          disabled={!active || busy || !!error}
+          disabled={!active || !ready || busy || !!error}
           className="tap-target col-span-1 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-eco-emerald px-3 text-xs font-bold text-obsidian-950 transition-colors hover:bg-eco-emerald-glow disabled:cursor-not-allowed disabled:opacity-40"
         >
           <Camera className="h-4 w-4" /> Capture

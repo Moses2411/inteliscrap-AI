@@ -283,7 +283,7 @@ export default function BentoDashboard() {
               onVolume={setVolume}
               status={voice.status}
               enabled={voiceEnabled}
-              supported={voice.supported}
+              supported={voice.supported && (voice.voicesProbed ? voice.supportedVoices : true)}
               bars={bars}
               onPlay={playGuidance}
               onPause={voice.pause}

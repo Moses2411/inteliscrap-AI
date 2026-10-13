@@ -22,7 +22,7 @@ async def _settle_one(test_session, idx: int):
     seller = User(
         id=f"impact-seller-{idx}",
         phone_number=f"+234806000{idx:04d}",
-        role=UserRole.household,
+        role=UserRole.seller,
         location_hub="Zaria",
     )
     collector = User(

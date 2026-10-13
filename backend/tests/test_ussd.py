@@ -25,7 +25,7 @@ async def _seed_offer(test_session):
     seller = User(
         id="ussd-seller",
         phone_number="+2348030000002",
-        role=UserRole.household,
+        role=UserRole.seller,
     )
     material = MaterialCategory(slug="aluminum", name="Aluminum", price_per_kg_naira=700)
     test_session.add_all([collector, seller, material])
@@ -179,7 +179,7 @@ async def test_accept_locks_listing_for_other_collectors(client, test_session):
     seller = User(
         id="other-seller",
         phone_number="+2348030000005",
-        role=UserRole.household,
+        role=UserRole.seller,
     )
     material = MaterialCategory(
         slug="copper", name="Copper", price_per_kg_naira=3200

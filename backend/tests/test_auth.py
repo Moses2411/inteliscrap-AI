@@ -53,7 +53,7 @@ async def test_mock_otp_code_verifies(client):
         json={"phone_number": phone, "otp_code": settings.mock_otp_code},
     )
     assert verify.status_code == 200
-    assert verify.json()["role"] == "household"
+    assert verify.json()["role"] == "seller"
 
 
 @pytest.mark.asyncio
@@ -61,7 +61,7 @@ async def test_explicit_role_applies_to_existing_user(client, test_session):
     from app.models import User, UserRole
 
     phone = "+2348080000050"
-    test_session.add(User(id="role-existing", phone_number=phone, role=UserRole.household))
+    test_session.add(User(id="role-existing", phone_number=phone, role=UserRole.seller))
     await test_session.flush()
 
     resp = await client.post(

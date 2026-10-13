@@ -19,11 +19,15 @@ export function useVoiceSafety() {
   const supported = typeof window !== "undefined" && "speechSynthesis" in window;
   const [status, setStatus] = useState<VoiceStatus>("idle");
   const [supportedVoices, setSupportedVoices] = useState(false);
+  const [voicesProbed, setVoicesProbed] = useState(false);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     if (!supported) return;
-    const update = () => setSupportedVoices(window.speechSynthesis.getVoices().length > 0);
+    const update = () => {
+      setSupportedVoices(window.speechSynthesis.getVoices().length > 0);
+      setVoicesProbed(true);
+    };
     update();
     window.speechSynthesis.addEventListener?.("voiceschanged", update);
     return () => {
@@ -69,5 +73,15 @@ export function useVoiceSafety() {
     setStatus("idle");
   }, [supported]);
 
-  return { supported, supportedVoices, status, speak, pause, resume, stop };
+  return {
+    supported,
+    /** True once getVoices() has been probed (voices can load lazily). */
+    voicesProbed,
+    supportedVoices,
+    status,
+    speak,
+    pause,
+    resume,
+    stop,
+  };
 }

@@ -152,7 +152,7 @@ export function ValuationCard({
             <Scale className="h-3.5 w-3.5" /> Net weight
           </span>
           <span className="font-mono font-semibold text-slate-100">
-            {displayWeight.toFixed(unit === "kg" ? 1 : 1)} {unit}
+            {displayWeight.toFixed(1)} {unit}
           </span>
         </div>
         <input
@@ -160,7 +160,7 @@ export function ValuationCard({
           min={sliderMin}
           max={sliderMax}
           step={sliderStep}
-          value={Number(displayWeight.toFixed(unit === "kg" ? 1 : 1))}
+          value={Number(displayWeight.toFixed(1))}
           onChange={(event) => onWeightKg(unitToKg(Number(event.target.value), unit))}
           className="h-2 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-eco-emerald"
           aria-label="Estimated net weight"
