@@ -6,6 +6,7 @@ import { getRole, type UserRole } from "./services/auth";
 import LoginPage from "./pages/auth/LoginPage";
 import LandingPage from "./pages/LandingPage";
 import ApexArcPage from "./pages/ApexArcPage";
+import BentoDashboard from "./pages/BentoDashboard";
 import MarketPage from "./pages/MarketPage";
 import HomeDashboard from "./pages/dashboard/HomeDashboard";
 import ScanPage from "./pages/ScanPage";
@@ -115,6 +116,8 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/" element={<LandingPage />} />
         <Route path="/apex-arc" element={<ApexArcPage />} />
+        {/* Full-screen Eco-Tech Bento AI studio (own dark header, outside the shell) */}
+        <Route path="/bento" element={<BentoDashboard />} />
         <Route path="/*" element={<ShellRoutes />} />
       </Routes>
     </AppProvider>

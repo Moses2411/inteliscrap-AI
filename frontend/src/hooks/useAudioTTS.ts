@@ -12,7 +12,7 @@ type SafetyKey = keyof typeof ha.safety_instructions;
 
 type Language = "en" | "ha" | "pcm" | "yo" | "ig";
 
-const LOCALE_MAP: Record<Language, typeof en> = { en, ha, pcm, yo, ig } as const;
+const LOCALE_MAP = { en, ha, pcm, yo, ig } as const;
 
 function determineSafetyKey(hazards: string[]): SafetyKey {
   if (hazards.includes("corrosive_acid") || hazards.includes("chemical_burns")) return "acid";
