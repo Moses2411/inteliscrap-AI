@@ -159,7 +159,13 @@ export default function LoginPage() {
             </p>
 
             {step === "role" ? (
-              <div className="mt-8 space-y-5">
+              <form
+                className="mt-8 space-y-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendCode();
+                }}
+              >
                 <div
                   role="radiogroup"
                   aria-label="Account role"
@@ -221,8 +227,14 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {addressRequired && (
-                  <div>
+                {/* Address: sellers only — kept mounted but collapsed for other roles so height never jumps */}
+                <div
+                  className={cn(
+                    "transition-all duration-300 ease-out",
+                    addressRequired ? "grid grid-rows-[1fr] opacity-100" : "grid grid-rows-[0fr] opacity-0",
+                  )}
+                >
+                  <div className="overflow-hidden">
                     <label className="label" htmlFor="address">Pickup address</label>
                     <input
                       id="address"
@@ -231,23 +243,27 @@ export default function LoginPage() {
                       className="input rounded-full border-transparent bg-slate-100 px-5 py-3 dark:border-transparent dark:bg-slate-800"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      required
+                      required={addressRequired}
+                      aria-hidden={!addressRequired}
+                      tabIndex={addressRequired ? 0 : -1}
                     />
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                       Required for pickup scheduling. Used to match you with nearby collectors.
                     </p>
                   </div>
-                )}
+                </div>
 
-                {error && <ErrorNote message={error} />}
+                {/* Reserved slot for error + phone warning — keeps button position static (CLS) */}
+                <div className="min-h-[3.5rem] pt-1" aria-live="polite">
+                  {error && <ErrorNote message={error} />}
+                  {phone && !validPhone && (
+                    <p className="mt-1 text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                      Enter a valid phone number, e.g. +234 801 234 5678
+                    </p>
+                  )}
+                </div>
 
-                {phone && !validPhone && (
-                  <p className="text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-                    Enter a valid phone number, e.g. +234 801 234 5678
-                  </p>
-                )}
-
-                <Button fullWidth size="lg" className="rounded-full" onClick={sendCode} loading={busy} disabled={!validPhone || (addressRequired && !validAddress)}>
+                <Button fullWidth size="lg" type="submit" className="rounded-full" loading={busy} disabled={!validPhone || (addressRequired && !validAddress)}>
                   Send verification code
                 </Button>
 
@@ -255,9 +271,15 @@ export default function LoginPage() {
                   New here? Your account is created automatically when you verify — no
                   passwords to forget.
                 </p>
-              </div>
+              </form>
             ) : (
-              <div className="mt-8 space-y-5">
+              <form
+                className="mt-8 space-y-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  confirmOtp();
+                }}
+              >
                 {debugOtp && (
                   <div className="rounded-2xl bg-brand-50 px-4 py-3 text-xs font-semibold text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
                     Demo mode — your code is <span className="font-mono text-sm font-extrabold">{debugOtp}</span>
@@ -276,8 +298,11 @@ export default function LoginPage() {
                     placeholder="••••••"
                   />
                 </div>
-                {error && <ErrorNote message={error} />}
-                <Button fullWidth size="lg" className="rounded-full" onClick={confirmOtp} loading={busy} disabled={otp.length !== 6}>
+                {/* Reserved slot for error — keeps button position static (CLS) */}
+                <div className="min-h-[3rem]" aria-live="polite">
+                  {error && <ErrorNote message={error} />}
+                </div>
+                <Button fullWidth size="lg" type="submit" className="rounded-full" loading={busy} disabled={otp.length !== 6}>
                   Verify &amp; continue
                 </Button>
                 <button
@@ -287,7 +312,7 @@ export default function LoginPage() {
                 >
                   Change phone / role
                 </button>
-              </div>
+              </form>
             )}
           </div>
         </div>

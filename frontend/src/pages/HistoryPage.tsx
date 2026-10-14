@@ -131,7 +131,7 @@ export default function HistoryPage() {
         />
       </motion.div>
 
-      <motion.div variants={pageStagger} className="grid grid-cols-4 gap-3">
+      <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label={t("total_scans")}
           value={stats.total}
