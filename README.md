@@ -332,7 +332,7 @@ Verify: open <http://localhost:5173> — you should see the InteliScrap AI app.
 
 ### 4. Test the App
 
-Snap or upload any image. The app runs the bundled ONNX classifier first; if no model is in `frontend/public/models/`, it goes to the server `/api/v1/analyze` when online, and finally offers an honest **manual material picker** — there is no random/mock result ever.
+Snap or upload any image. The app runs the bundled ONNX classifier first (a bootstrap model **is** now shipped in `frontend/public/models/` — see its README for the measured numbers); if the model is missing or fails, it goes to the server `/api/v1/analyze` when online, and finally offers an honest **manual material picker** — there is no random/mock result ever.
 
 ### Docker (all three services)
 
@@ -460,7 +460,7 @@ python training/evaluate.py --data training/data/test
 python training/verify_model.py --image path/to/test_photo.jpg
 ```
 
-`train.py` refuses to train when the dataset does not exactly match `classes.json` (it would mislabel every prediction) and writes the **measured** accuracy into `model.manifest.json`. Bundle a model only when it reports a `macro_f1` you trust; otherwise the app's server / heuristic / manual fallbacks are the honest option.
+`train.py` refuses to train when the dataset does not exactly match `classes.json` (it would mislabel every prediction) and writes the **measured** accuracy into `model.manifest.json`. Bundling guidance: aim for `macro_f1 ≥ 0.70` with no class missed; the repo currently ships a **bootstrap** model (macro-F1 0.641, no class missed) trained on temporary web-scraped photos to enable instant offline scanning — replace it with field photos and retrain. See `training/README.md` and `frontend/public/models/README.md`. Otherwise the app's server / heuristic / manual fallbacks are the honest option.
 
 The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]` ImageNet-normalized input, one output of 8 logits whose index order equals `frontend/public/models/classes.json`. Trained output goes straight to `frontend/public/models/mobilenetv4_scrap_int8.onnx`. The onnxruntime WASM runtime is emitted automatically by Vite into `dist/assets/` (no manual `public/ort/` copy step), and the service worker caches both the model and the runtime so edge inference keeps working offline after the first load.
 

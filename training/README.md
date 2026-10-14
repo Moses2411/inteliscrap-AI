@@ -126,6 +126,24 @@ data, because the app leans on the physical test, not the photo, for those.
 
 `train.py` prints an explicit warning when `macro-F1 < 0.60`.
 
+### Current bundled model (a deliberate exception)
+
+The repo currently ships a **bootstrap** model (macro-F1 **0.641**, no class
+missed, top-3 0.854, 2.5 MB) trained on the web-scraped images. It is *below* the
+0.70 bar above and is bundled only to get instant, fully-offline scanning working
+end to end. It is not the finished article: replace it with field photos, then
+retrain and re-check against the bar. See `frontend/public/models/README.md` for
+the measured numbers.
+
+`--export-only` re-runs export → quantize → verify → evaluate → manifest from an
+existing `training/data/models/best.pth` without retraining, which is handy when
+only the quantization/export step changed.
+
+> **Quantization note.** Static int8 export **must** use `per_channel=True`. With
+> the default per-tensor quantization, MobileNetV4 collapses from ~0.70 to ~0.19
+> macro-F1. Calibration also samples the **train** split (never val/test, which
+> report accuracy). `train.py` already does both.
+
 ## Files
 
 | File | Purpose |

@@ -12,6 +12,26 @@ browser expects.
 > `source` badge on every scan (`onnx` · `server` · `heuristic` · `manual`) tells
 > the user exactly which path produced it.
 
+## Current bundled model
+
+A **bootstrap** classifier is bundled now. Its numbers are measured on the
+held-out split (`training/data/val`, n = 157) and written into
+`model.manifest.json` — never asserted:
+
+| metric | value |
+|---|---|
+| top-1 | 0.637 |
+| top-3 | 0.854 |
+| macro-F1 | 0.641 |
+| weighted-F1 | 0.644 |
+| size | 2.5 MB (int8) |
+
+**This is a temporary bootstrap, not a finished model.** It is *below* the
+≥ 0.70 macro-F1 bar described in `training/README.md` and was trained on noisy,
+copyrighted web-scraped images. No class is completely missed and top-3 is high,
+so the app's confirm-the-candidate flow plus the magnet/scratch physical test
+cover most of its errors. Replace it with field photos you own, then retrain.
+
 ## Files
 
 | File | Required | Purpose |
