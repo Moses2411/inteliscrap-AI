@@ -31,6 +31,20 @@ class Settings(BaseSettings):
     voice_public_base_url: str = ""
     ollama_base_url: str = "http://localhost:11434"
     ollama_vision_model: str = "llava:13b"
+    ollama_timeout_s: int = 60
+    ollama_max_retries: int = 2
+    enable_server_vision: bool = True
+
+    # Pricing/Impact
+    price_stale_hours: int = 72
+    enable_realtime_prices: bool = False
+
+    # Telco flags
+    sms_enabled: bool = False
+    ussd_enabled: bool = True
+    ivr_enabled: bool = True
+    max_sms_retries: int = 5
+    provider_timeout_s: int = 30
 
     class Config:
         env_file = ".env"

@@ -10,7 +10,7 @@ import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PageMotion, pageItem, pageStagger } from "../components/ui/PageMotion";
 import { getLocalScans, softDeleteScan } from "../services/db";
-import { formatConfidence, formatDateTime, formatNaira } from "../utils/formatters";
+import { formatConfidence, formatDateTime, formatNairaEstimate } from "../utils/formatters";
 import type { ScrapScan } from "../types";
 import { useSync } from "../hooks/useSync";
 import { useTranslation } from "../hooks/useTranslation";
@@ -152,7 +152,7 @@ export default function HistoryPage() {
         />
         <StatCard
           label={t("estimated_value")}
-          value={formatNaira(stats.value)}
+          value={formatNairaEstimate(stats.value)}
           icon={<Coins className="h-5 w-5" />}
           iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
         />
@@ -228,7 +228,7 @@ export default function HistoryPage() {
                           </p>
                           <p className="text-xs text-slate-500 dark:text-slate-400">
                             {formatConfidence(scan.confidence_score)} •
-                            {formatNaira(scan.estimated_naira_value)}
+                            {formatNairaEstimate(scan.estimated_naira_value)}
                           </p>
                         </div>
                       </div>
@@ -284,7 +284,7 @@ export default function HistoryPage() {
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       {formatDateTime(scan.captured_at)} • {formatConfidence(scan.confidence_score)} •
-                      {formatNaira(scan.estimated_naira_value)}
+                      {formatNairaEstimate(scan.estimated_naira_value)}
                     </p>
                   </div>
                 </div>

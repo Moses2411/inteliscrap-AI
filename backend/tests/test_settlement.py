@@ -20,7 +20,7 @@ async def _seed(test_session):
     seller = User(
         id="settle-seller",
         phone_number="+2348050000001",
-        role=UserRole.household,
+        role=UserRole.seller,
         location_hub="Zaria",
     )
     collector = User(

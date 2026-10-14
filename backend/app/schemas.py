@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -42,6 +42,12 @@ class SyncPayload(BaseModel):
 class PriceMatrixItem(BaseModel):
     material_class: str
     price_per_kg_naira: float
+    name: Optional[str] = None
+    carbon_kg_co2e_per_kg: float = 0.0
+    price_last_updated_at: Optional[datetime] = None
+    price_source: str = "seed"
+    price_version: int = 1
+    is_stale: bool = False
 
 
 class SyncResponse(BaseModel):
@@ -80,9 +86,10 @@ class LocationUpdate(BaseModel):
 
 
 class PriceMatrixUpdate(BaseModel):
-    material_class: str
+    material_class: str = ""
     price_per_kg_naira: float
     updated_by: Optional[str] = None
+    reason: Optional[str] = None
 
 
 class HealthResponse(BaseModel):
@@ -92,11 +99,12 @@ class HealthResponse(BaseModel):
 
 
 class AnalyzeRequest(BaseModel):
-    image_base64: str
+    image_base64: str = Field(min_length=16, max_length=12_000_000)
 
 
 class AnalyzeResponse(BaseModel):
     material_class: str
+    material_slug: str = "other"
     confidence: float
     toxicity_hazards: list[str]
     safety_instructions: str
@@ -134,6 +142,10 @@ class ImpactSummary(BaseModel):
     total_carbon_offset_kg_co2e: float
     total_collector_income_naira: float
     transactions_count: int
+    total_transactions: int = 0
+    computed_from: str = "ngo_impact_logs"
+    platform_revenue_naira: float = 0.0
+    seller_payout_naira: float = 0.0
 
 
 class ImpactDailyPoint(BaseModel):
@@ -147,6 +159,7 @@ class ImpactByMaterial(BaseModel):
     material: str
     tonnage_kg: float
     carbon_offset_kg_co2e: float
+    collector_income_naira: float = 0.0
 
 
 class ListingCreate(BaseModel):
@@ -274,7 +287,12 @@ class MaterialCategoryResponse(BaseModel):
     name_ha: Optional[str] = None
     name_pcm: Optional[str] = None
     price_per_kg_naira: float
+    carbon_kg_co2e_per_kg: float = 0.0
     is_hazardous: bool = False
+    price_last_updated_at: Optional[datetime] = None
+    price_source: str = "seed"
+    price_version: int = 1
+    is_stale: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -332,7 +350,7 @@ class HubRecyclingRequestCreate(BaseModel):
     material_category_id: int
     requested_kg: float = Field(gt=0)
     note: Optional[str] = None
-    requested_on: datetime
+    requested_on: date
 
 
 class HubRecyclingRequestResponse(BaseModel):

@@ -1,12 +1,18 @@
-import { useEffect, useRef } from "react";
-import type { VisionAnalysis, HazardLevel } from "../../types";
-import { formatNaira, formatConfidence } from "../../utils/formatters";
+import { useEffect, useRef, useState } from "react";
+import { HelpCircle } from "lucide-react";
+import type { VisionAnalysis, VisionCandidate, HazardLevel } from "../../types";
+import { formatNairaEstimate, formatConfidence } from "../../utils/formatters";
 import { useTranslation, getLocale } from "../../hooks/useTranslation";
 import { useApp } from "../../store/appStore";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import HazardBadge from "../ui/HazardBadge";
 import type { TtsStatus } from "../../hooks/useAudioTTS";
+import {
+  detectFamily,
+  resolveDisambiguation,
+  type DisambiguationAnswers,
+} from "../../vision/disambiguation";
 
 interface Props {
   result: VisionAnalysis;
@@ -14,6 +20,9 @@ interface Props {
   hazard_level?: HazardLevel;
   onReadAloud?: () => void;
   onScanAgain?: () => void;
+  onConfirmMaterial?: (candidate: VisionCandidate) => void;
+  onDisambiguate?: (slug: string) => void;
+  onChooseManually?: () => void;
   ttsStatus?: TtsStatus;
   onPause?: () => void;
   onResume?: () => void;
@@ -51,7 +60,7 @@ function determineSafetyKey(hazards: string[]): SafetyKey {
   return "default";
 }
 
-export default function ScanResult({ result, estimated_value, hazard_level, onReadAloud, onScanAgain, ttsStatus = "idle", onPause, onResume }: Props) {
+export default function ScanResult({ result, estimated_value, hazard_level, onReadAloud, onScanAgain, onConfirmMaterial, onDisambiguate, onChooseManually, ttsStatus = "idle", onPause, onResume }: Props) {
   const { t } = useTranslation();
   const { selected_language } = useApp();
   const levelStyle = hazard_level ? HAZARD_LEVEL_STYLE[hazard_level] : null;
@@ -61,6 +70,17 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
     hazard_level ??
     (hazardKey === "hazard_high_risk" ? "critical" : hazardKey === "hazard_caution" ? "medium" : "low");
   const safetyKey = determineSafetyKey(result.toxicity_hazards ?? []);
+  const confirmCandidates = result.uncertain ? result.candidates ?? [] : [];
+  const showConfirm =
+    result.uncertain &&
+    confirmCandidates.length > 0 &&
+    Boolean(onConfirmMaterial || onChooseManually);
+  const [answers, setAnswers] = useState<DisambiguationAnswers>({});
+  const family = showConfirm
+    ? detectFamily(confirmCandidates.map((candidate) => candidate.material_slug))
+    : null;
+  const resolution = family ? resolveDisambiguation(family, answers) : null;
+  const question = resolution?.question ?? null;
   const localeData = getLocale(selected_language);
   const translatedSafety = (localeData.safety_instructions as Record<string, string>)?.[safetyKey] ?? result.safety_instructions;
   const autoReadRef = useRef(false);
@@ -71,6 +91,18 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
       onReadAloud();
     }
   }, [onReadAloud]);
+
+  useEffect(() => {
+    setAnswers({});
+  }, [result]);
+
+  function handleAnswer(questionId: string, optionId: string) {
+    if (!family) return;
+    const nextAnswers = { ...answers, [questionId]: optionId };
+    setAnswers(nextAnswers);
+    const next = resolveDisambiguation(family, nextAnswers);
+    if (next.resolvedSlug) onDisambiguate?.(next.resolvedSlug);
+  }
 
   function renderTtsButton() {
     if (!onReadAloud) return null;
@@ -126,14 +158,75 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
         <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3 dark:border-slate-800">
           <div>
             <span className="text-xs text-slate-500 dark:text-slate-400">{t("estimated_value")}</span>
-            <p className="text-xl font-bold text-brand-600 dark:text-brand-400">{formatNaira(estimated_value)}</p>
+            <p className="text-xl font-bold text-brand-600 dark:text-brand-400">{formatNairaEstimate(estimated_value)}</p>
           </div>
           <div>
             <span className="text-xs text-slate-500 dark:text-slate-400">{t("confidence")}</span>
             <p className="text-xl font-semibold text-slate-900 dark:text-slate-100">{formatConfidence(result.confidence)}</p>
           </div>
         </div>
+        <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{t("price_estimate_note")}</p>
       </Card>
+
+      {showConfirm && (
+        <Card className="space-y-3 border-l-4 border-amber-400 dark:border-amber-600">
+          <div className="flex items-start gap-2.5">
+            <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("uncertain_title")}</h3>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t("uncertain_hint")}</p>
+            </div>
+          </div>
+          {family && onDisambiguate && question && (
+            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-800">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                {t("disambiguate_title")}
+              </p>
+              <p className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{t(question.titleKey)}</p>
+              {question.hintKey && (
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{t(question.hintKey)}</p>
+              )}
+              <div className="mt-2 grid grid-cols-2 gap-2" role="group" aria-label={t(question.titleKey)}>
+                {question.options.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => handleAnswer(question.id, option.id)}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-all hover:border-brand-400 hover:shadow-sm active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                  >
+                    {t(option.labelKey)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-2" role="group" aria-label={t("uncertain_title")}>
+            {confirmCandidates.map((candidate) => (
+              <button
+                key={candidate.material_slug}
+                type="button"
+                onClick={() => onConfirmMaterial?.(candidate)}
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition-all hover:border-brand-400 hover:shadow-sm active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900"
+              >
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{candidate.material_class}</span>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{formatConfidence(candidate.confidence)}</span>
+              </button>
+            ))}
+          </div>
+          {onChooseManually && (
+            <Button variant="secondary" fullWidth onClick={onChooseManually}>
+              {t("choose_manually")}
+            </Button>
+          )}
+        </Card>
+      )}
+
+      {(result.source === "heuristic" || result.source === "manual") && (
+        <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900">
+          {t("estimate_disclaimer")}
+        </div>
+      )}
 
       {result.toxicity_hazards && result.toxicity_hazards.length > 0 && (
         <Card className="space-y-2 border-l-4 border-red-400 dark:border-red-600">

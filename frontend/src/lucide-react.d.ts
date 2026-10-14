@@ -29,6 +29,7 @@ declare module "lucide-react" {
   export const Calendar: FC<P>;
   export const CalendarClock: FC<P>;
   export const Camera: FC<P>;
+  export const CameraOff: FC<P>;
   export const ChartArea: FC<P>;
   export const ChartBar: FC<P>;
   export const ChartColumn: FC<P>;
@@ -85,9 +86,11 @@ declare module "lucide-react" {
   export const Grid: FC<P>;
   export const Handshake: FC<P>;
   export const HardHat: FC<P>;
+  export const HardDrive: FC<P>;
   export const Hash: FC<P>;
   export const Heart: FC<P>;
   export const HeartHandshake: FC<P>;
+  export const HelpCircle: FC<P>;
   export const History: FC<P>;
   export const Home: FC<P>;
   export const Image: FC<P>;
@@ -117,6 +120,8 @@ declare module "lucide-react" {
   export const Menu: FC<P>;
   export const MessageCircle: FC<P>;
   export const MessageSquare: FC<P>;
+  export const Mic: FC<P>;
+  export const MicOff: FC<P>;
   export const Milestone: FC<P>;
   export const Minus: FC<P>;
   export const Moon: FC<P>;
@@ -150,6 +155,7 @@ declare module "lucide-react" {
   export const Scale: FC<P>;
   export const Scan: FC<P>;
   export const ScanLine: FC<P>;
+  export const ScanSearch: FC<P>;
   export const Search: FC<P>;
   export const Send: FC<P>;
   export const Server: FC<P>;
@@ -166,11 +172,13 @@ declare module "lucide-react" {
   export const SlidersHorizontal: FC<P>;
   export const Smartphone: FC<P>;
   export const Sparkles: FC<P>;
+  export const Square: FC<P>;
   export const Star: FC<P>;
   export const Stethoscope: FC<P>;
   export const Store: FC<P>;
   export const Sun: FC<P>;
   export const Switch: FC<P>;
+  export const SwitchCamera: FC<P>;
   export const Tag: FC<P>;
   export const Tags: FC<P>;
   export const Target: FC<P>;

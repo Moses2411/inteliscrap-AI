@@ -33,6 +33,57 @@ export function stopCamera(stream: MediaStream): void {
   }
 }
 
+/** Start the camera with an explicit front/rear preference (live scanner). */
+export async function startCameraWithFacing(
+  videoElement: HTMLVideoElement,
+  facingMode: "environment" | "user",
+): Promise<MediaStream> {
+  const constraints: MediaStreamConstraints[] = [
+    {
+      video: { facingMode: { ideal: facingMode }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false,
+    },
+    { video: { facingMode }, audio: false },
+    { video: true, audio: false },
+  ];
+
+  for (const constraint of constraints) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(constraint);
+      videoElement.srcObject = stream;
+      await videoElement.play();
+      return stream;
+    } catch {
+      // try next fallback
+    }
+  }
+
+  throw new Error("No camera available");
+}
+
+/** Whether the active video track exposes a controllable torch/flashlight. */
+export function cameraTorchSupported(stream: MediaStream | null): boolean {
+  const track = stream?.getVideoTracks()[0];
+  const capabilities = (track?.getCapabilities?.() ?? {}) as MediaTrackCapabilities & {
+    torch?: boolean;
+  };
+  return Boolean(capabilities.torch);
+}
+
+/** Toggle the torch. Returns false when the device/stream cannot honour it. */
+export async function setTorch(stream: MediaStream | null, on: boolean): Promise<boolean> {
+  const track = stream?.getVideoTracks()[0];
+  if (!track) return false;
+  try {
+    await track.applyConstraints({
+      advanced: [{ torch: on }],
+    } as unknown as MediaTrackConstraints);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function captureFrame(videoElement: HTMLVideoElement): Promise<Blob | null> {
   const canvas = document.createElement("canvas");
   canvas.width = videoElement.videoWidth || 640;

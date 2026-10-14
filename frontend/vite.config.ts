@@ -24,36 +24,35 @@ export default defineConfig({
           { src: "icons/icon-512x512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
-      // Use custom service worker template
-      swSrc: "public/sw-template.js",
+      // Custom service worker (injectManifest). Source lives in src/sw.js so it
+      // is bundled + gets the precache manifest injected, instead of being
+      // copied verbatim from public/.
+      strategies: "injectManifest",
+      srcDir: "src",
       filename: "sw.js",
-      workbox: {
-        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        runtimeCaching: [
-          {
-            urlPattern: /^https?:\/\/.*\/api\/v1\/prices\/?/,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "price-cache",
-              expiration: { maxEntries: 1, maxAgeSeconds: 86400 },
-            },
-          },
-          {
-            urlPattern: /\.(?:onnx|wasm)(?:\?.*)?$/i,
-            handler: "CacheFirst",
-            options: {
-              cacheName: "model-cache",
-              expiration: { maxEntries: 20, maxAgeSeconds: 31536000 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
-        ],
+        maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
       },
     }),
   ],
   resolve: {
     alias: { "@": path.resolve(__dirname, "src") },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // Keep the ONNX Runtime WASM binary at a stable, unhashed path so the
+        // runtime can load it from /assets/ and we don't also ship a duplicate
+        // copy under public/. Every other asset keeps content hashing.
+        assetFileNames: (assetInfo) => {
+          const name = assetInfo.name ?? "";
+          return name.endsWith(".wasm")
+            ? "assets/[name][extname]"
+            : "assets/[name]-[hash][extname]";
+        },
+      },
+    },
   },
   server: {
     host: true,

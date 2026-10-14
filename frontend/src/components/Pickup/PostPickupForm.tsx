@@ -94,10 +94,12 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
       if (!category) throw new Error("Material category not found");
 
       let coords: GeolocationCoordinates | null = null;
+      let geoError: string | null = null;
       try {
         coords = await getCurrentPosition();
-      } catch {
-        // location optional — listing can still be created without coordinates
+      } catch (err) {
+        geoError = "Could not get your location. Listing will be visible on the market but won't auto-dispatch to nearby collectors.";
+        console.warn("Geolocation failed:", err);
       }
 
       await createListing({
@@ -111,6 +113,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
         contact_phone: sharePhone ? phone : undefined,
         auto_dispatch: coords != null,
       });
+      if (geoError) setError(geoError);
       setPosted(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Post failed");
@@ -255,7 +258,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   }
 
   return (
-    <div className="card space-y-3">
+    <form onSubmit={submitListing} className="card space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("confirm_listing")}</h2>
         <span className="text-xs text-brand-600 dark:text-brand-400">{analysis.material_class}</span>
@@ -278,13 +281,13 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
       {error && <div className="text-sm font-semibold text-red-600 dark:text-red-400" role="alert">{error}</div>}
 
-      <Button fullWidth onSubmit={submitListing} loading={busy}>
+      <Button fullWidth type="submit" loading={busy}>
         {t("list_scrap")}
       </Button>
 
-      <Button variant="ghost" fullWidth onClick={onReset}>
+      <Button variant="ghost" fullWidth type="button" onClick={onReset}>
         {t("scan_again")}
       </Button>
-    </div>
+    </form>
   );
 }

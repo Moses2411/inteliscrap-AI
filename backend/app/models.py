@@ -1,5 +1,6 @@
 import enum
 import uuid
+from datetime import datetime
 
 from sqlalchemy import (
     Boolean,
@@ -154,10 +155,39 @@ class MaterialCategory(Base):
     sort_order = Column(Integer, nullable=False, default=0)
     is_active = Column(Boolean, nullable=False, default=True)
     updated_by = Column(String(36), nullable=True)
+    price_last_updated_at = Column(DateTime, nullable=True, default=datetime.utcnow)
+    price_source = Column(String(32), nullable=False, default="seed")
+    price_version = Column(Integer, nullable=False, default=1)
+    price_updated_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     listings = relationship("Listing", back_populates="material_category")
+    price_updated_by = relationship("User", foreign_keys=[price_updated_by_id])
+
+
+class PriceHistory(Base):
+    """Append-only audit trail for every material price change.
+
+    Never mutated or deleted in normal operation — this is the record EPR/NGO
+    audits can rely on to reconstruct what a material was priced at, and when.
+    """
+
+    __tablename__ = "price_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    material_category_id = Column(
+        Integer, ForeignKey("material_categories.id"), nullable=False, index=True
+    )
+    price_per_kg_naira = Column(Numeric(12, 2), nullable=False)
+    carbon_kg_co2e_per_kg = Column(Numeric(10, 4), nullable=False, default=0)
+    source = Column(String(32), nullable=False, default="admin")
+    reason = Column(String(255), nullable=True)
+    updated_by_id = Column(String(36), ForeignKey("users.id"), nullable=True)
+    changed_at = Column(DateTime, server_default=func.now(), nullable=False, index=True)
+
+    material_category = relationship("MaterialCategory")
+    updated_by = relationship("User", foreign_keys=[updated_by_id])
 
 
 class Listing(Base):
@@ -168,16 +198,14 @@ class Listing(Base):
     material_category_id = Column(
         Integer, ForeignKey("material_categories.id"), nullable=False, index=True
     )
+    # Brand / own-product attribution captured at scan: an optional GTIN/EAN
+    # barcode that (when it matches a producer's registered catalog) maps to brand_id.
     brand_id = Column(String(36), ForeignKey("brands.id"), nullable=True, index=True)
     gtin = Column(String(64), nullable=True, index=True)
     title = Column(String(160), nullable=True)
     description = Column(Text, nullable=True)
     photo_url = Column(String(512), nullable=True)
     thumbnail_url = Column(String(512), nullable=True)
-    # Brand / own-product attribution captured at scan: optional GTIN/EAN barcode
-    # that (when it matches a producer's registered catalog) maps to brand_id.
-    brand_id = Column(String(36), ForeignKey("brands.id"), nullable=True, index=True)
-    gtin = Column(String(64), nullable=True, index=True)
     estimated_weight_kg = Column(Numeric(10, 3), nullable=True)
     actual_weight_kg = Column(Numeric(10, 3), nullable=True)
     estimated_value_naira = Column(Numeric(12, 2), nullable=True)
@@ -256,7 +284,6 @@ class Transaction(Base):
     collector = relationship("User", foreign_keys=[collector_id], back_populates="collected_transactions")
     impact_log = relationship("NGOImpactLog", back_populates="transaction", uselist=False)
     brand = relationship("Brand", back_populates="transactions")
-    brand = relationship("Brand", back_populates="transactions")
 
 
 class NGOImpactLog(Base):
@@ -273,9 +300,11 @@ class NGOImpactLog(Base):
     hub = Column(String(64), nullable=False, default="Zaria")
     period = Column(Date, nullable=False, index=True)
     raw_metrics = Column(JSON, nullable=True)
+    carbon_kg_co2e_per_kg_used = Column(Numeric(10, 4), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
     transaction = relationship("Transaction", back_populates="impact_log")
+    material_category = relationship("MaterialCategory")
 
 
 class SyncOutbox(Base):
@@ -289,6 +318,11 @@ class SyncOutbox(Base):
     attempt_count = Column(Integer, nullable=False, default=0)
     next_retry_at = Column(DateTime, nullable=True)
     status = Column(String(20), nullable=False, default="pending", index=True)
+    max_attempts = Column(Integer, nullable=False, default=5)
+    sent_at = Column(DateTime, nullable=True)
+    provider_message_id = Column(String(120), nullable=True)
+    error_code = Column(String(40), nullable=True)
+    last_error = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -442,6 +476,9 @@ class CompliancePartner(Base):
     name = Column(String(160), nullable=False)
     partner_type = Column(String(40), nullable=False, default="pro")  # pro | recycler | fg
     api_key = Column(String(80), unique=True, nullable=False, index=True)
+    api_keys_hash = Column(Text, nullable=True)  # hashed at rest support
+    scopes = Column(JSON, nullable=True, default=list)
+    last_used_at = Column(DateTime, nullable=True)
     brand_id = Column(String(36), ForeignKey("brands.id"), nullable=True, index=True)
     allow_category_aggregate = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)

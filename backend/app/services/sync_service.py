@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import List
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models import PriceMatrix, ScrapScan
+from app.models import MaterialCategory, ScrapScan
 from app.schemas import ScrapScanCreate
 
 
@@ -54,6 +54,11 @@ async def process_scans(db: AsyncSession, user_id: str, scans: list[ScrapScanCre
     return synced_ids
 
 
-async def get_latest_prices(db: AsyncSession) -> list[PriceMatrix]:
-    result = await db.execute(select(PriceMatrix))
+async def get_latest_prices(db: AsyncSession) -> list[MaterialCategory]:
+    """Canonical prices for the offline cache: the material rate card."""
+    result = await db.execute(
+        select(MaterialCategory)
+        .where(MaterialCategory.is_active.is_(True))
+        .order_by(MaterialCategory.sort_order.asc())
+    )
     return list(result.scalars().all())

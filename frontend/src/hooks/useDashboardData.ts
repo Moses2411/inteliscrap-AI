@@ -49,7 +49,7 @@ interface HookResult<T> {
  * Load once per tick. Falls back to clearly-labelled preview data when the
  * API is unreachable and preview mode is enabled.
  */
-function useLoad<T>(loader: () => Promise<T>, demo: () => T): HookResult<T> {
+function useLoad<T>(loader: () => Promise<T>, demo: () => T, options?: { fallbackOnError?: boolean }): HookResult<T> {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPreview, setPreview] = useState(false);
@@ -60,6 +60,8 @@ function useLoad<T>(loader: () => Promise<T>, demo: () => T): HookResult<T> {
   const demoRef = useRef(demo);
   loaderRef.current = loader;
   demoRef.current = demo;
+
+  const fallbackOnError = options?.fallbackOnError ?? true;
 
   const refresh = useCallback(() => setTick((t) => t + 1), []);
 
@@ -77,7 +79,7 @@ function useLoad<T>(loader: () => Promise<T>, demo: () => T): HookResult<T> {
         }
       } catch (err) {
         if (cancelled) return;
-        if (previewEnabled()) {
+        if (previewEnabled() && fallbackOnError) {
           setData(demoRef.current());
           setPreview(true);
         } else {
@@ -155,6 +157,7 @@ export function useHubData(): HookResult<HubBundle> {
       deliveries: DEMO_HUB_DELIVERIES,
       subscriptions: DEMO_HUB_SUBSCRIPTIONS,
     }),
+    { fallbackOnError: false }, // Don't fall back to demo data — we need to detect "no hub registered"
   );
 }
 
@@ -324,5 +327,6 @@ export function useSalesReportData(): HookResult<SalesReportData> {
       return deriveSalesReport(deliveries, requests, materials);
     },
     () => deriveSalesReport(DEMO_SALES_DELIVERIES, DEMO_SALES_REQUESTS, DEMO_MATERIALS),
+    { fallbackOnError: false }, // Don't fall back to demo data — requires hub registration
   );
 }

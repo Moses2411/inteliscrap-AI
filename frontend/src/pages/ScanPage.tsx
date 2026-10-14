@@ -1,27 +1,24 @@
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Camera, Recycle, Zap, WifiOff, ShieldCheck, AlertTriangle } from "lucide-react";
-import CameraCapture from "../components/Camera/CameraCapture";
+import { LiveScanner } from "../components/Scanner/LiveScanner";
 import ScanResult from "../components/Scanner/ScanResult";
 import ManualMaterialSelect from "../components/Scanner/ManualMaterialSelect";
 import PostPickupForm from "../components/Pickup/PostPickupForm";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
-import { Card } from "../components/ui/Card";
 import { PageMotion, pageItem } from "../components/ui/PageMotion";
 import { useVision } from "../hooks/useVision";
 import { useAudioTTS } from "../hooks/useAudioTTS";
 import { useTranslation } from "../hooks/useTranslation";
 import { useApp } from "../store/appStore";
+import { getRole } from "../services/auth";
 import { saveScanLocally } from "../services/db";
 import { getCategoryBySlug } from "../services/materials";
 import { resolveTradeRule } from "../services/language";
-import type { VisionAnalysis } from "../types";
+import type { VisionAnalysis, VisionCandidate } from "../types";
 
 export default function ScanPage() {
-  const { user } = useApp();
-  const role = user?.role;
-  
-  // Only seller and collector can access scanning functionality
+  const role = getRole();
   if (role !== "seller" && role !== "collector") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -38,17 +35,23 @@ export default function ScanPage() {
     );
   }
 
+  return <ScanWorkspace role={role} />;
+}
+
+function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
   const [result, setResult] = useState<VisionAnalysis | null>(null);
   const [estimated_value, setEstimatedValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [manualMode, setManualMode] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
   const { t } = useTranslation();
   const { selected_language, cached_prices, setCurrentScan } = useApp();
   const { analyze, loadingProgress } = useVision();
   const { speakReport, pause, resume, status: ttsStatus } = useAudioTTS();
 
   const finishWith = useCallback(
-    async (analysis: VisionAnalysis) => {
+    async (analysis: VisionAnalysis, options?: { persist?: boolean }) => {
+      const persist = options?.persist ?? true;
       setResult(analysis);
       setCurrentScan(analysis);
 
@@ -65,6 +68,8 @@ export default function ScanPage() {
         }
       }
       setEstimatedValue(value);
+
+      if (!persist) return;
 
       saveScanLocally({
         id: crypto.randomUUID(),
@@ -116,6 +121,57 @@ export default function ScanPage() {
     [finishWith]
   );
 
+  const handleConfirmMaterial = useCallback(
+    async (candidate: VisionCandidate) => {
+      if (!result) return;
+      const rule = resolveTradeRule(candidate.material_slug);
+      // The user confirmed one of the AI's own candidates: keep the originating
+      // source label but clear the uncertainty. The original scan was already
+      // persisted, so do not write a second record.
+      await finishWith(
+        {
+          ...result,
+          material_class: candidate.material_class || rule.material,
+          material_slug: rule.slug,
+          confidence: candidate.confidence,
+          toxicity_hazards: rule.hazards,
+          safety_instructions: rule.safety,
+          hazard_level: rule.hazardLevel,
+          uncertain: false,
+          candidates: undefined,
+        },
+        { persist: false }
+      );
+    },
+    [result, finishWith]
+  );
+
+  const handleResolveMaterial = useCallback(
+    async (slug: string) => {
+      if (!result) return;
+      const rule = resolveTradeRule(slug);
+      // A physical test (magnet/scratch/flex) resolved the material. It is more
+      // reliable than pixels, so trust it, but keep the originating source label
+      // and never re-persist the scan.
+      const known = result.candidates?.find((candidate) => candidate.material_slug === rule.slug);
+      await finishWith(
+        {
+          ...result,
+          material_class: rule.material,
+          material_slug: rule.slug,
+          confidence: known?.confidence ?? 0.9,
+          toxicity_hazards: rule.hazards,
+          safety_instructions: rule.safety,
+          hazard_level: rule.hazardLevel,
+          uncertain: false,
+          candidates: undefined,
+        },
+        { persist: false }
+      );
+    },
+    [result, finishWith]
+  );
+
   if (loading) {
     return (
       <div
@@ -164,6 +220,12 @@ export default function ScanPage() {
             speakReport(result.material_class, estimated_value, result.toxicity_hazards, selected_language)
           }
           onScanAgain={() => setResult(null)}
+          onConfirmMaterial={handleConfirmMaterial}
+          onDisambiguate={handleResolveMaterial}
+          onChooseManually={() => {
+            setResult(null);
+            setManualMode(true);
+          }}
           ttsStatus={ttsStatus}
           onPause={pause}
           onResume={resume}
@@ -192,9 +254,17 @@ export default function ScanPage() {
       </motion.div>
 
       <motion.div variants={pageItem}>
-        <Card pad={false} className="overflow-hidden shadow-sm">
-          <CameraCapture onImageCapture={handleImageCapture} />
-        </Card>
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-obsidian-950 p-3 shadow-bento">
+          <div className="h-[24rem] sm:h-[26rem]">
+            <LiveScanner
+              active={cameraActive}
+              onActiveChange={setCameraActive}
+              onCapture={(blob) => void handleImageCapture(blob)}
+              busy={loading}
+              allowUpload={role === "collector"}
+            />
+          </div>
+        </div>
       </motion.div>
 
       <motion.div

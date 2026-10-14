@@ -46,27 +46,3 @@ export function resolveTradeRule(slug: string): TradeRule {
 export function computeFairValue(weightKg: number, pricePerKgNaira: number): number {
   return weightKg * pricePerKgNaira;
 }
-
-const QWEN_MODEL = "onnx-community/Qwen2.5-0.5B-Instruct";
-
-type TextGenerator = (
-  text: string,
-  options?: Record<string, unknown>,
-) => Promise<Array<{ generated_text: string }>>;
-
-let generatorPromise: Promise<TextGenerator> | null = null;
-
-export async function parseTradeText(input: string): Promise<string> {
-  if (!generatorPromise) {
-    generatorPromise = import("@huggingface/transformers").then(
-      (mod) => mod.pipeline("text-generation", QWEN_MODEL, { device: "wasm", dtype: "q4" }),
-    ) as unknown as Promise<TextGenerator>;
-  }
-  try {
-    const generator = await generatorPromise;
-    const out = await generator(input, { max_new_tokens: 64, temperature: 0.1 });
-    return out[0]?.generated_text ?? input;
-  } catch {
-    return input;
-  }
-}

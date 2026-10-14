@@ -23,8 +23,9 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { useHubData, useMarketData } from "../../hooks/useDashboardData";
-import { createHubRequest } from "../../services/hubs";
-import { formatKg, formatNaira, formatDateTime } from "../../utils/formatters";
+import { createHubRequest, registerHub } from "../../services/hubs";
+import { formatKg, formatNaira, formatNairaEstimate, formatDateTime } from "../../utils/formatters";
+import { syncRoleFromServer } from "../../services/auth";
 import { cn } from "../../lib/cn";
 
 export default function HubDashboard() {
@@ -36,6 +37,11 @@ export default function HubDashboard() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
+  // Hub registration states
+  const [regForm, setRegForm] = useState({ name: "", address_text: "", city: "Zaria", contact_phone: "" });
+  const [regSubmitting, setRegSubmitting] = useState(false);
+  const [regError, setRegError] = useState<string | null>(null);
+
   const data = hub.data;
   const requests = data?.requests ?? [];
   const deliveries = data?.deliveries ?? [];
@@ -43,6 +49,7 @@ export default function HubDashboard() {
   const openRequests = requests.filter((r) => r.status === "open");
   const activeSub = subscriptions.find((s) => s.status === "active");
 
+  const hasHub = !!data?.hub;
   const deliveredKg = deliveries.reduce((a, d) => a + d.weight_kg, 0);
   const fulfillment =
     openRequests.length > 0
@@ -63,18 +70,45 @@ export default function HubDashboard() {
       await createHubRequest({
         material_category_id: Number(form.material_category_id),
         requested_kg: Number(form.requested_kg),
-        requested_on: new Date(form.requested_on).toISOString(),
+        requested_on: form.requested_on, // Send YYYY-MM-DD directly
         note: form.note || undefined,
       });
       setSaved(true);
       setTimeout(() => setSheetOpen(false), 600);
       hub.refresh();
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Failed to publish request");
+      // Try to extract backend error message
+      const message = err instanceof Error ? err.message : "Failed to publish request";
+      setFormError(message);
     } finally {
       setSubmitting(false);
     }
   }, [form, hub]);
+
+  const submitRegistration = useCallback(async () => {
+    setRegError(null);
+    if (!regForm.name.trim()) {
+      setRegError("Hub name is required.");
+      return;
+    }
+    setRegSubmitting(true);
+    try {
+      await registerHub({
+        name: regForm.name.trim(),
+        address_text: regForm.address_text.trim() || undefined,
+        city: regForm.city.trim() || "Zaria",
+        contact_phone: regForm.contact_phone.trim() || undefined,
+      });
+      // Sync role from server (backend changes role to recycling_hub after registration)
+      await syncRoleFromServer();
+      hub.refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to register hub";
+      setRegError(message);
+    } finally {
+      setRegSubmitting(false);
+    }
+  }, [regForm, hub]);
 
   const deliveryColumns: Column<(typeof deliveries)[number]>[] = [
     {
@@ -93,7 +127,7 @@ export default function HubDashboard() {
       },
     },
     { key: "weight", label: "Weight", align: "right", render: (d) => formatKg(d.weight_kg) },
-    { key: "value", label: "Hub price", align: "right", render: (d) => formatNaira(d.hub_price_naira) },
+    { key: "value", label: "Hub price", align: "right", render: (d) => formatNairaEstimate(d.hub_price_naira) },
     {
       key: "time",
       label: "Delivered",
@@ -108,29 +142,110 @@ export default function HubDashboard() {
 
   return (
     <PageMotion className="space-y-6">
-      <motion.div variants={pageItem}>
-        <PageHeader
-          title={data?.hub?.name ?? "Hub desk"}
-          subtitle={
-            data?.hub
-              ? `${data.hub.city} · ${data.hub.address_text ?? "address pending"}`
-              : "Manage daily buy requests, deliveries and subscriptions"
-          }
-          actions={
-            <div className="flex items-center gap-2">
-              {hub.isPreview && <PreviewPill />}
-              <Button variant="secondary" size="sm" onClick={hub.refresh}>
-                <RefreshCw className="h-3.5 w-3.5" />
-                Refresh
+      {hub.loading ? (
+        <motion.div variants={pageItem}>
+          <PageHeader
+            title="Hub desk"
+            subtitle="Loading..."
+            actions={
+              <div className="flex items-center gap-2">
+                {hub.isPreview && <PreviewPill />}
+                <Button variant="secondary" size="sm" onClick={hub.refresh}>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Refresh
+                </Button>
+              </div>
+            }
+          />
+        </motion.div>
+      ) : !hasHub && !hub.isPreview ? (
+        // Hub registration form
+        <motion.div variants={pageItem}>
+          <PageHeader title="Register your recycling hub" subtitle="Start publishing daily buy requests" />
+          <Card pad className="max-w-md">
+            <form onSubmit={(e) => { e.preventDefault(); submitRegistration(); }} className="space-y-4">
+              <div>
+                <label className="label" htmlFor="hub-name">Hub name</label>
+                <input
+                  id="hub-name"
+                  type="text"
+                  placeholder="e.g. GreenCycle Hub"
+                  className="input"
+                  value={regForm.name}
+                  onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
+                  required
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="hub-address">Address (optional)</label>
+                <input
+                  id="hub-address"
+                  type="text"
+                  placeholder="e.g. Along Kano Road, Samaru"
+                  className="input"
+                  value={regForm.address_text}
+                  onChange={(e) => setRegForm({ ...regForm, address_text: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="hub-city">City</label>
+                <input
+                  id="hub-city"
+                  type="text"
+                  className="input"
+                  value={regForm.city}
+                  onChange={(e) => setRegForm({ ...regForm, city: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label" htmlFor="hub-phone">Contact phone (optional)</label>
+                <input
+                  id="hub-phone"
+                  type="tel"
+                  placeholder="+23480xxxxxxxx"
+                  className="input"
+                  value={regForm.contact_phone}
+                  onChange={(e) => setRegForm({ ...regForm, contact_phone: e.target.value })}
+                />
+              </div>
+              {regError && (
+                <div className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:bg-red-950/60 dark:text-red-300">
+                  {regError}
+                </div>
+              )}
+              <Button fullWidth type="submit" loading={regSubmitting} className="pt-2">
+                Register hub
               </Button>
-              <Button size="sm" onClick={() => { setSaved(false); setSheetOpen(true); }}>
-                <PackagePlus className="h-3.5 w-3.5" />
-                New buy request
-              </Button>
-            </div>
-          }
-        />
-      </motion.div>
+            </form>
+          </Card>
+        </motion.div>
+      ) : (
+        <>
+          <motion.div variants={pageItem}>
+            <PageHeader
+              title={data?.hub?.name ?? "Hub desk"}
+              subtitle={
+                data?.hub
+                  ? `${data.hub.city} · ${data.hub.address_text ?? "address pending"}`
+                  : "Manage daily buy requests, deliveries and subscriptions"
+              }
+              actions={
+                <div className="flex items-center gap-2">
+                  {hub.isPreview && <PreviewPill />}
+                  <Button variant="secondary" size="sm" onClick={hub.refresh}>
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Refresh
+                  </Button>
+                  <Button size="sm" onClick={() => { setSaved(false); setSheetOpen(true); }}>
+                    <PackagePlus className="h-3.5 w-3.5" />
+                    New buy request
+                  </Button>
+                </div>
+              }
+            />
+          </motion.div>
+        </>
+      )}
 
       {/* KPI row */}
       <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -367,7 +482,7 @@ export default function HubDashboard() {
               <option value="">Select material…</option>
               {materials.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name} — {formatNaira(m.price_per_kg_naira)}/kg
+                  {m.name} — {formatNairaEstimate(m.price_per_kg_naira)}/kg
                 </option>
               ))}
             </select>

@@ -87,6 +87,24 @@ export default function ImpactDashboard() {
         }
       />
 
+      {/* Honest provenance: say whether these numbers are live settlements or seed/demo */}
+      {!impact.loading && s && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+          {s.computed_from === "settlements" ? (
+            <Badge tone="green">Live settlement ledger</Badge>
+          ) : impact.isPreview || s.computed_from === "demo" ? (
+            <Badge tone="amber">Preview / demo data</Badge>
+          ) : (
+            <Badge tone="slate">Seeded impact logs</Badge>
+          )}
+          <span>
+            {s.computed_from === "settlements"
+              ? "Computed directly from settled transactions."
+              : "Aggregated from recorded impact logs — not live settlement data."}
+          </span>
+        </div>
+      )}
+
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard

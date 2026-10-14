@@ -55,3 +55,54 @@ async def test_outbox_backoff_then_fail(client, test_session):
     await test_session.refresh(item)
     assert item.status == "failed"
     assert item.attempt_count == 5
+
+
+@pytest.mark.asyncio
+async def test_outbox_non_retryable_goes_to_dead_letter(client, test_session):
+    token = await _make_admin_token(test_session)
+    item = SyncOutbox(
+        id="outbox-dlq",
+        aggregate_type="pickup",
+        aggregate_id="p2",
+        event_type="unsupported.event",  # malformed -> non-retryable
+        payload={"phone_number": "+234", "message": "hello"},
+        status="pending",
+    )
+    test_session.add(item)
+    await test_session.flush()
+
+    resp = await client.post(
+        "/api/v1/outbox/process", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert resp.status_code == 200
+    assert resp.json()["processed"] == 0
+    await test_session.refresh(item)
+    assert item.status == "dead_letter"
+    assert item.error_code == "invalid_payload"
+    assert item.next_retry_at is None
+    assert item.last_error is not None
+
+    dlq = await client.get(
+        "/api/v1/outbox/dead-letter", headers={"Authorization": f"Bearer {token}"}
+    )
+    assert dlq.status_code == 200
+    assert dlq.json()["count"] == 1
+
+    retry = await client.post(
+        f"/api/v1/outbox/{item.id}/retry",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert retry.status_code == 200
+    await test_session.refresh(item)
+    assert item.status == "pending"
+    assert item.attempt_count == 0
+
+
+@pytest.mark.asyncio
+async def test_outbox_messages_filter_validates_status(client, test_session):
+    token = await _make_admin_token(test_session)
+    resp = await client.get(
+        "/api/v1/outbox/messages?status_filter=bogus",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 400
