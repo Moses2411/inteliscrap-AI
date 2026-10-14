@@ -79,7 +79,7 @@ async def _new_pickups_flow(db: AsyncSession, collector: User, rest: list[str]) 
         value = _fmt_num(listing.estimated_value_naira)
         return (
             f"CON {material.name} ({material.name_ha or ''})\n"
-            f"Nauyi: {weight}kg | Kima: N{value}\n"
+            f"Nauyi: {weight}kg | Kima (kimanin): N{value}\n"
             f"Adireshi: {listing.address_text or 'Zaria'}\n"
             "1. Karba (accept)\n2. Koma baya"
         )

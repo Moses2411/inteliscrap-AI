@@ -29,7 +29,8 @@ const FILTERS: Array<{ value: HistoryFilter; label: string }> = [
 ];
 
 function naira(value: number): string {
-  return `₦${Math.round(value).toLocaleString("en-NG")}`;
+  // Scan values are estimates: rates vary and the final price is agreed at pickup.
+  return `≈ ₦${Math.round(value).toLocaleString("en-NG")}`;
 }
 
 function when(iso: string): string {

@@ -90,6 +90,7 @@ declare module "lucide-react" {
   export const Hash: FC<P>;
   export const Heart: FC<P>;
   export const HeartHandshake: FC<P>;
+  export const HelpCircle: FC<P>;
   export const History: FC<P>;
   export const Home: FC<P>;
   export const Image: FC<P>;

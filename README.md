@@ -69,10 +69,6 @@
     <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/ONNX_Runtime-wasm-4b55c3.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=onnx" />
     <img alt="ONNX Runtime WebAssembly" src="https://shieldcn.dev/badge/ONNX_Runtime-wasm-4b55c3.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=onnx" />
   </picture>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/badge/Transformers.js-CLIP-ffd21f.svg?size=xs&amp;variant=ghost&amp;mode=dark&amp;logo=huggingface" />
-    <img alt="Transformers.js CLIP" src="https://shieldcn.dev/badge/Transformers.js-CLIP-ffd21f.svg?size=xs&amp;variant=ghost&amp;mode=light&amp;logo=huggingface" />
-  </picture>
 </p>
 
 ---
@@ -132,7 +128,7 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 - 🛡️ **Hazard detection** — corrosive acid, lead poisoning, mercury exposure and 12 more hazard classes with colour-coded severity badges
 - ⚖️ **Fair pricing** — material → price-per-kg matrix in Naira, cached locally and reconciled on every sync
 - 🗣️ **Local-language voice** — read-aloud TTS in Hausa and Nigerian Pidgin via a Google TTS proxy, with Web Speech fallback
-- 🤖 **Honest 4-tier AI fallback** — bundled ONNX → server `/api/v1/analyze` → runtime CLIP model → manual picker (never a mock)
+- 🤖 **Honest AI fallback** — bundled ONNX → server `/api/v1/analyze` → manual picker (never a mock)
 - 📱 **PWA + feature phones** — installable app for smartphones, USSD shortcode + SMS outbox for feature phones
 - 📍 **H3 dispatch** — Uber H3 hex-grid, ring-by-ring collector matching with haversine ranking
 - 🏦 **Hub traceability** — recycling-hub daily buy requests, live `fulfilled_kg` progress, subscriptions and EPR compliance exports
@@ -150,7 +146,7 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 | **Frontend** | React 18 · TypeScript 5.5 · Vite 5 · Tailwind CSS 3.4 · `vite-plugin-pwa` · framer-motion · lucide-react |
 | **Dashboards** | Role dashboards (collector, household, hub, partner, impact, sales) with hand-rolled SVG charts — no charting dependency |
 | **Offline data** | Dexie.js (IndexedDB) · `idb` · custom sync queue with timestamp conflict resolution |
-| **Edge AI** | `onnxruntime-web` (WASM) · MobileNetV4 int8 ONNX classifier · `@huggingface/transformers` (zero-shot CLIP) |
+| **Edge AI** | `onnxruntime-web` (WASM) · MobileNetV4 int8 ONNX classifier (~10 MB, downloaded once and cached for offline use) |
 | **Backend** | Python 3.11+ · FastAPI 0.115 · SQLAlchemy 2 (async) · Pydantic v2 · Alembic · PyJWT · `h3` |
 | **Database** | PostgreSQL 16 + PostGIS (production) · SQLite (development & tests) · `asyncpg` / `aiosqlite` |
 | **Server AI** | Ollama vision model (`llava:13b` default, configurable via `OLLAMA_VISION_MODEL`) |
@@ -210,12 +206,11 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 
 - **CameraCapture** — activates device camera or accepts image upload
 - **vision/visionEngine** — on-device ONNX scrap classifier (runs in-browser via onnxruntime-web WASM)
-- **vision/visionEngineRuntime** — offline runtime model via transformers.js (zero-shot CLIP) as a secondary on-device path
-- **services/analysis** — fallback chain: bundled ONNX → server `/api/v1/analyze` → runtime model → manual material selection (never mocks)
+- **services/analysis** — fallback chain: bundled ONNX → server `/api/v1/analyze` → manual material selection (never mocks)
 - **ManualMaterialSelect** — honest manual picker when no AI path is available offline
 - **useAudioTTS** — text-to-speech in Hausa/Pidgin via Google TTS proxy
 - **IndexedDB (Dexie.js)** — offline scan persistence, survives browser close
-- **PWA Service Worker** — caches assets and API responses for offline use
+- **PWA Service Worker** — custom workbox service worker (`src/sw.js`, `injectManifest`): precaches the app shell and caches the ONNX model + WASM runtime, API responses, and handles push notifications and background sync for offline use
 - **Sync Engine** — queues scans offline, uploads when connectivity returns
 - **Dark mode** — class-based theme with light/dark toggle, persisted and system-aware
 
@@ -239,8 +234,7 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 
 1. **Bundled ONNX** — `vision/visionEngine` classifies the photo in-browser (works fully offline)
 2. **Server vision model** — when online and edge inference is unavailable, the backend calls Ollama with `OLLAMA_VISION_MODEL` (default `llava:13b`, configurable via env)
-3. **Runtime model (transformers.js)** — offline fallback that downloads a zero-shot CLIP once (cached locally), trusted above a confidence threshold
-4. **Manual selection** — if no AI path succeeds, the collector picks the material from the visible scrap classes; the result is never fabricated
+3. **Manual selection** — if no AI path succeeds, the collector picks the material from the visible scrap classes; the result is never fabricated
 
 ---
 
@@ -252,7 +246,6 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 |---|---|---|
 | **Bundled ONNX classifier** | `frontend/public/models/mobilenetv4_scrap_int8.onnx` present | Runs the (ideally scrap-tuned) classifier in-browser via onnxruntime-web (WASM). Fully offline, no backend. Results carry `source: "onnx"`. |
 | **Server `/api/v1/analyze`** | `navigator.onLine` + Ollama reachable | POSTs the base64 image; the backend proxies to Ollama (`OLLAMA_VISION_MODEL`). Results carry `source: "server"`. |
-| **Runtime model (transformers.js)** | Offline; first run needs to download once from Hugging Face (cached) | Zero-shot CLIP matches the photo against the 8 scrap categories in the browser. Only trusted when the top match clears a confidence threshold; falls through otherwise. Results carry `source: "onnx"`. |
 | **Manual selection** | No AI path available | The app never fabricates — it shows the scrap-classes grid and stores the pick with `source: "manual"` and zero AI confidence. |
 
 Every result carries a `source` field so collectors can trust what they're seeing.
@@ -339,7 +332,7 @@ Verify: open <http://localhost:5173> — you should see the InteliScrap AI app.
 
 ### 4. Test the App
 
-Snap or upload any image. The app runs the bundled ONNX classifier first; if no model is in `frontend/public/models/`, it goes to the server `/api/v1/analyze` when online, then to the on-device runtime model (transformers.js, offline-capable after one download), and finally offers an honest **manual material picker** — there is no random/mock result ever.
+Snap or upload any image. The app runs the bundled ONNX classifier first; if no model is in `frontend/public/models/`, it goes to the server `/api/v1/analyze` when online, and finally offers an honest **manual material picker** — there is no random/mock result ever.
 
 ### Docker (all three services)
 
@@ -407,7 +400,7 @@ Upload photo → services/analysis.ts
 
 ## Running Without Ollama (Offline)
 
-When no AI model is reachable — no bundled ONNX, backend Ollama down, and the runtime model not yet downloaded or below the confidence threshold — the app shows a **manual material selection grid** built from the trade-rule knowledge base. Results from this path use `source: "manual"` and are presented honestly (zero AI confidence), so a pickup request can still be posted.
+When no AI model is reachable — no bundled ONNX and backend Ollama down — the app shows a **manual material selection grid** built from the trade-rule knowledge base. Results from this path use `source: "manual"` and are presented honestly (zero AI confidence), so a pickup request can still be posted.
 
 ---
 
@@ -462,7 +455,7 @@ python training/train.py --data training/data --out frontend/public/models/mobil
 python training/verify_model.py --image path/to/test_photo.jpg
 ```
 
-The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]` ImageNet-normalized input, one output of 8 logits whose index order equals `frontend/public/models/classes.json`. Trained output goes straight to `frontend/public/models/mobilenetv4_scrap_int8.onnx`; a `prebuild` step already copies the onnxruntime WASM to `public/ort/` so edge inference runs on deploy.
+The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]` ImageNet-normalized input, one output of 8 logits whose index order equals `frontend/public/models/classes.json`. Trained output goes straight to `frontend/public/models/mobilenetv4_scrap_int8.onnx`. The onnxruntime WASM runtime is emitted automatically by Vite into `dist/assets/` (no manual `public/ort/` copy step), and the service worker caches both the model and the runtime so edge inference keeps working offline after the first load.
 
 ---
 
@@ -583,7 +576,8 @@ pytest -v
 ```bash
 cd frontend
 npm run typecheck   # TypeScript strict checks
-npm run build       # Production PWA build (prebuild copies onnxruntime WASM)
+npm run build       # Production PWA build (prebuild warns if the vision model is missing)
+npm run fetch-models  # Optional: vendor the model from a published repo (needs HF_TOKEN)
 ```
 
 CI runs both pipelines on every push and pull request to `main` (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
@@ -692,7 +686,6 @@ inteliscrap-AI/
 │   │   │       compliance · location · language clients
 │   │   ├── vision/
 │   │   │   ├── visionEngine.ts       # On-device ONNX classifier + scrap classes
-│   │   │   ├── visionEngineRuntime.ts# transformers.js zero-shot CLIP path
 │   │   │   └── visionHeuristic.ts    # Lightweight heuristic classifier
 │   │   ├── hooks/
 │   │   │   ├── useVision.ts          # Analysis hook (progress + error)
@@ -731,8 +724,7 @@ inteliscrap-AI/
 │   │       ├── formatters.ts         # Currency, confidence, date formatters
 │   │       └── offline.ts            # Online/offline hook
 │   ├── public/
-│   │   ├── models/                   # Optional bundled ONNX model + classes.json
-│   │   └── ort/ + ort-tjs/           # onnxruntime WASM runtime assets
+│   │   └── models/                   # ONNX model + classes.json (served + SW-cached)
 │   ├── vite.config.ts                # + VitePWA plugin + API proxy
 │   ├── tailwind.config.js            # Brand colors + darkMode class
 │   ├── tsconfig.json

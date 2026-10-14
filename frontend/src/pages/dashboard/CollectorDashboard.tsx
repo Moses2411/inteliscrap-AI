@@ -25,7 +25,7 @@ import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotio
 import { fetchActivePickups, fetchOffers, type PickupJob, type PickupOffer } from "../../services/pickups";
 import { shareMyLocation, getCurrentPosition } from "../../services/location";
 import { DEMO_JOBS, DEMO_OFFERS, DEMO_COLLECTOR_INCOME, previewEnabled } from "../../lib/demoData";
-import { formatCompactNaira, formatPhoneDisplay } from "../../utils/formatters";
+import { formatCompactNaira, formatCompactNairaEstimate, formatPhoneDisplay } from "../../utils/formatters";
 import { getSavedPhone } from "../../services/auth";
 import { cn } from "../../lib/cn";
 import { initCollectorNotifications, notifyNewOffer, registerOffersSync } from "../../services/notifications";
@@ -186,7 +186,7 @@ export default function CollectorDashboard() {
         <motion.div variants={pageItem}>
           <StatCard
             label="Jobs value"
-            value={formatCompactNaira(jobsValue)}
+            value={formatCompactNairaEstimate(jobsValue)}
             icon={<Banknote className="h-5 w-5" />}
             iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
           />
@@ -225,7 +225,7 @@ export default function CollectorDashboard() {
                         <p className="font-semibold text-slate-900 dark:text-white">{offer.material_name}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
                           {offer.estimated_weight_kg ? `${offer.estimated_weight_kg} kg` : "Weight TBD"} •
-                          {offer.estimated_value_naira ? ` ~₦${offer.estimated_value_naira.toLocaleString()}` : ""}
+                          {offer.estimated_value_naira ? ` ≈ ₦${offer.estimated_value_naira.toLocaleString()}` : ""}
                           {offer.distance_m ? ` • ${distanceLabel(offer.distance_m)}` : ""}
                         </p>
                       </div>

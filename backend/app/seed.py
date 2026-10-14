@@ -1,3 +1,4 @@
+from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,7 +21,12 @@ async def seed_material_categories(db: AsyncSession) -> int:
     if result.scalar_one() > 0:
         return 0
 
+    now = datetime.utcnow()
     for data in DEFAULT_MATERIALS:
-        db.add(MaterialCategory(**data))
+        mc = MaterialCategory(**data)
+        mc.price_last_updated_at = now
+        mc.price_source = "seed"
+        mc.price_version = 1
+        db.add(mc)
     await db.flush()
     return len(DEFAULT_MATERIALS)

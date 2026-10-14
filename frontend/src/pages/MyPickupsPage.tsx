@@ -18,7 +18,7 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { useTranslation } from "../hooks/useTranslation";
 import { getToken } from "../services/auth";
 import { fetchActivePickups, type PickupJob } from "../services/pickups";
-import { formatDateTime, formatNaira } from "../utils/formatters";
+import { formatDateTime, formatNairaEstimate } from "../utils/formatters";
 
 export default function MyPickupsPage() {
   const { t } = useTranslation();
@@ -55,7 +55,7 @@ export default function MyPickupsPage() {
       <PageHeader
         title={t("my_jobs")}
         subtitle={`${jobs.length} active job${jobs.length === 1 ? "" : "s"}${
-          totalValue ? ` · ${formatNaira(totalValue)} locked in` : ""
+          totalValue ? ` · ${formatNairaEstimate(totalValue)} locked in` : ""
         }`}
         actions={<Badge tone="sky"><Truck className="h-3 w-3" /> {jobs.length}</Badge>}
       />
@@ -105,7 +105,7 @@ export default function MyPickupsPage() {
                   </Badge>
                 )}
                 {job.estimated_value_naira != null && (
-                  <Badge tone="gold">{formatNaira(job.estimated_value_naira)}</Badge>
+                  <Badge tone="gold">{formatNairaEstimate(job.estimated_value_naira)}</Badge>
                 )}
                 {hazards.length > 0 && (
                   <Badge tone="red">

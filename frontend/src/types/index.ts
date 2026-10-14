@@ -42,6 +42,12 @@ export interface User {
   created_at?: string;
 }
 
+export interface VisionCandidate {
+  material_class: string;
+  material_slug: string;
+  confidence: number;
+}
+
 export interface VisionAnalysis {
   material_class: string;
   material_slug: string;
@@ -49,7 +55,15 @@ export interface VisionAnalysis {
   toxicity_hazards: string[];
   safety_instructions: string;
   hazard_level: HazardLevel;
-  source: "clip" | "onnx" | "server" | "manual";
+  source: "clip" | "onnx" | "server" | "heuristic" | "manual";
+  /**
+   * True when the classifier is not confident enough to be presented as a firm
+   * answer (low top-1 score, two classes too close, or a diffuse distribution).
+   * The UI must ask the user to confirm instead of silently trading on a guess.
+   */
+  uncertain?: boolean;
+  /** Top candidates to offer for confirmation, present when `uncertain` is true. */
+  candidates?: VisionCandidate[];
 }
 
 export interface MaterialCategoryInfo {
@@ -59,7 +73,27 @@ export interface MaterialCategoryInfo {
   name_ha?: string;
   name_pcm?: string;
   price_per_kg_naira: number;
+  carbon_kg_co2e_per_kg?: number;
   is_hazardous: boolean;
+  price_last_updated_at?: string | null;
+  price_source?: "seed" | "admin" | "hub_feed" | "market_feed" | "manual" | string;
+  price_version?: number;
+  is_stale?: boolean;
+}
+
+/** Result of probing whether a verified on-device classifier is available. */
+export interface VisionModelStatus {
+  available: boolean;
+  verified: boolean;
+  reason:
+    | "verified"
+    | "model_missing"
+    | "class_mismatch"
+    | "load_error"
+    | "not_probed";
+  modelUrl: string;
+  classCount: number | null;
+  message: string;
 }
 
 export type HazardLevel = "low" | "medium" | "high" | "critical";

@@ -5,17 +5,22 @@ import type { Currency, WeightUnit } from "../types/bento";
 export const NGN_PER_USD = 1550;
 export const KG_PER_LB = 0.45359237;
 
-/** Offline fallback price guide (NGN / kg) when the price matrix is unreachable. */
+/**
+ * Offline fallback price guide (NGN / kg) when neither the live rate card nor
+ * the sync cache is reachable. These mirror the backend seed values in
+ * `backend/app/seed.py` so an offline estimate is never wildly wrong. Always
+ * prefer the live `/api/v1/materials` values (which carry an update timestamp).
+ */
 export const DEFAULT_PRICE_NGN: Record<string, number> = {
-  copper: 9800,
-  brass: 5600,
-  aluminum: 2200,
-  steel: 480,
-  glass: 60,
-  "pet-plastic": 130,
-  "e-waste": 3200,
-  "lead-battery": 700,
-  other: 300,
+  copper: 3200,
+  brass: 2200,
+  aluminum: 700,
+  steel: 90,
+  glass: 25,
+  "pet-plastic": 180,
+  "e-waste": 400,
+  "lead-battery": 950,
+  other: 90,
 };
 
 const SLUG_ALIASES: Record<string, string> = {
@@ -86,35 +91,6 @@ export function unitRate(
 ): number {
   const perUnitNgn = unit === "kg" ? priceNgnPerKg : priceNgnPerKg * KG_PER_LB;
   return convertCurrency(perUnitNgn, currency);
-}
-
-function seedFrom(text: string): number {
-  let seed = 0;
-  for (let i = 0; i < text.length; i += 1) {
-    seed = (seed * 31 + text.charCodeAt(i)) >>> 0;
-  }
-  return seed;
-}
-
-/** Deterministic, localized 24h scrap-value trend percentage for a material. */
-export function trendPercent(slug: string): number {
-  const seed = seedFrom(slug);
-  return Math.round(((seed % 900) / 100 - 3.4) * 10) / 10;
-}
-
-/** Deterministic sparkline (16 points, 0..100) biased toward the trend. */
-export function trendSparkline(slug: string, changePct: number): number[] {
-  let seed = seedFrom(slug);
-  const points: number[] = [];
-  let value = 50;
-  for (let i = 0; i < 16; i += 1) {
-    seed = (seed * 1664525 + 1013904223) >>> 0;
-    value += (seed / 0xffffffff - 0.5) * 9;
-    value = Math.max(10, Math.min(90, value));
-    points.push(value);
-  }
-  points.push(Math.max(10, Math.min(90, 50 + changePct * 4)));
-  return points;
 }
 
 export function humanizeHazard(key: string): string {

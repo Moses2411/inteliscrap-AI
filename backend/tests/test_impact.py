@@ -72,9 +72,95 @@ async def test_impact_summary(client, test_session):
     assert resp.status_code == 200
     data = resp.json()
     assert data["transactions_count"] == 2
+    assert data["total_transactions"] == 2
     assert data["total_tonnage_kg"] == 10.0
     assert data["total_carbon_offset_kg_co2e"] == 26.0
     assert data["total_collector_income_naira"] == 30400.0
+    # Live path: computed directly from the settlement ledger.
+    assert data["computed_from"] == "settlements"
+    assert data["platform_revenue_naira"] == 1600.0
+    assert data["seller_payout_naira"] == 32000.0
+
+
+@pytest.mark.asyncio
+async def test_impact_falls_back_to_logs_without_settlements(client, test_session):
+    from datetime import date
+
+    from app.models import NGOImpactLog, Transaction, TransactionStatus
+
+    seller = User(
+        id="fb-seller",
+        phone_number="+2348063000001",
+        role=UserRole.seller,
+        location_hub="Zaria",
+    )
+    collector = User(
+        id="fb-collector",
+        phone_number="+2348063000002",
+        role=UserRole.collector,
+    )
+    material = MaterialCategory(
+        slug="fb-copper",
+        name="Fallback Copper",
+        price_per_kg_naira=1000,
+        carbon_kg_co2e_per_kg=2.0,
+    )
+    test_session.add_all([seller, collector, material])
+    await test_session.flush()
+
+    listing = Listing(
+        id="fb-listing",
+        seller_id=seller.id,
+        material_category_id=material.id,
+        estimated_weight_kg=3,
+    )
+    pickup = Pickup(
+        id="fb-pickup",
+        listing_id=listing.id,
+        collector_id=collector.id,
+        status=PickupStatus.accepted,
+    )
+    test_session.add_all([listing, pickup])
+    await test_session.flush()
+
+    txn = Transaction(
+        id="fb-txn",
+        pickup_id=pickup.id,
+        seller_id=seller.id,
+        collector_id=collector.id,
+        material_category_id=material.id,
+        weight_kg=3,
+        unit_price_naira=1000,
+        gross_value_naira=3000,
+        platform_fee_naira=150,
+        collector_earnings_naira=2850,
+        seller_payout_naira=3000,
+        status=TransactionStatus.pending,  # deliberately NOT settled
+    )
+    test_session.add(txn)
+    await test_session.flush()
+
+    test_session.add(
+        NGOImpactLog(
+            transaction_id=txn.id,
+            material_category_id=material.id,
+            tonnage_kg=3,
+            carbon_offset_kg_co2e=6,
+            collector_income_naira=2850,
+            hub="Zaria",
+            period=date.today(),
+        )
+    )
+    await test_session.flush()
+
+    headers = await _admin_headers(test_session)
+    resp = await client.get("/api/v1/impact/summary", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["computed_from"] == "ngo_impact_logs"
+    assert data["total_tonnage_kg"] == 3.0
+    assert data["transactions_count"] == 1
+    assert data["platform_revenue_naira"] == 0.0
 
 
 @pytest.mark.asyncio

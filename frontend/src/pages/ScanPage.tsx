@@ -16,7 +16,7 @@ import { getRole } from "../services/auth";
 import { saveScanLocally } from "../services/db";
 import { getCategoryBySlug } from "../services/materials";
 import { resolveTradeRule } from "../services/language";
-import type { VisionAnalysis } from "../types";
+import type { VisionAnalysis, VisionCandidate } from "../types";
 
 export default function ScanPage() {
   const role = getRole();
@@ -50,7 +50,8 @@ function ScanWorkspace() {
   const { speakReport, pause, resume, status: ttsStatus } = useAudioTTS();
 
   const finishWith = useCallback(
-    async (analysis: VisionAnalysis) => {
+    async (analysis: VisionAnalysis, options?: { persist?: boolean }) => {
+      const persist = options?.persist ?? true;
       setResult(analysis);
       setCurrentScan(analysis);
 
@@ -67,6 +68,8 @@ function ScanWorkspace() {
         }
       }
       setEstimatedValue(value);
+
+      if (!persist) return;
 
       saveScanLocally({
         id: crypto.randomUUID(),
@@ -118,6 +121,57 @@ function ScanWorkspace() {
     [finishWith]
   );
 
+  const handleConfirmMaterial = useCallback(
+    async (candidate: VisionCandidate) => {
+      if (!result) return;
+      const rule = resolveTradeRule(candidate.material_slug);
+      // The user confirmed one of the AI's own candidates: keep the originating
+      // source label but clear the uncertainty. The original scan was already
+      // persisted, so do not write a second record.
+      await finishWith(
+        {
+          ...result,
+          material_class: candidate.material_class || rule.material,
+          material_slug: rule.slug,
+          confidence: candidate.confidence,
+          toxicity_hazards: rule.hazards,
+          safety_instructions: rule.safety,
+          hazard_level: rule.hazardLevel,
+          uncertain: false,
+          candidates: undefined,
+        },
+        { persist: false }
+      );
+    },
+    [result, finishWith]
+  );
+
+  const handleResolveMaterial = useCallback(
+    async (slug: string) => {
+      if (!result) return;
+      const rule = resolveTradeRule(slug);
+      // A physical test (magnet/scratch/flex) resolved the material. It is more
+      // reliable than pixels, so trust it, but keep the originating source label
+      // and never re-persist the scan.
+      const known = result.candidates?.find((candidate) => candidate.material_slug === rule.slug);
+      await finishWith(
+        {
+          ...result,
+          material_class: rule.material,
+          material_slug: rule.slug,
+          confidence: known?.confidence ?? 0.9,
+          toxicity_hazards: rule.hazards,
+          safety_instructions: rule.safety,
+          hazard_level: rule.hazardLevel,
+          uncertain: false,
+          candidates: undefined,
+        },
+        { persist: false }
+      );
+    },
+    [result, finishWith]
+  );
+
   if (loading) {
     return (
       <div
@@ -166,6 +220,12 @@ function ScanWorkspace() {
             speakReport(result.material_class, estimated_value, result.toxicity_hazards, selected_language)
           }
           onScanAgain={() => setResult(null)}
+          onConfirmMaterial={handleConfirmMaterial}
+          onDisambiguate={handleResolveMaterial}
+          onChooseManually={() => {
+            setResult(null);
+            setManualMode(true);
+          }}
           ttsStatus={ttsStatus}
           onPause={pause}
           onResume={resume}

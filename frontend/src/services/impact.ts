@@ -7,6 +7,10 @@ export interface ImpactSummary {
   total_carbon_offset_kg_co2e: number;
   total_collector_income_naira: number;
   transactions_count: number;
+  total_transactions?: number;
+  computed_from?: "settlements" | "ngo_impact_logs" | "demo";
+  platform_revenue_naira?: number;
+  seller_payout_naira?: number;
 }
 
 export interface ImpactDailyPoint {
@@ -20,6 +24,7 @@ export interface ImpactByMaterial {
   material: string;
   tonnage_kg: number;
   carbon_offset_kg_co2e: number;
+  collector_income_naira?: number;
 }
 
 export async function fetchImpactSummary(): Promise<ImpactSummary> {

@@ -104,27 +104,27 @@ export function useAudioTTS() {
         const hazardText = hazards.length > 0
           ? " Hatsari: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
-        speechString = `An gano ${materialClass}. Kilo daya ya kai naira ${nairaValue}.${hazardText}${locale.safety_instructions[safetyKey]}`;
+        speechString = `An gano ${materialClass}. Kimanin farashi ya kai naira ${nairaValue} kowace kilo. Wannan kimanin ne kawai, farashi na iya canzawa.${hazardText}${locale.safety_instructions[safetyKey]}`;
       } else if (language === "pcm") {
         const hazardText = hazards.length > 0
           ? " Danger: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
-        speechString = `We find ${materialClass}. The price nah ${nairaValue} Naira per kg.${hazardText}${locale.safety_instructions[safetyKey]}`;
+        speechString = `We find ${materialClass}. The price be like around ${nairaValue} Naira per kg. Na estimate o, price fit change.${hazardText}${locale.safety_instructions[safetyKey]}`;
       } else if (language === "yo") {
         const hazardText = hazards.length > 0
           ? " Ẹ̀rọ: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
-        speechString = `A rí ${materialClass}. Kilo kan yóò jẹ́ naira ${nairaValue}.${hazardText}${locale.safety_instructions[safetyKey]}`;
+        speechString = `A rí ${materialClass}. Iye owó tí a fojú dí ni naira ${nairaValue} fún kilo kan. Ìdíwọ̀n ni, owó lè yí padà.${hazardText}${locale.safety_instructions[safetyKey]}`;
       } else if (language === "ig") {
         const hazardText = hazards.length > 0
           ? " Njọ: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
-        speechString = `A chọpụtara ${materialClass}. Ọnụahịa kilo kwesịrị ekwu naira ${nairaValue}.${hazardText}${locale.safety_instructions[safetyKey]}`;
+        speechString = `A chọpụtara ${materialClass}. Atụmatụ ọnụahịa bụ ihe dị ka naira ${nairaValue} kwa kilo. Nke a bụ atụmatụ naanị, ọnụahịa nwere ike ịgbanwe.${hazardText}${locale.safety_instructions[safetyKey]}`;
       } else {
         const hazardText = hazards.length > 0
           ? " Hazards: " + hazards.map((h) => locale.hazards[h as HazardKey] || h).join(". ") + ". "
           : "";
-        speechString = `Detected ${materialClass}. Estimated value is ${nairaValue} Naira per kg.${hazardText}${locale.safety_instructions[safetyKey]}`;
+        speechString = `Detected ${materialClass}. The estimated price is about ${nairaValue} Naira per kg. This is only an estimate, prices can change.${hazardText}${locale.safety_instructions[safetyKey]}`;
       }
 
       const ttsLang = language === "ha" ? "ha" : language === "pcm" ? "en-NG" : language === "yo" ? "yo" : language === "ig" ? "ig" : "en";

@@ -2,12 +2,26 @@ export function formatNaira(value: number): string {
   return `₦${value.toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
+/**
+ * A price that is genuinely an estimate (market rates move and the final price
+ * is agreed at pickup). Always marked approximate so it is never read as a
+ * fixed quote. Use `formatNaira` only for settled, actual amounts.
+ */
+export function formatNairaEstimate(value: number): string {
+  return `≈ ${formatNaira(value)}`;
+}
+
 /** Compact naira for KPI tiles: ₦1.2M / ₦340K / ₦5,600 */
 export function formatCompactNaira(value: number): string {
   const abs = Math.abs(value);
   if (abs >= 1_000_000) return `₦${(value / 1_000_000).toFixed(abs >= 10_000_000 ? 1 : 2)}M`;
   if (abs >= 1_000) return `₦${(value / 1_000).toFixed(abs >= 100_000 ? 1 : 0)}K`;
   return `₦${value.toLocaleString("en-NG", { maximumFractionDigits: 0 })}`;
+}
+
+/** Compact naira that is an estimate rather than a settled amount. */
+export function formatCompactNairaEstimate(value: number): string {
+  return `≈ ${formatCompactNaira(value)}`;
 }
 
 export function formatKg(value: number): string {

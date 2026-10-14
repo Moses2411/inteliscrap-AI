@@ -342,6 +342,10 @@ export const DEMO_IMPACT_SUMMARY: ImpactSummary = {
   total_carbon_offset_kg_co2e: 34120,
   total_collector_income_naira: 4880500,
   transactions_count: 1247,
+  total_transactions: 1247,
+  computed_from: "demo",
+  platform_revenue_naira: 0,
+  seller_payout_naira: 0,
 };
 
 export const DEMO_IMPACT_DAILY: ImpactDailyPoint[] = (() => {

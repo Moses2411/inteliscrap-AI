@@ -15,7 +15,7 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { useMarketData } from "../../hooks/useDashboardData";
 import { useTranslation } from "../../hooks/useTranslation";
 import { getLocalScans } from "../../services/db";
-import { formatNaira, formatPhoneDisplay } from "../../utils/formatters";
+import { formatNairaEstimate, formatPhoneDisplay } from "../../utils/formatters";
 import { getSavedPhone } from "../../services/auth";
 import type { ScrapScan } from "../../types";
 
@@ -44,7 +44,7 @@ export default function HouseholdDashboard() {
     tone: (["brand", "amber", "sky", "violet", "rose"] as const)[i % 5],
     icon: <ScanLine className="h-4 w-4" />,
     title: `Scanned ${s.material_class}`,
-    meta: `≈ ${formatNaira(s.estimated_naira_value)}`,
+    meta: formatNairaEstimate(s.estimated_naira_value),
     time: s.captured_at,
   }));
 
@@ -79,7 +79,7 @@ export default function HouseholdDashboard() {
         <motion.div variants={pageItem} className="min-w-0">
           <StatCard
             label="Scanned value"
-            value={formatNaira(scannedValue)}
+            value={formatNairaEstimate(scannedValue)}
             icon={<PiggyBank className="h-5 w-5" />}
             iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
             hint="At current rates"
@@ -236,7 +236,7 @@ export default function HouseholdDashboard() {
                         </span>
                         <span className="flex shrink-0 items-center gap-1.5">
                           <span className="text-sm font-bold tabular-nums text-brand-600 dark:text-brand-400">
-                            {formatNaira(m.price_per_kg_naira)}
+                            {formatNairaEstimate(m.price_per_kg_naira)}
                             <span className="ml-0.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">/kg</span>
                           </span>
                           <motion.span

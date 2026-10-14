@@ -17,8 +17,10 @@ Input contract the exported model must satisfy:
 """
 
 import argparse
+import hashlib
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import torch
@@ -28,6 +30,9 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from tqdm import tqdm
 
+DEFAULT_CLASSES_JSON = Path(__file__).resolve().parent.parent / "frontend" / "public" / "models" / "classes.json"
+
+# Derived from classes.json at runtime; the hardcoded list is a safe fallback.
 EXPECTED_SLUGS = [
     "copper",
     "aluminum",
@@ -38,6 +43,12 @@ EXPECTED_SLUGS = [
     "e-waste",
     "glass",
 ]
+
+
+def load_classes(classes_json: Path) -> list[dict]:
+    if not classes_json.exists():
+        raise SystemExit(f"ERROR: classes.json not found at {classes_json}")
+    return json.loads(classes_json.read_text(encoding="utf-8"))
 
 PREP = transforms.Compose(
     [
@@ -72,19 +83,35 @@ def build_model_backbone() -> nn.Module:
         return model
 
 
-def validate_class_order(data_root: Path) -> None:
+def validate_class_order(data_root: Path, strict: bool = True) -> bool:
+    """Ensure dataset folders exactly match the classes.json slugs.
+
+    The export-time class order *is* ``EXPECTED_SLUGS`` ordering, so a missing or
+    extra folder would silently mislabel every prediction. We therefore treat any
+    mismatch as fatal.
+    """
+    ok = True
     for split in ("train", "val"):
         split_dir = data_root / split
         if not split_dir.is_dir():
             continue
         found = sorted(p.name for p in split_dir.iterdir() if p.is_dir())
         missing = [slug for slug in EXPECTED_SLUGS if slug not in found]
+        extra = [slug for slug in found if slug not in EXPECTED_SLUGS]
         for slug in EXPECTED_SLUGS:
             d = split_dir / slug
             n = sum(1 for _ in d.glob("*.jpg")) + sum(1 for _ in d.glob("*.png")) + sum(1 for _ in d.glob("*.jpeg"))
             print(f"{split}/{slug}: {n} images")
+            if n == 0 and strict:
+                print(f"ERROR: {split}/{slug} has no images")
+                ok = False
         if missing:
-            print(f"WARNING: {split} missing class folders: {missing}")
+            print(f"ERROR: {split} missing class folders: {missing}")
+            ok = False
+        if extra:
+            print(f"ERROR: {split} has unknown class folders (not in classes.json): {extra}")
+            ok = False
+    return ok
 
 
 @torch.no_grad()
@@ -123,9 +150,13 @@ class ScrapDataset(Dataset):
 
 
 def main() -> int:
+    global EXPECTED_SLUGS
+
     parser = argparse.ArgumentParser(description="Train and export a scrap-material classifier")
     parser.add_argument("--data", type=Path, default=Path("data"), help="root folder holding train/ and val/")
     parser.add_argument("--out", type=Path, default=Path("../frontend/public/models/mobilenetv4_scrap_int8.onnx"))
+    parser.add_argument("--classes", type=Path, default=DEFAULT_CLASSES_JSON,
+                        help="classes.json defining the ordered class list / ONNX output order")
     parser.add_argument("--epochs", type=int, default=15)
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -136,13 +167,19 @@ def main() -> int:
         print(f"ERROR: {args.data}/train does not exist. Put labeled photos in data/train/<slug>/ and data/val/<slug>/.")
         return 1
 
+    classes = load_classes(args.classes)
+    EXPECTED_SLUGS = [c["slug"] for c in classes]
+    print(f"classes.json: {len(EXPECTED_SLUGS)} classes -> {EXPECTED_SLUGS}")
+
     device = (
         torch.device("cuda" if torch.cuda.is_available() else "cpu")
         if args.device == "auto"
         else torch.device(args.device)
     )
     print(f"device: {device}")
-    validate_class_order(args.data)
+    if not validate_class_order(args.data, strict=True):
+        print("ERROR: dataset does not match classes.json — refusing to train (would mislabel predictions).")
+        return 1
 
     train_set = ScrapDataset(args.data / "train", TRAIN_PREP)
     val_set = ScrapDataset(args.data / "val", PREP)
@@ -205,13 +242,65 @@ def main() -> int:
 
         quantize_dynamic(fp32_path, args.out, weight_type=QuantType.QInt8)
         fp32_path.unlink()
+        int8 = True
         print(f"exported int8 -> {args.out}")
-    except Exception:
+    except Exception as exc:  # noqa: BLE001
         fp32_path.rename(args.out)
-        print(f"quantization skipped; exported fp32 -> {args.out}")
+        int8 = False
+        print(f"quantization skipped ({exc}); exported fp32 -> {args.out}")
 
+    verify_exported_model(args.out, args.classes)
+    write_manifest(args.out, args.classes, int8=int8, accuracy=best_acc)
     print("classes order:", json.dumps(EXPECTED_SLUGS))
     return 0
+
+
+def verify_exported_model(model_path: Path, classes_json: Path) -> None:
+    """Fail fast if the freshly exported model violates the browser contract."""
+    try:
+        import onnx
+
+        onnx.checker.check_model(str(model_path))
+    except ImportError:
+        print("WARNING: onnx package not installed; skipping structural check")
+        return
+    except Exception as exc:  # noqa: BLE001
+        raise SystemExit(f"ERROR: exported model failed onnx.checker: {exc}")
+
+    classes = load_classes(classes_json)
+    try:
+        import onnxruntime as ort
+
+        sess = ort.InferenceSession(str(model_path), providers=["CPUExecutionProvider"])
+        inp, out = sess.get_inputs()[0], sess.get_outputs()[0]
+        if [str(d) for d in inp.shape[-3:]] != ["3", "224", "224"]:
+            raise SystemExit(f"ERROR: unexpected input shape {inp.shape}, expected [*, 3, 224, 224]")
+        if len(sess.get_outputs()) != 1:
+            raise SystemExit("ERROR: expected exactly one output tensor")
+        if out.shape[-1] not in (len(classes), "?"):
+            raise SystemExit(
+                f"ERROR: output width {out.shape[-1]} != classes.json size {len(classes)}"
+            )
+    except ImportError:
+        print("WARNING: onnxruntime not installed; skipping runtime shape check")
+
+
+def write_manifest(model_path: Path, classes_json: Path, int8: bool, accuracy: float) -> None:
+    manifest = {
+        "name": "mobilenetv4_scrap",
+        "version": "1.0.0",
+        "int8": int8,
+        "input_shape": [1, 3, 224, 224],
+        "normalize": "imagenet",
+        "classes_count": len(load_classes(classes_json)),
+        "classes_sha256": hashlib.sha256(classes_json.read_bytes()).hexdigest(),
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "val_accuracy": round(float(accuracy), 4),
+        "source": "trained",
+    }
+    manifest_path = model_path.parent / "model.manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote manifest -> {manifest_path}")
 
 
 if __name__ == "__main__":

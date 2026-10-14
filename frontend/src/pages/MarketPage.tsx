@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   Camera,
+  Clock,
   Factory,
   MapPin,
   Phone,
@@ -25,7 +26,7 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { PageMotion, pageItem } from "../components/ui/PageMotion";
 import { useMarketData } from "../hooks/useDashboardData";
 import { materialNameById } from "../services/market";
-import { formatDateTime, formatNaira } from "../utils/formatters";
+import { formatDateTime, formatNairaEstimate, relativeTime } from "../utils/formatters";
 import { cn } from "../lib/cn";
 
 type Tab = "listings" | "prices" | "hubs";
@@ -177,7 +178,7 @@ export default function MarketPage() {
                         </Badge>
                       )}
                       {l.estimated_value_naira != null && (
-                        <Badge tone="gold">{formatNaira(l.estimated_value_naira)}</Badge>
+                        <Badge tone="gold">{formatNairaEstimate(l.estimated_value_naira)}</Badge>
                       )}
                       {hazards.length > 0 && (
                         <Badge tone="red">
@@ -212,7 +213,7 @@ export default function MarketPage() {
             <div>
               <h2 className="text-sm font-bold text-slate-900 dark:text-white">Material rate card</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Fair market price per kilogram — cached for offline use
+                Indicative price per kilogram — cached for offline use. Check the update time before trading.
               </p>
             </div>
             <button
@@ -251,6 +252,9 @@ export default function MarketPage() {
                       <p className="truncate text-sm font-bold text-slate-800 dark:text-slate-100">{m.name}</p>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400">
                         {m.is_hazardous ? "Handle with care" : "Safe to handle"}
+                        {m.price_last_updated_at
+                          ? ` · updated ${relativeTime(m.price_last_updated_at)}`
+                          : ""}
                       </p>
                       <div
                         className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
@@ -268,13 +272,18 @@ export default function MarketPage() {
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    {m.is_stale && (
+                      <Badge tone="amber">
+                        <Clock className="h-3 w-3" /> rate outdated
+                      </Badge>
+                    )}
                     {m.is_hazardous && (
                       <Badge tone="red">
                         <ShieldAlert className="h-3 w-3" /> hazardous
                       </Badge>
                     )}
                     <span className="text-sm font-bold tabular-nums text-brand-600 dark:text-brand-400">
-                      {formatNaira(m.price_per_kg_naira)}
+                      {formatNairaEstimate(m.price_per_kg_naira)}
                       <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400">/kg</span>
                     </span>
                   </div>

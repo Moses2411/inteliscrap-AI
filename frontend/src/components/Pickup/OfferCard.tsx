@@ -37,7 +37,7 @@ export default function OfferCard({ offer, busy, busyId, distanceLabel, nairaSym
         )}
         {offer.estimated_value_naira != null && (
           <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 px-2 py-1 font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-            {nairaSymbol}{offer.estimated_value_naira.toLocaleString()}
+            ≈ {nairaSymbol}{offer.estimated_value_naira.toLocaleString()}
           </span>
         )}
       </div>

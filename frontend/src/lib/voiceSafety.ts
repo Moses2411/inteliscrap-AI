@@ -25,11 +25,16 @@ const HAZARD_PREFIX: Record<Language, string> = {
 };
 
 const RATE_LINE: Record<Language, (material: string, value: number) => string> = {
-  en: (m, v) => `Detected ${m}. Estimated market rate ${v} Naira per kilogram.`,
-  ha: (m, v) => `An gano ${m}. Kimar kasuwa naira ${v} kowace kilo.`,
-  pcm: (m, v) => `We detect ${m}. Market price na ${v} Naira per kilo.`,
-  yo: (m, v) => `A rí ${m}. Owó ọjà náírà ${v} fún kílò kan.`,
-  ig: (m, v) => `Anyị chọtara ${m}. Ọnụ ahịa ${v} Naira kwa kilo.`,
+  en: (m, v) =>
+    `Detected ${m}. The estimated market rate is about ${v} Naira per kilogram. This is only an estimate, prices can change.`,
+  ha: (m, v) =>
+    `An gano ${m}. Kimanin farashin kasuwa ya kai naira ${v} kowace kilo. Kimanin ne kawai, farashi na iya canzawa.`,
+  pcm: (m, v) =>
+    `We detect ${m}. The market price be like around ${v} Naira per kilo. Na estimate o, price fit change.`,
+  yo: (m, v) =>
+    `A rí ${m}. Iye owó ọjà tí a fojú dí ni naira ${v} fún kílò kan. Ìdíwọ̀n ni, owó lè yí padà.`,
+  ig: (m, v) =>
+    `Anyị chọtara ${m}. Atụmatụ ọnụahịa ahịa bụ ihe dị ka naira ${v} kwa kilo. Nke a bụ atụmatụ naanị, ọnụahịa nwere ike ịgbanwe.`,
 };
 
 /** Builds a localized, spoken safety script for the current scan. */

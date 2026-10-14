@@ -218,7 +218,7 @@ export default function PickupsPage() {
                   )}
                   {offer.estimated_value_naira != null && (
                     <Badge tone="gold">
-                      {naira}
+                      ≈ {naira}
                       {offer.estimated_value_naira.toLocaleString()}
                     </Badge>
                   )}

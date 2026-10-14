@@ -24,7 +24,7 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { useHubData, useMarketData } from "../../hooks/useDashboardData";
 import { createHubRequest, registerHub } from "../../services/hubs";
-import { formatKg, formatNaira, formatDateTime } from "../../utils/formatters";
+import { formatKg, formatNaira, formatNairaEstimate, formatDateTime } from "../../utils/formatters";
 import { syncRoleFromServer } from "../../services/auth";
 import { cn } from "../../lib/cn";
 
@@ -127,7 +127,7 @@ export default function HubDashboard() {
       },
     },
     { key: "weight", label: "Weight", align: "right", render: (d) => formatKg(d.weight_kg) },
-    { key: "value", label: "Hub price", align: "right", render: (d) => formatNaira(d.hub_price_naira) },
+    { key: "value", label: "Hub price", align: "right", render: (d) => formatNairaEstimate(d.hub_price_naira) },
     {
       key: "time",
       label: "Delivered",
@@ -482,7 +482,7 @@ export default function HubDashboard() {
               <option value="">Select material…</option>
               {materials.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.name} — {formatNaira(m.price_per_kg_naira)}/kg
+                  {m.name} — {formatNairaEstimate(m.price_per_kg_naira)}/kg
                 </option>
               ))}
             </select>

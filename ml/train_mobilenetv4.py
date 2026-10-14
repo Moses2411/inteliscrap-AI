@@ -212,7 +212,10 @@ def main():
 
     print(f"Saved {classes_path}")
     print(f"Saved {int8_path}")
-    print("Place both files under frontend/public/models/ and run: npm run fetch-models")
+    print(
+        "The frontend loads frontend/public/models/mobilenetv4_scrap_int8.onnx at "
+        "runtime and caches it on device after the first load."
+    )
 
 
 if __name__ == "__main__":

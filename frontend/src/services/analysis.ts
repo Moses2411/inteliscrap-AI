@@ -1,7 +1,9 @@
-import type { VisionAnalysis } from "../types";
-import { classifyScrap } from "../vision/visionEngine";
-import { classifyScrapZeroShot, RUNTIME_MIN_SCORE } from "../vision/visionEngineRuntime";
+import type { VisionAnalysis, VisionCandidate, VisionModelStatus } from "../types";
+import { classifyScrap, getVisionModelStatus } from "../vision/visionEngine";
+import { assessUncertainty } from "../vision/uncertainty";
 import { resolveTradeRule } from "./language";
+
+export type { VisionModelStatus };
 
 function rgbToHsl(r: number, g: number, b: number) {
   const max = Math.max(r, g, b);
@@ -241,6 +243,18 @@ const SERVER_SLUG_ALIASES: Record<string, string> = {
   pvc: "pet-plastic",
 };
 
+/** Canonical slugs the server is allowed to return (see backend CANONICAL_MATERIALS). */
+const KNOWN_SERVER_SLUGS = new Set([
+  "copper",
+  "aluminum",
+  "pet-plastic",
+  "lead-battery",
+  "brass",
+  "steel",
+  "e-waste",
+  "glass",
+]);
+
 function slugFromServerLabel(raw: string): string {
   const key = raw.trim().toLowerCase();
   if (SERVER_SLUG_ALIASES[key]) return SERVER_SLUG_ALIASES[key];
@@ -258,23 +272,39 @@ function buildAnalysis(
   source: VisionAnalysis["source"],
   serverHazards?: string[],
   serverSafety?: string,
+  candidates?: VisionCandidate[],
 ): VisionAnalysis {
   const rule = resolveTradeRule(slug);
+  const normalizedConfidence = clamp01(Number(confidence) || 0);
+  const candidateList: VisionCandidate[] =
+    candidates && candidates.length > 0
+      ? candidates
+      : [{ material_class: material || rule.material, material_slug: rule.slug, confidence: normalizedConfidence }];
+
+  const assessment = assessUncertainty(candidateList, source);
   return {
     material_class: material || rule.material,
     material_slug: rule.slug,
-    confidence,
+    confidence: normalizedConfidence,
     toxicity_hazards: serverHazards && serverHazards.length > 0 ? serverHazards : rule.hazards,
     safety_instructions: serverSafety || rule.safety,
     hazard_level: rule.hazardLevel,
     source,
+    // Only offer a confirm step (and candidates) when we are genuinely unsure.
+    uncertain: assessment.uncertain,
+    candidates: assessment.uncertain ? candidateList.slice(0, 3) : undefined,
   };
 }
 
 async function classifyOnDevice(blob: Blob): Promise<VisionAnalysis> {
   const result = await classifyScrap(blob);
   const top = result.top;
-  return buildAnalysis(top.material, top.materialSlug, top.confidence, "onnx");
+  const candidates: VisionCandidate[] = result.predictions.slice(0, 3).map((prediction) => ({
+    material_class: prediction.material,
+    material_slug: prediction.materialSlug,
+    confidence: prediction.confidence,
+  }));
+  return buildAnalysis(top.material, top.materialSlug, top.confidence, "onnx", undefined, undefined, candidates);
 }
 
 async function classifyOnServer(blob: Blob): Promise<VisionAnalysis> {
@@ -286,68 +316,108 @@ async function classifyOnServer(blob: Blob): Promise<VisionAnalysis> {
     signal: AbortSignal.timeout(45_000),
   });
   if (!res.ok) throw new Error(`Analyze failed: ${res.statusText}`);
-  const data: { material_class?: string; confidence?: number; toxicity_hazards?: string[]; safety_instructions?: string } =
-    await res.json();
-  const slug = slugFromServerLabel(data.material_class || "");
+  const data: {
+    material_class?: string;
+    material_slug?: string;
+    confidence?: number;
+    toxicity_hazards?: string[];
+    safety_instructions?: string;
+  } = await res.json();
+  const material = data.material_class || "Unknown";
+  // The hardened server returns a validated slug; fall back to label matching for
+  // older server builds that only return a display label.
+  const slug = data.material_slug && KNOWN_SERVER_SLUGS.has(data.material_slug)
+    ? data.material_slug
+    : slugFromServerLabel(material);
+  const confidence = Number(data.confidence ?? 0);
+  const rule = resolveTradeRule(slug);
+  const candidates: VisionCandidate[] = [
+    { material_class: material || rule.material, material_slug: rule.slug, confidence },
+  ];
   return buildAnalysis(
-    data.material_class || "Unknown",
+    material,
     slug,
-    Number(data.confidence ?? 0),
+    confidence,
     "server",
     data.toxicity_hazards,
     data.safety_instructions,
+    candidates,
   );
 }
 
-/** Prefer browser-based CLIP inference, then use the other configured analysis paths. */
+/**
+ * On-device INT8 classifier first (small, fast, fully offline — downloaded once
+ * and cached by the service worker), then the server model when online, then the
+ * lightweight on-device heuristic. No large remote model is ever fetched here.
+ *
+ * Each source is scored for confidence. A source is only returned as a firm
+ * answer when it is confident enough; otherwise the next source is tried and, if
+ * none is confident, the best available answer is returned flagged `uncertain`
+ * with its top candidates so the UI can ask the user to confirm.
+ */
 export async function analyzeScrapImage(image: Blob): Promise<VisionAnalysis> {
-  try {
-    const runtime = await classifyScrapZeroShot(image);
-    if (
-      runtime.top &&
-      runtime.top.materialSlug !== "other" &&
-      runtime.top.confidence >= RUNTIME_MIN_SCORE
-    ) {
-      return buildAnalysis(
-        runtime.top.material,
-        runtime.top.materialSlug,
-        runtime.top.confidence,
-        "clip",
-      );
-    }
-  } catch {
-    // CLIP unavailable or inference failed; fall through to other analysis paths.
-  }
+  const attempts: VisionAnalysis[] = [];
 
+  // 1) Bundled on-device model (small, fast, fully offline).
   try {
     const edge = await classifyOnDevice(image);
-    if (edge.material_slug !== "other") return edge;
+    if (edge.material_slug !== "other") {
+      if (!edge.uncertain) return edge;
+      attempts.push(edge);
+    }
   } catch {
-    // Optional bundled ONNX model missing or inference failed.
+    // Bundled ONNX model missing, unverified or inference failed; fall through.
   }
 
+  // 2) Server model when online — it may resolve an on-device ambiguity.
   if (navigator.onLine) {
     try {
-      return await classifyOnServer(image);
+      const server = await classifyOnServer(image);
+      if (server.material_slug !== "other") {
+        if (!server.uncertain) return server;
+        attempts.push(server);
+      }
     } catch {
       // Server unreachable or model offline; fall through to local heuristic.
     }
   }
 
-  // Lightweight heuristic (real analysis, works offline, very fast for low-end phones)
+  // 3) Lightweight heuristic (real analysis, works offline, very fast for low-end
+  //    phones). It is clearly labelled "heuristic" so it is never passed off as a
+  //    trained model inference, and its uncalibrated scores are held to a
+  //    stricter confidence bar.
   try {
     const heuristic = await classifyHeuristicInline(image);
     if (heuristic.top && heuristic.top.confidence > 0.2) {
-      return buildAnalysis(
+      const candidates: VisionCandidate[] = heuristic.preds.slice(0, 3).map((prediction) => ({
+        material_class: prediction.material,
+        material_slug: prediction.slug,
+        confidence: prediction.confidence,
+      }));
+      const analysis = buildAnalysis(
         heuristic.top.material,
         heuristic.top.slug,
         heuristic.top.confidence,
-        "onnx",
+        "heuristic",
+        undefined,
+        undefined,
+        candidates,
       );
+      if (!analysis.uncertain) return analysis;
+      attempts.push(analysis);
     }
   } catch (err) {
     console.warn("heuristic failed", err);
   }
 
+  // Nothing was confident: return the best available answer, flagged uncertain,
+  // so the UI asks the user to confirm rather than trading on a silent guess.
+  if (attempts.length > 0) return attempts[0];
+
   throw new AnalysisUnavailableError();
+}
+
+/** Report the honest availability of the on-device classifier. */
+export async function getEdgeModelStatus(): Promise<VisionModelStatus> {
+  return getVisionModelStatus();
 }

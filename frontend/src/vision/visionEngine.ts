@@ -1,4 +1,4 @@
-import type { HazardLevel } from "../types";
+import type { HazardLevel, VisionModelStatus } from "../types";
 
 export interface ScrapClass {
   label: string;
@@ -35,11 +35,17 @@ type OrtModule = typeof import("onnxruntime-web");
 const DEFAULT_CONFIG: VisionModelConfig = {
   modelUrl: "/models/mobilenetv4_scrap_int8.onnx",
   labelsUrl: "/models/classes.json",
-  wasmPaths: "/ort/",
+  // Emitted by Vite as dist/assets/ort-wasm-simd-threaded.wasm (see
+  // build.rollupOptions.output.assetFileNames in vite.config.ts).
+  wasmPaths: "/assets/",
   inputSize: 224,
   normalize: "imagenet",
   applySoftmax: true,
 };
+
+export function defaultVisionModelUrl(): string {
+  return DEFAULT_CONFIG.modelUrl;
+}
 
 const HAZARD_LEVELS: HazardLevel[] = ["low", "medium", "high", "critical"];
 
@@ -57,6 +63,13 @@ export const SCRAP_CLASSES: ScrapClass[] = [
 let session: import("onnxruntime-web").InferenceSession | null = null;
 let ort: OrtModule | null = null;
 let labelsCache: ScrapClass[] | null = null;
+// Once the model cannot be loaded (e.g. it has not been shipped yet) we stop
+// re-hitting the network on every scan.
+let sessionUnavailable = false;
+let modelStatus: VisionModelStatus | null = null;
+// Verified class count of the loaded model; used to guard against a model whose
+// output width does not match classes.json.
+let verifiedClassCount: number | null = null;
 
 function toHazardLevel(value: unknown): HazardLevel {
   return HAZARD_LEVELS.includes(value as HazardLevel) ? (value as HazardLevel) : "low";
@@ -88,16 +101,102 @@ async function ensureSession(
   config: VisionModelConfig,
 ): Promise<import("onnxruntime-web").InferenceSession> {
   if (session) return session;
+  if (sessionUnavailable) {
+    throw new Error(`On-device model unavailable: ${config.modelUrl}`);
+  }
 
-  ort = await import("onnxruntime-web");
-  ort.env.wasm.wasmPaths = config.wasmPaths;
-  ort.env.wasm.numThreads = 2;
+  try {
+    const ortModule = await import("onnxruntime-web");
+    ort = ortModule;
+    ort.env.wasm.wasmPaths = config.wasmPaths;
+    // Multi-threaded WASM relies on SharedArrayBuffer, which only exists when the
+    // page is cross-origin isolated (COOP + COEP headers). Without that, forcing
+    // numThreads > 1 does nothing (or throws), so fall back to a single thread.
+    const isolated =
+      (globalThis as { crossOriginIsolated?: boolean }).crossOriginIsolated === true;
+    const cores = navigator.hardwareConcurrency || 1;
+    ort.env.wasm.numThreads = isolated ? Math.min(4, cores) : 1;
 
-  session = await ort.InferenceSession.create(config.modelUrl, {
-    executionProviders: ["wasm"],
-    graphOptimizationLevel: "all",
-  });
-  return session;
+    session = await ortModule.InferenceSession.create(config.modelUrl, {
+      executionProviders: ["wasm"],
+      graphOptimizationLevel: "all",
+    });
+    return session;
+  } catch (err) {
+    sessionUnavailable = true;
+    setModelStatus({
+      available: false,
+      verified: false,
+      reason: "model_missing",
+      modelUrl: config.modelUrl,
+      classCount: null,
+      message:
+        "No verified on-device classifier is bundled. Falling back to the server model (online) or manual selection (offline).",
+    });
+    throw err;
+  }
+}
+
+function setModelStatus(status: VisionModelStatus): void {
+  modelStatus = status;
+}
+
+/**
+ * Probe whether a *verified* on-device classifier is available.
+ *
+ * A model is only reported as usable when it loads, has at least one output and
+ * its output width matches the number of classes the app knows about. This keeps
+ * the UI honest: a stale/mismatched model is never silently used.
+ */
+export async function getVisionModelStatus(
+  config: Partial<VisionModelConfig> = {},
+): Promise<VisionModelStatus> {
+  const cfg = { ...DEFAULT_CONFIG, ...config };
+  if (modelStatus && modelStatus.reason === "verified") return modelStatus;
+  if (sessionUnavailable) {
+    return (
+      modelStatus ?? {
+        available: false,
+        verified: false,
+        reason: "model_missing",
+        modelUrl: cfg.modelUrl,
+        classCount: null,
+        message: "No verified on-device classifier is bundled.",
+      }
+    );
+  }
+
+  try {
+    const [sess, classes] = await Promise.all([
+      ensureSession(cfg),
+      loadLabels(cfg.labelsUrl),
+    ]);
+    if (sess.outputNames.length < 1) {
+      throw new Error("Model exposes no outputs");
+    }
+    verifiedClassCount = classes.length;
+    setModelStatus({
+      available: true,
+      verified: true,
+      reason: "verified",
+      modelUrl: cfg.modelUrl,
+      classCount: classes.length,
+      message: "Verified on-device classifier ready.",
+    });
+    return modelStatus as VisionModelStatus;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown model error";
+    const status: VisionModelStatus = {
+      available: false,
+      verified: false,
+      reason: sessionUnavailable ? "model_missing" : "load_error",
+      modelUrl: cfg.modelUrl,
+      classCount: null,
+      message,
+    };
+    setModelStatus(status);
+    return status;
+  }
 }
 
 async function toImage(source: Blob | HTMLImageElement): Promise<HTMLImageElement> {
@@ -123,10 +222,23 @@ async function rasterize(
   canvas.width = size;
   canvas.height = size;
 
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   if (!ctx) throw new Error("Canvas 2D context unavailable");
 
-  ctx.drawImage(img, 0, 0, size, size);
+  // Match the training/validation transform (torchvision Resize(int(size * 1.14))
+  // then CenterCrop(size)): scale so the shorter side fills `size * 1.14`, then
+  // center-crop. The previous code stretched the image into a square, which
+  // distorted aspect ratios and hurt accuracy.
+  const fit = size * 1.14;
+  const srcW = img.naturalWidth || size;
+  const srcH = img.naturalHeight || size;
+  const scale = fit / Math.min(srcW, srcH);
+  const drawW = Math.round(srcW * scale);
+  const drawH = Math.round(srcH * scale);
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(img, (size - drawW) / 2, (size - drawH) / 2, drawW, drawH);
   return ctx.getImageData(0, 0, size, size);
 }
 
@@ -211,10 +323,34 @@ export async function classifyScrap(
   const inferenceMs = performance.now() - started;
 
   const raw = Array.from(outputs[outputName].data as ArrayLike<number>);
+
+  // Guard against a model whose output width does not match the class list —
+  // otherwise index-to-class mapping would silently produce wrong materials.
+  if (raw.length !== classes.length) {
+    setModelStatus({
+      available: false,
+      verified: false,
+      reason: "class_mismatch",
+      modelUrl: cfg.modelUrl,
+      classCount: classes.length,
+      message: `Model produced ${raw.length} outputs but classes.json defines ${classes.length}. Re-export or re-verify the model.`,
+    });
+    // Invalidate the mismatched session so future scans don't reuse it.
+    sessionUnavailable = true;
+    throw new Error(
+      `On-device model/class mismatch: ${raw.length} outputs vs ${classes.length} classes`,
+    );
+  }
+
+  verifiedClassCount = classes.length;
   const probs = cfg.applySoftmax ? softmax(raw) : raw;
 
   const predictions = rankPredictions(probs, classes);
   return { predictions, top: predictions[0], inferenceMs };
+}
+
+export function getVerifiedClassCount(): number | null {
+  return verifiedClassCount;
 }
 
 export async function disposeVision(): Promise<void> {
@@ -222,5 +358,19 @@ export async function disposeVision(): Promise<void> {
     await session.release();
     session = null;
     ort = null;
+    sessionUnavailable = false;
+    modelStatus = null;
+    verifiedClassCount = null;
   }
+}
+
+/**
+ * Download + initialize the on-device model once, off the critical path.
+ * The service worker's CacheFirst route for `*.onnx`/`*.wasm` keeps the
+ * artifacts on device, so this download happens only on first run and later
+ * launches/scans work fully offline. Returns false when no model is shipped.
+ */
+export async function warmUpVision(): Promise<boolean> {
+  const status = await getVisionModelStatus();
+  return status.verified;
 }

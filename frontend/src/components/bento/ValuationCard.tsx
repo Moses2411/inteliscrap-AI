@@ -1,4 +1,4 @@
-import { Scale, Tag, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { Scale, Tag, Wallet } from "lucide-react";
 import { cn } from "../../lib/cn";
 import {
   convertCurrency,
@@ -6,8 +6,6 @@ import {
   kgToUnit,
   money,
   slugForMaterial,
-  trendPercent,
-  trendSparkline,
   unitRate,
   unitToKg,
 } from "../../lib/bentoPricing";
@@ -40,26 +38,6 @@ const GRADE_LABELS: Record<string, string> = {
   other: "Unclassified",
 };
 
-function Sparkline({ points, positive }: { points: number[]; positive: boolean }) {
-  const width = 100;
-  const height = 32;
-  const step = width / (points.length - 1 || 1);
-  const path = points
-    .map((value, index) => `${index === 0 ? "M" : "L"}${(index * step).toFixed(2)},${(height - (value / 100) * height).toFixed(2)}`)
-    .join(" ");
-  const stroke = positive ? "#34d399" : "#f87171";
-  return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      className="h-8 w-full"
-      aria-hidden="true"
-    >
-      <path d={path} fill="none" stroke={stroke} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export function ValuationCard({
   materialClass,
   materialSlug,
@@ -78,9 +56,6 @@ export function ValuationCard({
   const displayWeight = kgToUnit(weightKg, unit);
   const rate = unitRate(priceNgnPerKg, unit, currency);
   const total = convertCurrency(weightKg * priceNgnPerKg, currency);
-  const trend = trendPercent(slug);
-  const positive = trend >= 0;
-  const sparkline = trendSparkline(slug, trend);
   const grade = GRADE_LABELS[slug] ?? "Unclassified";
 
   const sliderMin = unit === "kg" ? 0.5 : 1;
@@ -97,7 +72,7 @@ export function ValuationCard({
               <Wallet className="h-3.5 w-3.5" /> Estimated value
             </p>
             <p className="mt-1 truncate text-3xl font-extrabold tracking-tight text-white text-shadow-eco">
-              {money(total, currency)}
+              ≈ {money(total, currency)}
             </p>
             <p className="mt-1 text-xs text-slate-400">
               {materialClass ?? "Awaiting scan"}
@@ -105,20 +80,6 @@ export function ValuationCard({
                 <span className="text-eco-emerald-glow"> · {(confidence * 100).toFixed(1)}%</span>
               )}
             </p>
-          </div>
-          <div className="w-24 shrink-0 text-right">
-            <Sparkline points={sparkline} positive={positive} />
-            <span
-              className={cn(
-                "mt-1 inline-flex items-center gap-1 text-xs font-bold",
-                positive ? "text-eco-emerald-glow" : "text-eco-red-glow",
-              )}
-            >
-              {positive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-              {positive ? "+" : ""}
-              {trend.toFixed(1)}%
-            </span>
-            <p className="text-[10px] text-slate-500">vs yesterday</p>
           </div>
         </div>
       </div>
@@ -168,7 +129,7 @@ export function ValuationCard({
         <div className="flex items-center justify-between text-xs">
           <span className="text-slate-500">Market rate</span>
           <span className="font-mono font-semibold text-eco-lime-glow">
-            {money(rate, currency)}/{unit}
+            ≈ {money(rate, currency)}/{unit}
           </span>
         </div>
       </div>
