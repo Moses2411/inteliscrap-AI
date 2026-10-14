@@ -33,7 +33,7 @@ export function stopCamera(stream: MediaStream): void {
   }
 }
 
-/** Start the camera with an explicit front/rear preference (Bento scanner). */
+/** Start the camera with an explicit front/rear preference (live scanner). */
 export async function startCameraWithFacing(
   videoElement: HTMLVideoElement,
   facingMode: "environment" | "user",

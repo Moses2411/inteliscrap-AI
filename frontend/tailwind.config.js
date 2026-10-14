@@ -37,8 +37,8 @@ export default {
           high: "#ef4444",
           critical: "#dc2626",
         },
-        // ── Eco-Tech Bento Grid (additive) ──────────────────────────
-        // Deep obsidian surfaces used by the Bento dashboard.
+        // ── Eco-Tech accents + obsidian surfaces (live scanner) ─────
+        // Deep obsidian surfaces used by the full-screen scanner viewfinder.
         obsidian: {
           50: "#f0f4f8",
           100: "#d9e2ec",
@@ -113,7 +113,7 @@ export default {
           "0%": { clipPath: "inset(0 100% 0 0)" },
           "100%": { clipPath: "inset(0 0 0 0)" },
         },
-        // ── Bento additions ─────────────────────────────────────────
+        // ── Scanner additions ───────────────────────────────────────
         "wave-form": {
           "0%, 100%": { transform: "scaleY(0.28)" },
           "50%": { transform: "scaleY(1)" },

@@ -8,7 +8,6 @@ import {
   PieChart,
   Receipt,
   Settings,
-  Sparkles,
   Store,
   Truck,
 } from "lucide-react";
@@ -65,7 +64,6 @@ export function getNavForRole(role: UserRole | null): NavItem[] {
   // Only seller and collector get scan functionality
   if (role === "seller" || role === "collector") {
     items.push({ path: "/scan", labelKey: "nav_scan", icon: Camera });
-    items.push({ path: "/bento", labelKey: "nav_scan_ai", icon: Sparkles });
   }
 
   items.push({ path: "/settings", labelKey: "nav_settings", icon: Settings });

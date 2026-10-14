@@ -1,12 +1,11 @@
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Camera, Recycle, Zap, WifiOff, ShieldCheck, AlertTriangle } from "lucide-react";
-import CameraCapture from "../components/Camera/CameraCapture";
+import { LiveScanner } from "../components/Scanner/LiveScanner";
 import ScanResult from "../components/Scanner/ScanResult";
 import ManualMaterialSelect from "../components/Scanner/ManualMaterialSelect";
 import PostPickupForm from "../components/Pickup/PostPickupForm";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
-import { Card } from "../components/ui/Card";
 import { PageMotion, pageItem } from "../components/ui/PageMotion";
 import { useVision } from "../hooks/useVision";
 import { useAudioTTS } from "../hooks/useAudioTTS";
@@ -36,14 +35,15 @@ export default function ScanPage() {
     );
   }
 
-  return <ScanWorkspace />;
+  return <ScanWorkspace role={role} />;
 }
 
-function ScanWorkspace() {
+function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
   const [result, setResult] = useState<VisionAnalysis | null>(null);
   const [estimated_value, setEstimatedValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [manualMode, setManualMode] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false);
   const { t } = useTranslation();
   const { selected_language, cached_prices, setCurrentScan } = useApp();
   const { analyze, loadingProgress } = useVision();
@@ -254,9 +254,17 @@ function ScanWorkspace() {
       </motion.div>
 
       <motion.div variants={pageItem}>
-        <Card pad={false} className="overflow-hidden shadow-sm">
-          <CameraCapture onImageCapture={handleImageCapture} />
-        </Card>
+        <div className="overflow-hidden rounded-3xl border border-white/10 bg-obsidian-950 p-3 shadow-bento">
+          <div className="h-[24rem] sm:h-[26rem]">
+            <LiveScanner
+              active={cameraActive}
+              onActiveChange={setCameraActive}
+              onCapture={(blob) => void handleImageCapture(blob)}
+              busy={loading}
+              allowUpload={role === "collector"}
+            />
+          </div>
+        </div>
       </motion.div>
 
       <motion.div
