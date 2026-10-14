@@ -56,6 +56,7 @@ image search so you can exercise the whole pipeline end to end:
 
 ```bash
 python training/fetch_web_images.py --per-class 160
+python training/dedupe_splits.py --data training/data
 python training/dataset_check.py --data training/data --check-images
 ```
 
@@ -65,6 +66,11 @@ copyrighted and noisy** — expect wrong subjects, collages and watermarks, and
 expect the model to score lower than it will on real field photos. Treat them as
 temporary filler, replace them with your own pictures, then retrain. Re-running a
 class is safe: it tops up to `--per-class` without re-downloading what exists.
+
+Because each resumed run starts with a fresh de-dup set, the same image can land
+in `train/` on one run and `val/` on the next (leakage), or under two classes.
+`dedupe_splits.py` keeps one copy per image — preferring `train > val > test` —
+and deletes the rest, so always run it before checking the dataset.
 
 ## The 8 classes
 
@@ -126,6 +132,7 @@ data, because the app leans on the physical test, not the photo, for those.
 |---|---|
 | `dataset_check.py` | Read-only data validator / inventory (no ML deps). |
 | `fetch_web_images.py` | Optional bootstrap: pull a starter set from Bing (temporary, noisy). |
+| `dedupe_splits.py` | Remove cross-split / cross-class duplicate images left by resumed scraping. |
 | `train.py` | Train → quantize (static int8) → export → verify → manifest. |
 | `evaluate.py` | top-1 / top-3 / per-class F1 + confusion matrix. |
 | `verify_model.py` | Contract check on an exported `.onnx`. |

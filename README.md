@@ -444,6 +444,7 @@ training/
 ├── data/{train,val,test}/<slug>/    # labelled photos; slugs = copper, aluminum, pet-plastic,
 │                                    #   lead-battery, brass, steel, e-waste, glass
 ├── dataset_check.py   # validates layout, counts, class balance and train/val leakage
+├── dedupe_splits.py   # removes cross-split / cross-class duplicate images
 ├── train.py           # fine-tunes MobileNetV4 (MobileNetV3 fallback) → int8 ONNX + manifest
 ├── evaluate.py        # top-1 / top-3, per-class F1 and a confusion matrix
 └── verify_model.py    # checks input/output shape + class order match classes.json
