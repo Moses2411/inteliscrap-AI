@@ -437,23 +437,29 @@ The locale files (`locales/ha.json`, `locales/pcm.json`) contain full dictionari
 
 ## Bundling a Real Scrap Classifier (Training)
 
-The bundled edge model is what makes the app accurate and fully offline. A training pipeline lives in `training/`:
+The bundled edge model is what makes the app accurate and fully offline. A training pipeline lives in `training/` (see [`training/README.md`](training/README.md) for the full data spec — how many photos, the photography guide and the labelling rules):
 
 ```
 training/
-├── data/train/<slug>/    # e.g. data/train/copper/*.jpg, data/train/lead-battery/*.jpg
-├── data/val/<slug>/      # same 8 slugs: copper, aluminum, pet-plastic, lead-battery, brass, steel, e-waste, glass
-├── train.py              # fine-tunes MobileNetV4 (or MobileNetV3 fallback) → exports int8 ONNX
-└── verify_model.py       # checks input/output shape + class order match classes.json
+├── data/{train,val,test}/<slug>/    # labelled photos; slugs = copper, aluminum, pet-plastic,
+│                                    #   lead-battery, brass, steel, e-waste, glass
+├── dataset_check.py   # validates layout, counts, class balance and train/val leakage
+├── train.py           # fine-tunes MobileNetV4 (MobileNetV3 fallback) → int8 ONNX + manifest
+├── evaluate.py        # top-1 / top-3, per-class F1 and a confusion matrix
+└── verify_model.py    # checks input/output shape + class order match classes.json
 ```
 
 Run it once you have labeled photos (a few hundred per class):
 
 ```bash
 pip install -r training/requirements.txt
+python training/dataset_check.py --data training/data
 python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap_int8.onnx
+python training/evaluate.py --data training/data/test
 python training/verify_model.py --image path/to/test_photo.jpg
 ```
+
+`train.py` refuses to train when the dataset does not exactly match `classes.json` (it would mislabel every prediction) and writes the **measured** accuracy into `model.manifest.json`. Bundle a model only when it reports a `macro_f1` you trust; otherwise the app's server / heuristic / manual fallbacks are the honest option.
 
 The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]` ImageNet-normalized input, one output of 8 logits whose index order equals `frontend/public/models/classes.json`. Trained output goes straight to `frontend/public/models/mobilenetv4_scrap_int8.onnx`. The onnxruntime WASM runtime is emitted automatically by Vite into `dist/assets/` (no manual `public/ort/` copy step), and the service worker caches both the model and the runtime so edge inference keeps working offline after the first load.
 
@@ -571,13 +577,19 @@ cd backend
 pytest -v
 ```
 
-**62 tests** across 12 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings, pickups, settlement fees, SMS outbox, hubs, impact aggregates and user location updates.
+**108 tests** across 14 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings, pickups, settlement fees, SMS outbox, hubs, impact aggregates, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend
 npm run typecheck   # TypeScript strict checks
 npm run build       # Production PWA build (prebuild warns if the vision model is missing)
-npm run fetch-models  # Optional: vendor the model from a published repo (needs HF_TOKEN)
+npm run fetch-models  # Optional: vendor a model you published (set MOBILENETV4_URL)
+```
+
+The edge-model pipeline has its own tests (dataset checker + metrics):
+
+```bash
+python -m pytest training/tests -q
 ```
 
 CI runs both pipelines on every push and pull request to `main` (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
@@ -733,9 +745,9 @@ inteliscrap-AI/
 │   └── Dockerfile / Dockerfile.dev
 │
 ├── training/                         # Edge model pipeline (MobileNetV4 → int8 ONNX)
-│   ├── train.py · verify_model.py · requirements.txt
-│   └── data/{train,val}/<slug>/      # 8 scrap classes
-├── ml/                               # Standalone training helpers + labels.json
+│   ├── dataset_check.py · train.py · evaluate.py · verify_model.py · requirements.txt
+│   └── data/{train,val,test}/<slug>/ # 8 scrap classes (see training/README.md)
+├── ml/                               # Deprecated (superseded by training/)
 ├── ngo-dashboard/                    # Static NGO dashboard prototype
 ├── .github/workflows/ci.yml          # GitHub Actions (backend tests + frontend build)
 ├── docker-compose.yml                # Local dev orchestration

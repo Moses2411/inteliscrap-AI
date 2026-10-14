@@ -6,11 +6,13 @@ import { fileURLToPath } from "node:url";
 // Vendors the on-device classifier into public/models/ so it is served from our
 // own origin and cached by the service worker (offline after the first load).
 //
-// Two ways to produce the model:
-//   1. Train locally:
-//        python training/train.py --out frontend/public/models/mobilenetv4_scrap_int8.onnx
-//   2. Download a published one (private/gated repos need HF_TOKEN):
-//        HF_TOKEN=... npm run fetch-models
+// There is NO default published model. Produce one of:
+//   1. Train locally (the normal path):
+//        python training/train.py --data training/data \
+//          --out frontend/public/models/mobilenetv4_scrap_int8.onnx
+//   2. Download one you published yourself (set MOBILENETV4_URL; gated repos
+//      also need HF_TOKEN):
+//        MOBILENETV4_URL="https://.../model_int8.onnx" npm run fetch-models
 //
 // NOTE: this script intentionally does NOT copy ONNX Runtime WASM files.
 // Vite emits the runtime WASM into dist/assets/ automatically (see
@@ -18,11 +20,10 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "..", "public");
 
-const DEFAULT_URL =
-  process.env.MOBILENETV4_URL ??
-  "https://huggingface.co/inteliscrap/mobilenetv4-scrap/resolve/main/model_int8.onnx";
+const MODEL_NAME = "mobilenetv4_scrap_int8.onnx";
+const url = process.env.MOBILENETV4_URL;
 
-const MODELS = [{ name: "mobilenetv4_scrap_int8.onnx", url: DEFAULT_URL }];
+const MODELS = url ? [{ name: MODEL_NAME, url }] : [];
 
 async function downloadModel({ name, url }) {
   const dest = path.join(publicDir, "models");
@@ -53,6 +54,16 @@ async function downloadModel({ name, url }) {
 }
 
 async function main() {
+  if (MODELS.length === 0) {
+    console.log(
+      "No MOBILENETV4_URL set — nothing to download.\n" +
+        "Train the model locally instead:\n" +
+        "  python training/train.py --data training/data " +
+        "--out frontend/public/models/mobilenetv4_scrap_int8.onnx\n" +
+        "Or set MOBILENETV4_URL to a model you published.",
+    );
+    return;
+  }
   for (const model of MODELS) {
     await downloadModel(model);
   }
