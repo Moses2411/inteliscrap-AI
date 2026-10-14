@@ -172,13 +172,17 @@ def quantize(fp32_path: Path, int8_path: Path, mode: str, calib=None):
                 quant_format=QuantFormat.QOperator,
                 weight_type=QuantType.QInt8,
                 activation_type=QuantType.QUInt8,
+                # Per-channel weight quantization is essential: the default
+                # (per-tensor) collapses MobileNetV4 to near-chance. With it the
+                # int8 export tracks the fp32 model closely.
+                per_channel=True,
             )
             return True, "static int8 quantization"
         except Exception as exc:  # noqa: BLE001
             print(f"WARNING: static quantization failed ({exc}); trying dynamic", file=sys.stderr)
 
     try:
-        quantize_dynamic(str(fp32_path), str(int8_path), weight_type=QuantType.QInt8)
+        quantize_dynamic(str(fp32_path), str(int8_path), weight_type=QuantType.QInt8, per_channel=True)
         return True, "dynamic int8 quantization"
     except Exception as exc:  # noqa: BLE001
         return False, f"quantization failed ({exc})"
@@ -252,6 +256,17 @@ def main() -> int:
     parser.add_argument("--calib-samples", type=int, default=128)
     parser.add_argument("--min-per-class", type=int, default=dc.DEFAULT_MIN_TRAIN_PER_CLASS)
     parser.add_argument("--skip-dataset-check", action="store_true")
+    parser.add_argument(
+        "--export-only",
+        action="store_true",
+        help="skip training and (re)export from --checkpoint (default <data>/models/best.pth)",
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="checkpoint to load for --export-only (default <data>/models/best.pth)",
+    )
     args = parser.parse_args()
 
     seed = args.seed
@@ -300,58 +315,67 @@ def main() -> int:
     val_loader = DataLoader(val_set, batch_size=args.batch_size, shuffle=False, num_workers=args.workers)
 
     model = build_model(args.backbone, len(slugs)).to(device)
-    weights = class_weights(train_set, len(slugs)).to(device) if args.class_weights else None
-    if weights is not None:
-        print(f"class weights: {[round(w, 3) for w in weights.tolist()]}")
-    criterion = nn.CrossEntropyLoss(weight=weights)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
-
     checkpoint_dir = args.data / "models"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
     best_path = checkpoint_dir / "best.pth"
+    history: list[dict] = []
     best_f1 = -1.0
     best_epoch = 0
-    history: list[dict] = []
-    epochs_without_improvement = 0
 
-    for epoch in range(1, args.epochs + 1):
-        model.train()
-        total_loss = 0.0
-        for images, targets in tqdm(train_loader, desc=f"epoch {epoch}/{args.epochs}"):
-            images, targets = images.to(device), targets.to(device)
-            optimizer.zero_grad()
-            loss = criterion(model(images), targets)
-            loss.backward()
-            optimizer.step()
-            total_loss += loss.item() * images.size(0)
-        scheduler.step()
+    if args.export_only:
+        ckpt = args.checkpoint or best_path
+        if not ckpt.exists():
+            print(f"ERROR: --export-only needs a checkpoint at {ckpt}", file=sys.stderr)
+            return 1
+        model.load_state_dict(torch.load(ckpt, map_location=device))
+        model.eval()
+        print(f"export-only: loaded {ckpt} (training skipped)")
+    else:
+        weights = class_weights(train_set, len(slugs)).to(device) if args.class_weights else None
+        if weights is not None:
+            print(f"class weights: {[round(w, 3) for w in weights.tolist()]}")
+        criterion = nn.CrossEntropyLoss(weight=weights)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
-        y_true, probs = collect_probs(model, val_loader, device)
-        metrics = ev.compute_metrics(y_true, probs, slugs)
-        train_loss = total_loss / len(train_set)
-        history.append(
-            {"epoch": epoch, "loss": round(train_loss, 4), "top1": metrics["top1"], "macro_f1": metrics["macro_f1"]}
-        )
-        print(
-            f"epoch {epoch}: loss={train_loss:.4f} val_top1={metrics['top1'] * 100:.2f}% "
-            f"val_macroF1={metrics['macro_f1']:.3f}"
-        )
+        epochs_without_improvement = 0
+        for epoch in range(1, args.epochs + 1):
+            model.train()
+            total_loss = 0.0
+            for images, targets in tqdm(train_loader, desc=f"epoch {epoch}/{args.epochs}"):
+                images, targets = images.to(device), targets.to(device)
+                optimizer.zero_grad()
+                loss = criterion(model(images), targets)
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item() * images.size(0)
+            scheduler.step()
 
-        if metrics["macro_f1"] > best_f1:
-            best_f1 = metrics["macro_f1"]
-            best_epoch = epoch
-            torch.save(model.state_dict(), best_path)
-            epochs_without_improvement = 0
-        else:
-            epochs_without_improvement += 1
-            if epochs_without_improvement >= args.patience:
-                print(f"early stopping at epoch {epoch} (no F1 improvement for {args.patience} epochs)")
-                break
+            y_true, probs = collect_probs(model, val_loader, device)
+            metrics = ev.compute_metrics(y_true, probs, slugs)
+            train_loss = total_loss / len(train_set)
+            history.append(
+                {"epoch": epoch, "loss": round(train_loss, 4), "top1": metrics["top1"], "macro_f1": metrics["macro_f1"]}
+            )
+            print(
+                f"epoch {epoch}: loss={train_loss:.4f} val_top1={metrics['top1'] * 100:.2f}% "
+                f"val_macroF1={metrics['macro_f1']:.3f}"
+            )
 
-    print(f"best val macro-F1 {best_f1:.3f} at epoch {best_epoch}")
-    model.load_state_dict(torch.load(best_path, map_location=device))
-    model.eval()
+            if metrics["macro_f1"] > best_f1:
+                best_f1 = metrics["macro_f1"]
+                best_epoch = epoch
+                torch.save(model.state_dict(), best_path)
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+                if epochs_without_improvement >= args.patience:
+                    print(f"early stopping at epoch {epoch} (no F1 improvement for {args.patience} epochs)")
+                    break
+
+        print(f"best val macro-F1 {best_f1:.3f} at epoch {best_epoch}")
+        model.load_state_dict(torch.load(best_path, map_location=device))
+        model.eval()
 
     # 2. Export to ONNX (fp32 first, then quantize).
     args.out.parent.mkdir(parents=True, exist_ok=True)
@@ -378,10 +402,13 @@ def main() -> int:
 
     calib = None
     if args.quant == "static":
-        # The exported graph has a fixed batch of 1, so calibration must feed
-        # single images (onnxruntime rejects batch>1 with "Expected: 1").
-        calib_loader = DataLoader(val_set, batch_size=1, shuffle=False, num_workers=0)
+        # Calibrate on a deterministic sample of the TRAIN split — never val/test,
+        # which are used to report accuracy. The exported graph has a fixed batch
+        # of 1, so calibration must feed single images.
+        calib_set = ScrapDataset(args.data / "train", slugs, EVAL_TF)
+        calib_loader = DataLoader(calib_set, batch_size=1, shuffle=False, num_workers=0)
         calib = [batch for batch, _ in calib_loader][: args.calib_samples]
+        print(f"calibrating static int8 on {len(calib)} train image(s)")
 
     int8, note = quantize(fp32_path, args.out, args.quant, calib=calib)
     if int8:
