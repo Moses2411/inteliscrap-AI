@@ -49,6 +49,23 @@ with what the browser expects. A missing or extra folder is a hard error.
 `dataset_check.py` blocks training below the per-class minimum and warns below the
 recommended count. More **diverse** photos beat more near-duplicate photos.
 
+## Bootstrapping from the web (optional, temporary)
+
+If you have no photos yet, `fetch_web_images.py` can pull a first pass from Bing
+image search so you can exercise the whole pipeline end to end:
+
+```bash
+python training/fetch_web_images.py --per-class 160
+python training/dataset_check.py --data training/data --check-images
+```
+
+It validates each result is a real image of at least 200 px, resizes to a 640 px
+JPEG, de-duplicates by content hash, and puts ~15% into `val/`. **These images are
+copyrighted and noisy** — expect wrong subjects, collages and watermarks, and
+expect the model to score lower than it will on real field photos. Treat them as
+temporary filler, replace them with your own pictures, then retrain. Re-running a
+class is safe: it tops up to `--per-class` without re-downloading what exists.
+
 ## The 8 classes
 
 | Slug | Label | Hazard | What to photograph | How to tell it apart |
@@ -108,6 +125,7 @@ data, because the app leans on the physical test, not the photo, for those.
 | File | Purpose |
 |---|---|
 | `dataset_check.py` | Read-only data validator / inventory (no ML deps). |
+| `fetch_web_images.py` | Optional bootstrap: pull a starter set from Bing (temporary, noisy). |
 | `train.py` | Train → quantize (static int8) → export → verify → manifest. |
 | `evaluate.py` | top-1 / top-3 / per-class F1 + confusion matrix. |
 | `verify_model.py` | Contract check on an exported `.onnx`. |

@@ -449,7 +449,7 @@ training/
 └── verify_model.py    # checks input/output shape + class order match classes.json
 ```
 
-Run it once you have labeled photos (a few hundred per class):
+Run it once you have labeled photos (a few hundred per class). No photos yet? `python training/fetch_web_images.py --per-class 160` bootstraps a temporary, noisy set from the web — see [`training/README.md`](training/README.md).
 
 ```bash
 pip install -r training/requirements.txt

@@ -6,3 +6,5 @@ onnxruntime>=1.17
 Pillow>=10.0
 numpy
 tqdm
+# For the optional bootstrap scraper (training/fetch_web_images.py)
+requests>=2.31
