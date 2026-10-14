@@ -1,7 +1,22 @@
 import type { VisionAnalysis, VisionCandidate, VisionModelStatus } from "../types";
-import { classifyScrap, getVisionModelStatus } from "../vision/visionEngine";
+import {
+  classifyScrap,
+  getVisionModelStatus,
+  isVisionModelReady,
+  waitForVisionSession,
+} from "../vision/visionEngine";
 import { assessUncertainty } from "../vision/uncertainty";
 import { resolveTradeRule } from "./language";
+
+// How long a scan will wait for an *already in-flight* model load before giving
+// up and using the fast local heuristic. It never starts a fresh download here.
+const DEVICE_MODEL_WAIT_MS = 2_500;
+// Hard cap on the server round trip so a slow/dead network can never make a scan
+// hang. The image is downscaled first, so a healthy server answers well within this.
+const SERVER_TIMEOUT_MS = 6_000;
+// Longest side of the image uploaded to the server. The model only ever sees
+// 224px, so shipping a full-resolution frame wastes bandwidth and time.
+const MAX_UPLOAD_SIDE = 1024;
 
 export type { VisionModelStatus };
 
@@ -225,6 +240,42 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+/**
+ * Downscale the captured photo before uploading it to the server. A phone camera
+ * produces a multi-megabyte frame; sending it as base64 over a mobile network is
+ * the single biggest cause of a slow scan. The model only uses 224px, so this
+ * costs nothing in accuracy and makes the round trip dramatically smaller.
+ */
+async function compactImageBlob(blob: Blob): Promise<Blob> {
+  try {
+    const url = URL.createObjectURL(blob);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      const w = img.naturalWidth || 0;
+      const h = img.naturalHeight || 0;
+      const maxSide = Math.max(w, h);
+      if (maxSide === 0) return blob;
+      const scale = Math.min(1, MAX_UPLOAD_SIDE / maxSide);
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(w * scale);
+      canvas.height = Math.round(h * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return blob;
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const out = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/jpeg", 0.8),
+      );
+      return out ?? blob;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  } catch {
+    return blob;
+  }
+}
+
 const SERVER_SLUG_ALIASES: Record<string, string> = {
   copper: "copper",
   aluminum: "aluminum",
@@ -297,6 +348,12 @@ function buildAnalysis(
 }
 
 async function classifyOnDevice(blob: Blob): Promise<VisionAnalysis> {
+  // Only use the on-device model when it is already loaded, or will be within a
+  // short window. This keeps a scan snappy even if the one-time download is still
+  // running in the background — the model simply becomes available next scan.
+  if (!isVisionModelReady() && !(await waitForVisionSession(DEVICE_MODEL_WAIT_MS))) {
+    throw new Error("On-device model not ready");
+  }
   const result = await classifyScrap(blob);
   const top = result.top;
   const candidates: VisionCandidate[] = result.predictions.slice(0, 3).map((prediction) => ({
@@ -308,12 +365,13 @@ async function classifyOnDevice(blob: Blob): Promise<VisionAnalysis> {
 }
 
 async function classifyOnServer(blob: Blob): Promise<VisionAnalysis> {
-  const imageBase64 = await blobToBase64(blob);
+  const compact = await compactImageBlob(blob);
+  const imageBase64 = await blobToBase64(compact);
   const res = await fetch(`${API_BASE}/api/v1/analyze`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ image_base64: imageBase64 }),
-    signal: AbortSignal.timeout(45_000),
+    signal: AbortSignal.timeout(SERVER_TIMEOUT_MS),
   });
   if (!res.ok) throw new Error(`Analyze failed: ${res.statusText}`);
   const data: {
@@ -345,6 +403,30 @@ async function classifyOnServer(blob: Blob): Promise<VisionAnalysis> {
   );
 }
 
+async function heuristicAnalysis(image: Blob): Promise<VisionAnalysis | null> {
+  try {
+    const heuristic = await classifyHeuristicInline(image);
+    if (!heuristic.top || heuristic.top.confidence <= 0.2) return null;
+    const candidates: VisionCandidate[] = heuristic.preds.slice(0, 3).map((prediction) => ({
+      material_class: prediction.material,
+      material_slug: prediction.slug,
+      confidence: prediction.confidence,
+    }));
+    return buildAnalysis(
+      heuristic.top.material,
+      heuristic.top.slug,
+      heuristic.top.confidence,
+      "heuristic",
+      undefined,
+      undefined,
+      candidates,
+    );
+  } catch (err) {
+    console.warn("heuristic failed", err);
+    return null;
+  }
+}
+
 /**
  * On-device INT8 classifier first (small, fast, fully offline — downloaded once
  * and cached by the service worker), then the server model when online, then the
@@ -354,6 +436,10 @@ async function classifyOnServer(blob: Blob): Promise<VisionAnalysis> {
  * answer when it is confident enough; otherwise the next source is tried and, if
  * none is confident, the best available answer is returned flagged `uncertain`
  * with its top candidates so the UI can ask the user to confirm.
+ *
+ * Latency is bounded on purpose: the on-device model is used only once warm, the
+ * server call is capped by a short timeout, and the (instant) heuristic is
+ * computed in parallel so the user never waits on a slow network for a result.
  */
 export async function analyzeScrapImage(image: Blob): Promise<VisionAnalysis> {
   const attempts: VisionAnalysis[] = [];
@@ -366,10 +452,16 @@ export async function analyzeScrapImage(image: Blob): Promise<VisionAnalysis> {
       attempts.push(edge);
     }
   } catch {
-    // Bundled ONNX model missing, unverified or inference failed; fall through.
+    // Model not downloaded yet, unverified or inference failed; fall through.
   }
 
-  // 2) Server model when online — it may resolve an on-device ambiguity.
+  // Start the cheap on-device heuristic now so it is ready the moment the
+  // network path gives up (or is skipped), instead of only running after a slow
+  // server timeout.
+  const heuristicPromise = heuristicAnalysis(image);
+
+  // 2) Server model when online — it may resolve an on-device ambiguity. Bounded
+  //    by a short timeout (and a downscaled image) so it can't stall the scan.
   if (navigator.onLine) {
     try {
       const server = await classifyOnServer(image);
@@ -378,7 +470,7 @@ export async function analyzeScrapImage(image: Blob): Promise<VisionAnalysis> {
         attempts.push(server);
       }
     } catch {
-      // Server unreachable or model offline; fall through to local heuristic.
+      // Server unreachable, slow or model offline; fall through to the heuristic.
     }
   }
 
@@ -386,28 +478,10 @@ export async function analyzeScrapImage(image: Blob): Promise<VisionAnalysis> {
   //    phones). It is clearly labelled "heuristic" so it is never passed off as a
   //    trained model inference, and its uncalibrated scores are held to a
   //    stricter confidence bar.
-  try {
-    const heuristic = await classifyHeuristicInline(image);
-    if (heuristic.top && heuristic.top.confidence > 0.2) {
-      const candidates: VisionCandidate[] = heuristic.preds.slice(0, 3).map((prediction) => ({
-        material_class: prediction.material,
-        material_slug: prediction.slug,
-        confidence: prediction.confidence,
-      }));
-      const analysis = buildAnalysis(
-        heuristic.top.material,
-        heuristic.top.slug,
-        heuristic.top.confidence,
-        "heuristic",
-        undefined,
-        undefined,
-        candidates,
-      );
-      if (!analysis.uncertain) return analysis;
-      attempts.push(analysis);
-    }
-  } catch (err) {
-    console.warn("heuristic failed", err);
+  const heuristic = await heuristicPromise;
+  if (heuristic) {
+    if (!heuristic.uncertain) return heuristic;
+    attempts.push(heuristic);
   }
 
   // Nothing was confident: return the best available answer, flagged uncertain,
