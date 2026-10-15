@@ -28,7 +28,9 @@ function determineSafetyKey(hazards: string[]): SafetyKey {
 async function playAudio(
   src: string,
   audioRef: React.MutableRefObject<HTMLAudioElement | null>,
-  cancelledRef: React.MutableRefObject<boolean>
+  cancelledRef: React.MutableRefObject<boolean>,
+  pausedRef: React.MutableRefObject<boolean>,
+  onTime: (fraction: number) => void,
 ): Promise<boolean> {
   try {
     const resp = await fetch(src);
@@ -44,7 +46,10 @@ async function playAudio(
       audio.src = blobUrl;
       audio.style.display = "none";
 
+      let interval: ReturnType<typeof setInterval> | undefined;
+
       const cleanup = () => {
+        if (interval) clearInterval(interval);
         URL.revokeObjectURL(blobUrl);
         audio.remove();
         if (audioRef.current === audio) audioRef.current = null;
@@ -52,19 +57,29 @@ async function playAudio(
 
       audio.onended = () => { cleanup(); resolve(true); };
       audio.onerror = (e) => { console.warn("TTS playback error", e); cleanup(); resolve(false); };
+      audio.ontimeupdate = () => {
+        if (audio.duration && Number.isFinite(audio.duration)) {
+          onTime(Math.min(1, audio.currentTime / audio.duration));
+        }
+      };
 
       document.body.appendChild(audio);
       audioRef.current = audio;
 
-      audio.play().catch((err) => {
-        console.warn("TTS play() failed", err);
-        cleanup();
-        resolve(false);
-      });
+      // If pause was pressed while this sentence was still loading, stay paused;
+      // resume() will call play() on this same element.
+      if (pausedRef.current) {
+        // leave paused; resume() starts it
+      } else {
+        audio.play().catch((err) => {
+          console.warn("TTS play() failed", err);
+          cleanup();
+          resolve(false);
+        });
+      }
 
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         if (cancelledRef.current) {
-          clearInterval(interval);
           audio.pause();
           cleanup();
           resolve(false);
@@ -78,9 +93,17 @@ async function playAudio(
 }
 
 export type TtsStatus = "idle" | "playing" | "paused";
+export interface TtsProgress {
+  /** 1-based index of the sentence currently playing. */
+  current: number;
+  total: number;
+  /** Smooth 0..1 across the whole report; null when unknown (browser TTS fallback). */
+  fraction: number | null;
+}
 
 export function useAudioTTS() {
   const [status, setStatus] = useState<TtsStatus>("idle");
+  const [progress, setProgress] = useState<TtsProgress | null>(null);
   const playingRef = useRef(false);
   const cancelledRef = useRef(false);
   const pausedRef = useRef(false);
@@ -135,7 +158,9 @@ export function useAudioTTS() {
       // Try server TTS
       usingFallbackRef.current = false;
       let allOk = true;
-      for (const sentence of sentences) {
+      const total = sentences.length;
+      for (let i = 0; i < total; i++) {
+        const sentence = sentences[i];
         if (cancelledRef.current) { allOk = false; break; }
 
         while (pausedRef.current && !cancelledRef.current) {
@@ -143,10 +168,14 @@ export function useAudioTTS() {
         }
         if (cancelledRef.current) { allOk = false; break; }
 
+        setProgress({ current: i + 1, total, fraction: i / total });
+
         const ok = await playAudio(
           `${API_BASE}/api/v1/tts?text=${encodeURIComponent(sentence.trim())}&lang=${ttsLang}`,
           currentAudioRef,
-          cancelledRef
+          cancelledRef,
+          pausedRef,
+          (within) => setProgress({ current: i + 1, total, fraction: (i + within) / total }),
         );
         if (!ok) { allOk = false; break; }
       }
@@ -155,12 +184,14 @@ export function useAudioTTS() {
         // Fallback: use browser speech synthesis for the full text at once
         if ("speechSynthesis" in window) {
           usingFallbackRef.current = true;
+          setProgress({ current: 1, total: 1, fraction: null });
           const u = new SpeechSynthesisUtterance(speechString);
           u.lang = ttsLang === "ha" ? "ha-NG" : ttsLang === "yo" ? "yo-NG" : ttsLang === "ig" ? "ig-NG" : "en-NG";
           u.rate = 0.85;
           u.onend = () => {
             playingRef.current = false;
             setStatus("idle");
+            setProgress(null);
           };
           u.onpause = () => setStatus("paused");
           u.onresume = () => setStatus("playing");
@@ -170,34 +201,34 @@ export function useAudioTTS() {
         }
       }
 
-      if (!cancelledRef.current) {
-        playingRef.current = false;
-        setStatus("idle");
-      } else {
-        playingRef.current = false;
-        setStatus("idle");
-      }
+      playingRef.current = false;
+      setStatus("idle");
+      setProgress(null);
     },
     []
   );
 
   const pause = useCallback(() => {
+    // Always pause the live audio element if one exists (covers the fetch-window
+    // race where the element was created but not yet in `usingFallback` mode).
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+    }
     if (usingFallbackRef.current && "speechSynthesis" in window) {
       window.speechSynthesis.pause();
-    } else if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
     }
     pausedRef.current = true;
     setStatus("paused");
   }, []);
 
   const resume = useCallback(() => {
-    if (usingFallbackRef.current && "speechSynthesis" in window) {
-      window.speechSynthesis.resume();
-    } else if (currentAudioRef.current) {
+    pausedRef.current = false;
+    if (currentAudioRef.current) {
       currentAudioRef.current.play().catch(() => {});
     }
-    pausedRef.current = false;
+    if (usingFallbackRef.current && "speechSynthesis" in window) {
+      window.speechSynthesis.resume();
+    }
     setStatus("playing");
   }, []);
 
@@ -206,7 +237,8 @@ export function useAudioTTS() {
     if (usingFallbackRef.current && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
       fallbackUtteranceRef.current = null;
-    } else if (currentAudioRef.current) {
+    }
+    if (currentAudioRef.current) {
       currentAudioRef.current.pause();
       currentAudioRef.current.remove();
       currentAudioRef.current = null;
@@ -214,7 +246,8 @@ export function useAudioTTS() {
     playingRef.current = false;
     pausedRef.current = false;
     setStatus("idle");
+    setProgress(null);
   }, []);
 
-  return { speakReport, pause, resume, stop, status };
+  return { speakReport, pause, resume, stop, status, progress };
 }

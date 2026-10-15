@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock3, Coins, History, RefreshCw, Trash2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, Clock3, Coins, History, RefreshCw, Trash2, AlertTriangle, ChevronRight } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { StatCard } from "../components/ui/StatCard";
 import { Card } from "../components/ui/Card";
@@ -16,6 +17,7 @@ import { useSync } from "../hooks/useSync";
 import { useTranslation } from "../hooks/useTranslation";
 import { cn } from "../lib/cn";
 import { useApp } from "../store/appStore";
+import { getRole } from "../services/auth";
 
 const ACCENTS = [
   "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
@@ -33,7 +35,8 @@ function accentFor(label: string): string {
 
 export default function HistoryPage() {
   const { user } = useApp();
-  const role = user?.role;
+  const role = user?.role ?? getRole();
+  const navigate = useNavigate();
   
   // Only sellers can access history
   if (role !== "seller") {
@@ -211,7 +214,16 @@ export default function HistoryPage() {
                   {dayScans.map((scan) => (
                     <div
                       key={scan.id}
-                      className="px-4 py-3 flex items-center justify-between gap-3"
+                      className="group cursor-pointer px-4 py-3 flex items-center justify-between gap-3 transition-colors hover:bg-brand-50/50 dark:hover:bg-brand-950/30"
+                      onClick={() => navigate(`/history/${scan.id}`)}
+                      role="link"
+                      tabIndex={0}
+                      onKeyDown={(e: React.KeyboardEvent) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          navigate(`/history/${scan.id}`);
+                        }
+                      }}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <span
@@ -252,12 +264,16 @@ export default function HistoryPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDelete(scan.id)}
+                            onClick={(e: React.MouseEvent) => {
+                              e.stopPropagation();
+                              handleDelete(scan.id);
+                            }}
                             className="text-red-600 hover:text-red-700 dark:text-red-400"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         )}
+                        <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-all duration-150 group-hover:text-brand-500 group-hover:translate-x-0.5 dark:text-slate-600 dark:group-hover:text-brand-400" />
                       </div>
                     </div>
                   ))}
@@ -268,52 +284,71 @@ export default function HistoryPage() {
         ) : (
           <motion.div variants={pageStagger} className="space-y-3">
             {filtered.map((scan) => (
-              <Card key={scan.id} hover className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <span
-                    className={cn(
-                      "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
-                      accentFor(scan.material_class),
-                    )}
-                  >
-                    <Trash2 className="h-5 w-5" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="font-medium text-slate-900 dark:text-white truncate">
-                      {scan.material_class}
-                    </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {formatDateTime(scan.captured_at)} • {formatConfidence(scan.confidence_score)} •
-                      {formatNairaEstimate(scan.estimated_naira_value)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge
-                    tone={
-                      scan.is_deleted
-                        ? "slate"
-                        : scan.is_synced
-                        ? "green"
-                        : "amber"
-                    }
-                  >
-                    {scan.is_deleted
-                      ? t("deleted")
-                      : scan.is_synced
-                      ? t("synced")
-                      : t("pending")}
-                  </Badge>
-                  {!scan.is_deleted && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(scan.id)}
-                      className="text-red-600 hover:text-red-700 dark:text-red-400"
+              <Card
+                key={scan.id}
+                hover
+                className="group cursor-pointer transition-all duration-150 hover:border-brand-200 hover:shadow-card dark:hover:border-brand-900"
+                onClick={() => navigate(`/history/${scan.id}`)}
+                role="link"
+                tabIndex={0}
+                onKeyDown={(e: React.KeyboardEvent) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    navigate(`/history/${scan.id}`);
+                  }
+                }}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span
+                      className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                        accentFor(scan.material_class),
+                      )}
                     >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  )}
+                      <Trash2 className="h-5 w-5" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-medium text-slate-900 dark:text-white truncate">
+                        {scan.material_class}
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {formatDateTime(scan.captured_at)} • {formatConfidence(scan.confidence_score)} •
+                        {formatNairaEstimate(scan.estimated_naira_value)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge
+                      tone={
+                        scan.is_deleted
+                          ? "slate"
+                          : scan.is_synced
+                          ? "green"
+                          : "amber"
+                      }
+                    >
+                      {scan.is_deleted
+                        ? t("deleted")
+                        : scan.is_synced
+                        ? t("synced")
+                        : t("pending")}
+                    </Badge>
+                    {!scan.is_deleted && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          handleDelete(scan.id);
+                        }}
+                        className="text-red-600 hover:text-red-700 dark:text-red-400"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-all duration-150 group-hover:text-brand-500 group-hover:translate-x-0.5 dark:text-slate-600 dark:group-hover:text-brand-400" />
+                  </div>
                 </div>
               </Card>
             ))}

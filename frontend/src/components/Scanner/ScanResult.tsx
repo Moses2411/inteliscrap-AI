@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { HelpCircle } from "lucide-react";
+import { HelpCircle, ShieldCheck } from "lucide-react";
 import type { VisionAnalysis, VisionCandidate, HazardLevel } from "../../types";
 import { formatNairaEstimate, formatConfidence } from "../../utils/formatters";
 import { useTranslation, getLocale } from "../../hooks/useTranslation";
@@ -7,7 +7,8 @@ import { useApp } from "../../store/appStore";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import HazardBadge from "../ui/HazardBadge";
-import type { TtsStatus } from "../../hooks/useAudioTTS";
+import { AudioReportPlayer } from "./AudioReportPlayer";
+import type { TtsStatus, TtsProgress } from "../../hooks/useAudioTTS";
 import {
   detectFamily,
   resolveDisambiguation,
@@ -24,8 +25,10 @@ interface Props {
   onDisambiguate?: (slug: string) => void;
   onChooseManually?: () => void;
   ttsStatus?: TtsStatus;
+  ttsProgress?: TtsProgress | null;
   onPause?: () => void;
   onResume?: () => void;
+  onStop?: () => void;
 }
 
 const HAZARD_LEVEL_STYLE: Record<HazardLevel, { accent: string; label: string }> = {
@@ -60,7 +63,21 @@ function determineSafetyKey(hazards: string[]): SafetyKey {
   return "default";
 }
 
-export default function ScanResult({ result, estimated_value, hazard_level, onReadAloud, onScanAgain, onConfirmMaterial, onDisambiguate, onChooseManually, ttsStatus = "idle", onPause, onResume }: Props) {
+export default function ScanResult({
+  result,
+  estimated_value,
+  hazard_level,
+  onReadAloud,
+  onScanAgain,
+  onConfirmMaterial,
+  onDisambiguate,
+  onChooseManually,
+  ttsStatus = "idle",
+  ttsProgress = null,
+  onPause,
+  onResume,
+  onStop,
+}: Props) {
   const { t } = useTranslation();
   const { selected_language } = useApp();
   const levelStyle = hazard_level ? HAZARD_LEVEL_STYLE[hazard_level] : null;
@@ -104,47 +121,15 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
     if (next.resolvedSlug) onDisambiguate?.(next.resolvedSlug);
   }
 
-  function renderTtsButton() {
-    if (!onReadAloud) return null;
-
-    if (ttsStatus === "playing") {
-      return (
-        <Button variant="secondary" className="flex-1" onClick={onPause}>
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
-          </svg>
-          {t("pause")}
-        </Button>
-      );
-    }
-
-    if (ttsStatus === "paused") {
-      return (
-        <Button variant="secondary" className="flex-1" onClick={onResume}>
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-          </svg>
-          {t("continue")}
-        </Button>
-      );
-    }
-
-    return (
-      <Button variant="secondary" className="flex-1" onClick={onReadAloud}>
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-        </svg>
-        {t("read_aloud")}
-      </Button>
-    );
-  }
-
   return (
     <div className="space-y-4">
-      <Card className={`space-y-3 ${levelStyle ? `border-l-4 ${levelStyle.accent}` : ""}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">{t("material")}</h2>
+      {/* Material result hero */}
+      <Card className={`space-y-4 ${levelStyle ? `border-l-4 ${levelStyle.accent}` : ""}`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              {t("material")}
+            </h2>
             {sourceTag && (
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
                 {t(sourceTag)}
@@ -153,20 +138,46 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
           </div>
           <HazardBadge level={badgeLevel} />
         </div>
-        <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{result.material_class}</p>
 
-        <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3 dark:border-slate-800">
-          <div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">{t("estimated_value")}</span>
-            <p className="text-xl font-bold text-brand-600 dark:text-brand-400">{formatNairaEstimate(estimated_value)}</p>
+        <p className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+          {result.material_class}
+        </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900/60">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              {t("estimated_value")}
+            </span>
+            <p className="mt-0.5 text-2xl font-bold text-brand-600 dark:text-brand-400">
+              {formatNairaEstimate(estimated_value)}
+            </p>
           </div>
-          <div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">{t("confidence")}</span>
-            <p className="text-xl font-semibold text-slate-900 dark:text-slate-100">{formatConfidence(result.confidence)}</p>
+          <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-900/60">
+            <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+              {t("confidence")}
+            </span>
+            <p className="mt-0.5 text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {formatConfidence(result.confidence)}
+            </p>
           </div>
         </div>
-        <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{t("price_estimate_note")}</p>
+
+        <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+          {t("price_estimate_note")}
+        </p>
       </Card>
+
+      {/* Audio report — its own section so playback is always visible and controllable */}
+      {onReadAloud && (
+        <AudioReportPlayer
+          status={ttsStatus}
+          progress={ttsProgress}
+          onStart={onReadAloud}
+          onPause={onPause ?? (() => {})}
+          onResume={onResume ?? (() => {})}
+          onStop={onStop ?? (() => {})}
+        />
+      )}
 
       {showConfirm && (
         <Card className="space-y-3 border-l-4 border-amber-400 dark:border-amber-600">
@@ -177,22 +188,23 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
               <p className="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t("uncertain_hint")}</p>
             </div>
           </div>
+
           {family && onDisambiguate && question && (
-            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-800">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+            <div className="rounded-2xl bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-800">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 {t("disambiguate_title")}
               </p>
               <p className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{t(question.titleKey)}</p>
               {question.hintKey && (
                 <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{t(question.hintKey)}</p>
               )}
-              <div className="mt-2 grid grid-cols-2 gap-2" role="group" aria-label={t(question.titleKey)}>
+              <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-2" role="group" aria-label={t(question.titleKey)}>
                 {question.options.map((option) => (
                   <button
                     key={option.id}
                     type="button"
                     onClick={() => handleAnswer(question.id, option.id)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-all hover:border-brand-400 hover:shadow-sm active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                    className="tap-target rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 transition-all hover:border-brand-400 hover:shadow-sm active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
                   >
                     {t(option.labelKey)}
                   </button>
@@ -202,18 +214,37 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
           )}
 
           <div className="grid grid-cols-1 gap-2" role="group" aria-label={t("uncertain_title")}>
-            {confirmCandidates.map((candidate) => (
-              <button
-                key={candidate.material_slug}
-                type="button"
-                onClick={() => onConfirmMaterial?.(candidate)}
-                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition-all hover:border-brand-400 hover:shadow-sm active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900"
-              >
-                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{candidate.material_class}</span>
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{formatConfidence(candidate.confidence)}</span>
-              </button>
-            ))}
+            {confirmCandidates.map((candidate) => {
+              const pct = Math.round(Math.max(0, Math.min(1, candidate.confidence)) * 100);
+              return (
+                <button
+                  key={candidate.material_slug}
+                  type="button"
+                  onClick={() => onConfirmMaterial?.(candidate)}
+                  className="tap-target w-full rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-left transition-all hover:border-brand-400 hover:shadow-sm active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <span className="flex items-center justify-between gap-3">
+                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {candidate.material_class}
+                    </span>
+                    <span className="text-xs font-semibold tabular-nums text-brand-600 dark:text-brand-400">
+                      {formatConfidence(candidate.confidence)}
+                    </span>
+                  </span>
+                  <span
+                    className="mt-2 block h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                    aria-hidden="true"
+                  >
+                    <span
+                      className="block h-full rounded-full bg-brand-500 transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </span>
+                </button>
+              );
+            })}
           </div>
+
           {onChooseManually && (
             <Button variant="secondary" fullWidth onClick={onChooseManually}>
               {t("choose_manually")}
@@ -223,15 +254,16 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
       )}
 
       {(result.source === "heuristic" || result.source === "manual") && (
-        <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900">
-          {t("estimate_disclaimer")}
+        <div className="flex items-start gap-2 rounded-2xl bg-amber-50 px-3.5 py-2.5 text-xs leading-relaxed text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900">
+          <HelpCircle className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          <span>{t("estimate_disclaimer")}</span>
         </div>
       )}
 
       {result.toxicity_hazards && result.toxicity_hazards.length > 0 && (
         <Card className="space-y-2 border-l-4 border-red-400 dark:border-red-600">
           <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">{t("hazards_detected")}</h3>
-          <ul className="space-y-1">
+          <ul className="space-y-1.5">
             {result.toxicity_hazards.map((h, i) => {
               const hazardKey = `hazards.${h}` as const;
               const translatedHazard = t(hazardKey);
@@ -247,19 +279,17 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
       )}
 
       {translatedSafety && (
-        <Card className="bg-brand-50 ring-brand-200 dark:bg-brand-950/50 dark:ring-brand-900">
-          <p className="text-sm text-brand-800 dark:text-brand-300">{translatedSafety}</p>
+        <Card className="flex items-start gap-2.5 bg-brand-50 ring-brand-200 dark:bg-brand-950/50 dark:ring-brand-900">
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" aria-hidden="true" />
+          <p className="text-sm leading-relaxed text-brand-800 dark:text-brand-300">{translatedSafety}</p>
         </Card>
       )}
 
-      <div className="flex gap-3">
-        {renderTtsButton()}
-        {onScanAgain && (
-          <Button className="flex-1" onClick={onScanAgain}>
-            {t("scan_again")}
-          </Button>
-        )}
-      </div>
+      {onScanAgain && (
+        <Button className="w-full" size="lg" onClick={onScanAgain}>
+          {t("scan_again")}
+        </Button>
+      )}
     </div>
   );
 }

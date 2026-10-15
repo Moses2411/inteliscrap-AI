@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Camera, Recycle, Zap, WifiOff, ShieldCheck, AlertTriangle } from "lucide-react";
 import { LiveScanner } from "../components/Scanner/LiveScanner";
@@ -47,7 +47,15 @@ function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
   const { t } = useTranslation();
   const { selected_language, cached_prices, setCurrentScan } = useApp();
   const { analyze, loadingProgress } = useVision();
-  const { speakReport, pause, resume, status: ttsStatus } = useAudioTTS();
+  const { speakReport, pause, resume, stop, status: ttsStatus, progress: ttsProgress } = useAudioTTS();
+
+  // Stop any ongoing read-aloud when the workspace unmounts
+  useEffect(() => stop, [stop]);
+
+  const resetResult = useCallback(() => {
+    stop();
+    setResult(null);
+  }, [stop]);
 
   const finishWith = useCallback(
     async (analysis: VisionAnalysis, options?: { persist?: boolean }) => {
@@ -209,7 +217,7 @@ function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="space-y-4"
+        className="mx-auto w-full max-w-xl space-y-4"
       >
         <h1 className="sr-only">{t("material")}</h1>
         <ScanResult
@@ -219,20 +227,20 @@ function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
           onReadAloud={() =>
             speakReport(result.material_class, estimated_value, result.toxicity_hazards, selected_language)
           }
-          onScanAgain={() => setResult(null)}
+          onScanAgain={resetResult}
           onConfirmMaterial={handleConfirmMaterial}
           onDisambiguate={handleResolveMaterial}
           onChooseManually={() => {
-            setResult(null);
+            resetResult();
             setManualMode(true);
           }}
           ttsStatus={ttsStatus}
+          ttsProgress={ttsProgress}
           onPause={pause}
           onResume={resume}
+          onStop={stop}
         />
-        <div className="mx-auto max-w-md">
-          <PostPickupForm analysis={result} onReset={() => setResult(null)} />
-        </div>
+        <PostPickupForm analysis={result} onReset={resetResult} />
       </motion.div>
     );
   }
