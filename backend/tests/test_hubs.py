@@ -152,6 +152,45 @@ async def test_list_hub_requests(client, test_session):
     assert resp.json()[0]["requested_kg"] == 30.0
 
 
+@pytest.mark.asyncio
+async def test_seller_and_collector_see_hub_requests(client, test_session):
+    _, _, _, material, hub = await _seed_hub(test_session)
+    hub_token = security.create_access_token("hub-owner", UserRole.recycling_hub.value)
+    await client.post(
+        "/api/v1/hubs/requests",
+        json={
+            "material_category_id": material.id,
+            "requested_kg": 25.0,
+            "note": "Copper wanted",
+            "requested_on": "2026-09-08T00:00:00",
+        },
+        headers={"Authorization": f"Bearer {hub_token}"},
+    )
+
+    for owner in ("hub-seller", "hub-collector"):
+        role = UserRole.seller if owner == "hub-seller" else UserRole.collector
+        token = security.create_access_token(owner, role.value)
+        resp = await client.get(
+            "/api/v1/hubs/requests", headers={"Authorization": f"Bearer {token}"}
+        )
+        assert resp.status_code == 200, owner
+        body = resp.json()
+        assert len(body) == 1
+        assert body[0]["hub_name"] == "GreenCycle Hub"
+        assert body[0]["material_name"] == "Copper"
+
+    # Roles that are neither hub owners nor buyers are refused.
+    test_session.add(
+        User(id="hub-partner", phone_number="+2348060000099", role=UserRole.partner)
+    )
+    await test_session.flush()
+    partner_token = security.create_access_token("hub-partner", UserRole.partner.value)
+    denied = await client.get(
+        "/api/v1/hubs/requests", headers={"Authorization": f"Bearer {partner_token}"}
+    )
+    assert denied.status_code == 403
+
+
 # ── Hub Subscription ─────────────────────────────────────────────────
 
 

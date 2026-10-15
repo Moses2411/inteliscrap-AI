@@ -104,6 +104,7 @@ export function useMarketData(): HookResult<MarketData> {
     materials: DEMO_MATERIALS as MaterialCategoryInfo[],
     listings: DEMO_LISTINGS as MarketplaceListing[],
     hubs: [DEMO_HUB],
+    hubRequests: DEMO_HUB_REQUESTS,
   }));
 }
 

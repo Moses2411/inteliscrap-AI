@@ -12,12 +12,53 @@ browser expects.
 > `source` badge on every scan (`onnx` · `server` · `heuristic` · `manual`) tells
 > the user exactly which path produced it.
 
+## Current bundled model
+
+The bundled classifier is trained on **93 real field photos** the team
+photographed (split: 68 train / 25 held-out val). Its numbers are measured on
+that held-out split and written into `model.manifest.json` — never asserted:
+
+| metric | value |
+|---|---|
+| top-1 | 0.720 |
+| top-3 | 0.880 |
+| macro-F1 | 0.690 |
+| weighted-F1 | 0.715 |
+| size | 9.5 MB (fp32) |
+
+Per-class F1 on the held-out split:
+
+| class | F1 | notes |
+|---|---|---|
+| e-waste | 0.83 | |
+| copper | 0.80 | |
+| pet-plastic | 0.71 | |
+| lead-battery | 0.60 | |
+| aluminum | 0.50 | only 6 photos |
+| brass · steel · glass | — | **no training photos yet** |
+
+**Honest caveats.**
+
+- Three of the eight classes — **brass, steel and glass — have no photos at
+  all**. Those outputs are untrained and must be ignored; only copper,
+  aluminum, pet-plastic, lead-battery and e-waste are real.
+- Macro-F1 (0.690) is just below the ≥ 0.70 bar in `training/README.md` and the
+  dataset is small (tens of photos per class), so treat every result as a hint
+  to confirm with the physical test — not a verdict.
+- The model is exported **fp32**, not int8. With so few images the static int8
+  calibration is unstable (macro-F1 swung 0.34–0.71 across random calibration
+  seeds), so the reproducible fp32 export is shipped. Once each class has a few
+  hundred photos, `training/train.py` can produce a trustworthy int8 build.
+
+Collect more photos (aim 300–500 per class, including brass, steel and glass),
+then retrain with `training/train.py`.
+
 ## Files
 
 | File | Required | Purpose |
 |---|---|---|
 | `classes.json` | ✅ always | Ordered class list. **Index order is the model's output order.** |
-| `mobilenetv4_scrap_int8.onnx` | optional (recommended) | The trained, quantized classifier. |
+| `mobilenetv4_scrap.onnx` | optional (recommended) | The trained classifier (currently fp32; int8 once the dataset supports it). |
 | `model.manifest.json` | recommended | Provenance + verification metadata for the model above. |
 
 ## The browser contract
@@ -52,7 +93,7 @@ pip install -r training/requirements.txt
 python training/dataset_check.py --data training/data
 
 # 3. Train + export int8 ONNX with a manifest containing measured accuracy
-python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap_int8.onnx
+python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap.onnx
 
 # 4. Evaluate on a held-out split (per-class F1 + confusion matrix)
 python training/evaluate.py --data training/data/test

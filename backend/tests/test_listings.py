@@ -13,6 +13,21 @@ async def _seller_headers(test_session, phone="+2348090000001"):
     return {"Authorization": f"Bearer {token}"}, user
 
 
+async def _collector_headers(test_session, phone="+2348090000010", *, lat=None, lng=None):
+    user = User(
+        id=f"auth-{phone}",
+        phone_number=phone,
+        role=UserRole.collector,
+        latitude=lat,
+        longitude=lng,
+        is_active=True,
+    )
+    test_session.add(user)
+    await test_session.flush()
+    token = security.create_access_token(user.id, UserRole.collector.value)
+    return {"Authorization": f"Bearer {token}"}, user
+
+
 @pytest.mark.asyncio
 async def test_create_listing_dispatches(client, test_session):
     headers, seller = await _seller_headers(test_session)
@@ -75,7 +90,7 @@ async def test_create_listing_unknown_material(client, test_session):
 
 @pytest.mark.asyncio
 async def test_list_and_get_listing(client, test_session):
-    headers, _ = await _seller_headers(test_session, phone="+2348090000004")
+    headers, seller = await _seller_headers(test_session, phone="+2348090000004")
     material = MaterialCategory(slug="aluminum", name="Aluminum", price_per_kg_naira=700)
     test_session.add(material)
     await test_session.flush()
@@ -91,10 +106,76 @@ async def test_list_and_get_listing(client, test_session):
     )
     listing_id = resp.json()["id"]
 
-    listing_resp = await client.get("/api/v1/listings")
+    # The market board is collector-only.
+    collector_headers, _ = await _collector_headers(test_session)
+    listing_resp = await client.get("/api/v1/listings", headers=collector_headers)
     assert listing_resp.status_code == 200
     assert any(item["id"] == listing_id for item in listing_resp.json())
 
-    one = await client.get(f"/api/v1/listings/{listing_id}")
+    one = await client.get(f"/api/v1/listings/{listing_id}", headers=collector_headers)
     assert one.status_code == 200
     assert one.json()["id"] == listing_id
+
+    # The seller sees their own listing through /mine, not the market board.
+    mine = await client.get("/api/v1/listings/mine", headers=headers)
+    assert mine.status_code == 200
+    assert [item["id"] for item in mine.json()] == [listing_id]
+
+
+@pytest.mark.asyncio
+async def test_market_board_is_collector_only(client, test_session):
+    seller_headers, _ = await _seller_headers(test_session, phone="+2348090000020")
+
+    anon = await client.get("/api/v1/listings")
+    assert anon.status_code == 401
+
+    forbidden = await client.get("/api/v1/listings", headers=seller_headers)
+    assert forbidden.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_accept_listing_creates_pickup(client, test_session):
+    seller_headers, _ = await _seller_headers(test_session, phone="+2348090000021")
+    material = MaterialCategory(slug="copper", name="Copper", price_per_kg_naira=3200)
+    test_session.add(material)
+    await test_session.flush()
+
+    created = await client.post(
+        "/api/v1/listings",
+        json={
+            "material_category_id": material.id,
+            "estimated_weight_kg": 4,
+            "latitude": 11.0,
+            "longitude": 7.0,
+            "auto_dispatch": False,
+        },
+        headers=seller_headers,
+    )
+    listing_id = created.json()["id"]
+
+    collector_headers, collector = await _collector_headers(
+        test_session, phone="+2348090000022", lat=11.01, lng=7.01
+    )
+    accepted = await client.post(
+        f"/api/v1/listings/{listing_id}/accept", headers=collector_headers
+    )
+    assert accepted.status_code == 200
+    assert accepted.json()["status"] == "scheduled"
+
+    pickup = (
+        await test_session.execute(select(Pickup).where(Pickup.listing_id == listing_id))
+    ).scalars().one()
+    assert pickup.collector_id == collector.id
+    assert pickup.status.value == "accepted"
+    assert pickup.distance_m is not None
+
+    jobs = await client.get("/api/v1/pickups/active", headers=collector_headers)
+    assert jobs.status_code == 200
+    assert any(job["listing_id"] == listing_id for job in jobs.json())
+
+    # A second collector cannot claim the same listing.
+    other_headers, _ = await _collector_headers(test_session, phone="+2348090000023")
+    conflict = await client.post(
+        f"/api/v1/listings/{listing_id}/accept", headers=other_headers
+    )
+    assert conflict.status_code == 409

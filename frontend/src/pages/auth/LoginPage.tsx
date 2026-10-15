@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   Check,
@@ -37,6 +37,7 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debugOtp, setDebugOtp] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
 
   // Users type spaces/dashes (the placeholder itself has spaces) — strip them
   // for validation and before sending to the API so lookups match consistently.
@@ -51,15 +52,28 @@ export default function LoginPage() {
     setError(null);
     setDebugOtp(null);
     try {
-      const { otp: code, debug } = await requestOtp(normalizedPhone, role, addressRequired ? address : undefined);
+      const { otp: code, debug, retryAfter } = await requestOtp(
+        normalizedPhone,
+        role,
+        addressRequired ? address : undefined,
+      );
       if (debug && code) setDebugOtp(code);
       setStep("otp");
-    } catch {
-      setError("Could not send code. Check the number and try again.");
+      setCooldown(retryAfter > 0 ? retryAfter : 30);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't send the code. Please try again.");
     } finally {
       setBusy(false);
     }
   }, [normalizedPhone, role, address, addressRequired]);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = window.setTimeout(() => {
+      setCooldown((c) => Math.max(0, c - 1));
+    }, 1000);
+    return () => window.clearTimeout(t);
+  }, [cooldown]);
 
   const confirmOtp = useCallback(async () => {
     setBusy(true);
@@ -67,8 +81,8 @@ export default function LoginPage() {
     try {
       await verifyOtp(normalizedPhone, otp.trim());
       navigate(from, { replace: true });
-    } catch {
-      setError("That code didn't match. Try again.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "That code didn't match or has expired. Try again.");
     } finally {
       setBusy(false);
     }
@@ -263,9 +277,21 @@ export default function LoginPage() {
                   )}
                 </div>
 
-                <Button fullWidth size="lg" type="submit" className="rounded-full" loading={busy} disabled={!validPhone || (addressRequired && !validAddress)}>
-                  Send verification code
-                </Button>
+                  <div>
+                    <label className="label" htmlFor="otp">Verification code</label>
+                    <input
+                      id="otp"
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="123456"
+                      className="input rounded-full border-transparent bg-slate-100 px-5 py-3 text-center text-2xl tracking-widest font-bold dark:border-transparent dark:bg-slate-800"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\\D/g, ""))}
+                      autoComplete="one-time-code"
+                      autoFocus
+                    />
+                  </div>
 
                 <p className="text-center text-xs text-slate-400 dark:text-slate-500">
                   New here? Your account is created automatically when you verify — no
@@ -301,6 +327,22 @@ export default function LoginPage() {
                 {/* Reserved slot for error — keeps button position static (CLS) */}
                 <div className="min-h-[3rem]" aria-live="polite">
                   {error && <ErrorNote message={error} />}
+
+                  <Button fullWidth size="lg" className="rounded-full" onClick={confirmOtp} loading={busy} disabled={otp.length !== 6}>
+                    Verify & continue
+                  </Button>
+
+                  <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                    Didn't receive the code?{" "}
+                    <button
+                      type="button"
+                      onClick={sendCode}
+                      disabled={busy || cooldown > 0}
+                      className="font-semibold text-brand-600 hover:underline disabled:cursor-not-allowed disabled:opacity-50 dark:text-brand-400"
+                    >
+                      {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
+                    </button>
+                  </p>
                 </div>
                 <Button fullWidth size="lg" type="submit" className="rounded-full" loading={busy} disabled={otp.length !== 6}>
                   Verify &amp; continue

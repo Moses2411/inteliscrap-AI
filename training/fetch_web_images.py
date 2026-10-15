@@ -73,15 +73,30 @@ def parse_murls(text: str) -> list[str]:
     return [u.replace("\\/", "/") for u in found if u.startswith("http")]
 
 
-def bing_search_urls(session: requests.Session, query: str, first: int) -> list[str]:
+def bing_search_urls(
+    session: requests.Session, query: str, first: int, attempts: int = 3
+) -> list[str]:
+    """Fetch one page of Bing image results, retrying transient failures.
+
+    Bing (and flaky mobile networks) routinely reset or time out; a single
+    blip must not blow away an entire class, so back off and retry.
+    """
     url = (
         "https://www.bing.com/images/async?q="
         + requests.utils.quote(query)
         + f"&first={first}&count=35&mmasync=1"
     )
-    resp = session.get(url, timeout=20)
-    resp.raise_for_status()
-    return parse_murls(resp.text)
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            resp = session.get(url, timeout=20)
+            resp.raise_for_status()
+            return parse_murls(resp.text)
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+            if attempt < attempts - 1:
+                time.sleep(2 * (attempt + 1))
+    raise last_error if last_error else RuntimeError("search failed")
 
 
 def to_jpeg(raw: bytes) -> bytes | None:

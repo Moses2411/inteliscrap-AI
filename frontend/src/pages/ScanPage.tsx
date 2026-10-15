@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Camera, Recycle, Zap, WifiOff, ShieldCheck, AlertTriangle } from "lucide-react";
+import { Camera, Download, Recycle, Zap, WifiOff, ShieldCheck, AlertTriangle } from "lucide-react";
 import { LiveScanner } from "../components/Scanner/LiveScanner";
 import ScanResult from "../components/Scanner/ScanResult";
 import ManualMaterialSelect from "../components/Scanner/ManualMaterialSelect";
@@ -8,6 +8,7 @@ import PostPickupForm from "../components/Pickup/PostPickupForm";
 import LoadingSpinner from "../components/ui/LoadingSpinner";
 import { PageMotion, pageItem } from "../components/ui/PageMotion";
 import { useVision } from "../hooks/useVision";
+import { useEdgeModel } from "../hooks/useEdgeModel";
 import { useAudioTTS } from "../hooks/useAudioTTS";
 import { useTranslation } from "../hooks/useTranslation";
 import { useApp } from "../store/appStore";
@@ -15,7 +16,40 @@ import { getRole } from "../services/auth";
 import { saveScanLocally } from "../services/db";
 import { getCategoryBySlug } from "../services/materials";
 import { resolveTradeRule } from "../services/language";
-import type { VisionAnalysis, VisionCandidate } from "../types";
+import type { VisionAnalysis, VisionCandidate, VisionModelStatus } from "../types";
+
+/**
+ * Tells the user whether on-device detection is ready. The model downloads once
+ * when there is connectivity and is then cached, so this makes that one-time
+ * step explicit instead of leaving an unexplained delay on the first scan.
+ */
+function ModelReadinessChip({ status }: { status: VisionModelStatus | null }) {
+  if (status?.verified) {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+        <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+        AI model ready — scans work offline
+      </span>
+    );
+  }
+  if (status?.reason === "load_error") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold text-amber-700 dark:text-amber-300">
+        <Download className="h-3.5 w-3.5 animate-pulse" aria-hidden="true" />
+        Downloading AI model — one time, needs data
+      </span>
+    );
+  }
+  if (status?.reason === "model_missing") {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-400/30 bg-slate-500/10 px-3 py-1 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+        <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />
+        Basic mode — no AI model yet
+      </span>
+    );
+  }
+  return null;
+}
 
 export default function ScanPage() {
   const role = getRole();
@@ -56,6 +90,7 @@ function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
     stop();
     setResult(null);
   }, [stop]);
+  const edgeModel = useEdgeModel();
 
   const finishWith = useCallback(
     async (analysis: VisionAnalysis, options?: { persist?: boolean }) => {
@@ -259,6 +294,7 @@ function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
           <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">{t("snap_scrap")}</h1>
           <p className="mt-1 text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t("snap_scrap_desc")}</p>
         </div>
+        <ModelReadinessChip status={edgeModel} />
       </motion.div>
 
       <motion.div variants={pageItem}>

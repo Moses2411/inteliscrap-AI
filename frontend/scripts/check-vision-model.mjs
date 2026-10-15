@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 // The app still builds and degrades to the server/heuristic paths, but on-device
 // (offline) inference is disabled until this file exists.
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const modelPath = resolve(root, "public/models/mobilenetv4_scrap_int8.onnx");
+const modelPath = resolve(root, "public/models/mobilenetv4_scrap.onnx");
 const labelsPath = resolve(root, "public/models/classes.json");
 const manifestPath = resolve(root, "public/models/model.manifest.json");
 
@@ -31,7 +31,7 @@ if (!existsSync(modelPath)) {
     "\n[check-vision-model] WARNING: on-device model is missing:\n" +
       `  ${modelPath}\n` +
       "  Offline classification is disabled until you train/export it:\n" +
-      "    python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap_int8.onnx\n" +
+      "    python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap.onnx\n" +
       "    python training/verify_model.py --image <test.jpg>  # REQUIRED: verifies class order + shapes\n" +
       "  See frontend/public/models/README.md for the full contract.\n",
   );

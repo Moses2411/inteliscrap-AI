@@ -15,7 +15,7 @@ measurably beats the manual picker.**
 | Step | Command | What it does |
 |---|---|---|
 | 1. Check data | `python training/dataset_check.py --data training/data` | Validates layout against `classes.json`, counts images, finds leakage/corrupt files. Refuses to proceed when unsafe. |
-| 2. Train | `python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap_int8.onnx` | Fine-tunes MobileNetV4, measures top-1/top-3/F1, exports int8 ONNX, verifies it, writes `model.manifest.json`. |
+| 2. Train | `python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap.onnx` | Fine-tunes MobileNetV4, measures top-1/top-3/F1, exports int8 ONNX, verifies it, writes `model.manifest.json`. |
 | 3. Evaluate | `python training/evaluate.py --data training/data/test` | Reproducible per-class metrics + confusion matrix on a held-out split. |
 | 4. Verify | `python training/verify_model.py --image path/to/photo.jpg` | Confirms input/output shape and class order match the browser contract. |
 
@@ -34,6 +34,10 @@ training/data/
 ├── val/<slug>/*.jpg     # required — used to pick the best epoch
 └── test/<slug>/*.jpg    # optional — kept untouched for the final report
 ```
+
+Accepted image extensions are `.jpg`, `.jpeg`, `.jfif`, `.png` and `.webp`
+(anything else is ignored). `.jfif` is common when images are saved from a phone
+browser, so it is treated as a first-class JPEG.
 
 `train.py` reads the class order from `classes.json`, so indices always line up
 with what the browser expects. A missing or extra folder is a hard error.
@@ -56,6 +60,7 @@ image search so you can exercise the whole pipeline end to end:
 
 ```bash
 python training/fetch_web_images.py --per-class 160
+python training/dedupe_splits.py --data training/data
 python training/dataset_check.py --data training/data --check-images
 ```
 
@@ -65,6 +70,11 @@ copyrighted and noisy** — expect wrong subjects, collages and watermarks, and
 expect the model to score lower than it will on real field photos. Treat them as
 temporary filler, replace them with your own pictures, then retrain. Re-running a
 class is safe: it tops up to `--per-class` without re-downloading what exists.
+
+Because each resumed run starts with a fresh de-dup set, the same image can land
+in `train/` on one run and `val/` on the next (leakage), or under two classes.
+`dedupe_splits.py` keeps one copy per image — preferring `train > val > test` —
+and deletes the rest, so always run it before checking the dataset.
 
 ## The 8 classes
 
@@ -120,12 +130,31 @@ data, because the app leans on the physical test, not the photo, for those.
 
 `train.py` prints an explicit warning when `macro-F1 < 0.60`.
 
+### Current bundled model (a deliberate exception)
+
+The repo currently ships a **bootstrap** model (macro-F1 **0.641**, no class
+missed, top-3 0.854, 2.5 MB) trained on the web-scraped images. It is *below* the
+0.70 bar above and is bundled only to get instant, fully-offline scanning working
+end to end. It is not the finished article: replace it with field photos, then
+retrain and re-check against the bar. See `frontend/public/models/README.md` for
+the measured numbers.
+
+`--export-only` re-runs export → quantize → verify → evaluate → manifest from an
+existing `training/data/models/best.pth` without retraining, which is handy when
+only the quantization/export step changed.
+
+> **Quantization note.** Static int8 export **must** use `per_channel=True`. With
+> the default per-tensor quantization, MobileNetV4 collapses from ~0.70 to ~0.19
+> macro-F1. Calibration also samples the **train** split (never val/test, which
+> report accuracy). `train.py` already does both.
+
 ## Files
 
 | File | Purpose |
 |---|---|
 | `dataset_check.py` | Read-only data validator / inventory (no ML deps). |
 | `fetch_web_images.py` | Optional bootstrap: pull a starter set from Bing (temporary, noisy). |
+| `dedupe_splits.py` | Remove cross-split / cross-class duplicate images left by resumed scraping. |
 | `train.py` | Train → quantize (static int8) → export → verify → manifest. |
 | `evaluate.py` | top-1 / top-3 / per-class F1 + confusion matrix. |
 | `verify_model.py` | Contract check on an exported `.onnx`. |

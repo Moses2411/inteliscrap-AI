@@ -33,7 +33,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CLASSES_JSON = ROOT / "frontend" / "public" / "models" / "classes.json"
 
-IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp")
+IMAGE_EXTS = (".jpg", ".jpeg", ".jfif", ".png", ".webp")
 SPLITS = ("train", "val", "test")
 
 # Soft guidance for a model that behaves well on a phone camera. Below

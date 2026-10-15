@@ -9,7 +9,7 @@ import { fileURLToPath } from "node:url";
 // There is NO default published model. Produce one of:
 //   1. Train locally (the normal path):
 //        python training/train.py --data training/data \
-//          --out frontend/public/models/mobilenetv4_scrap_int8.onnx
+//          --out frontend/public/models/mobilenetv4_scrap.onnx
 //   2. Download one you published yourself (set MOBILENETV4_URL; gated repos
 //      also need HF_TOKEN):
 //        MOBILENETV4_URL="https://.../model_int8.onnx" npm run fetch-models
@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, "..", "public");
 
-const MODEL_NAME = "mobilenetv4_scrap_int8.onnx";
+const MODEL_NAME = "mobilenetv4_scrap.onnx";
 const url = process.env.MOBILENETV4_URL;
 
 const MODELS = url ? [{ name: MODEL_NAME, url }] : [];
@@ -59,7 +59,7 @@ async function main() {
       "No MOBILENETV4_URL set — nothing to download.\n" +
         "Train the model locally instead:\n" +
         "  python training/train.py --data training/data " +
-        "--out frontend/public/models/mobilenetv4_scrap_int8.onnx\n" +
+        "--out frontend/public/models/mobilenetv4_scrap.onnx\n" +
         "Or set MOBILENETV4_URL to a model you published.",
     );
     return;

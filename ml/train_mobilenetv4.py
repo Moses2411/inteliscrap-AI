@@ -11,7 +11,7 @@ accuracy, and writes the model manifest. Run that instead:
     pip install -r training/requirements.txt
     python training/dataset_check.py --data training/data
     python training/train.py --data training/data \
-        --out frontend/public/models/mobilenetv4_scrap_int8.onnx
+        --out frontend/public/models/mobilenetv4_scrap.onnx
     python training/evaluate.py --data training/data/test
 """
 

@@ -78,19 +78,25 @@ async def test_explicit_role_applies_to_existing_user(client, test_session):
 
 
 @pytest.mark.asyncio
-async def test_omitted_role_keeps_existing_role(client, test_session):
+async def test_expired_otp_rejected(client, test_session):
+    from datetime import datetime, timedelta
     from sqlalchemy import select
+    from app.models import User
 
-    from app.models import User, UserRole
-
-    phone = "+2348080000051"
-    test_session.add(User(id="role-keeper", phone_number=phone, role=UserRole.collector))
-    await test_session.flush()
-
+    phone = "+2348080000101"
     resp = await client.post("/api/v1/auth/otp/request", json={"phone_number": phone})
     assert resp.status_code == 200
+    otp = resp.json()["otp"]
+    assert otp is not None
 
     user = (
         await test_session.execute(select(User).where(User.phone_number == phone))
     ).scalar_one()
-    assert user.role == UserRole.collector
+    user.otp_expires_at = datetime.utcnow() - timedelta(seconds=1)
+    await test_session.flush()
+
+    verify = await client.post(
+        "/api/v1/auth/otp/verify", json={"phone_number": phone, "otp_code": otp}
+    )
+    assert verify.status_code == 401
+

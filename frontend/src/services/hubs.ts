@@ -65,11 +65,18 @@ export async function fetchMyHub(): Promise<HubInfo> {
   return res.json();
 }
 
-export async function fetchMyHubRequests(): Promise<HubRequest[]> {
+/**
+ * Requests visible to the current user. A hub owner gets their own feed; a
+ * collector or household (seller) gets every active hub's demand.
+ */
+export async function fetchHubRequests(): Promise<HubRequest[]> {
   const res = await fetch(`${API_BASE}/api/v1/hubs/requests`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to load hub requests");
   return res.json();
 }
+
+/** The hub desk's own request feed — same endpoint, hub-owner scoped. */
+export const fetchMyHubRequests = fetchHubRequests;
 
 export async function fetchMyHubDeliveries(): Promise<HubDelivery[]> {
   const res = await fetch(`${API_BASE}/api/v1/hubs/deliveries`, { headers: authHeaders() });

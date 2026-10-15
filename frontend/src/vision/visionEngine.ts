@@ -30,10 +30,21 @@ export interface VisionModelConfig {
   applySoftmax: boolean;
 }
 
+/** Progress of the one-time on-device model download. */
+export interface VisionLoadProgress {
+  loadedBytes: number;
+  totalBytes: number;
+  /** 0..1 (best effort — browsers do not always expose content-length). */
+  fraction: number;
+}
+
+export type VisionProgressHandler = (progress: VisionLoadProgress) => void;
+export type VisionStatusListener = (status: VisionModelStatus) => void;
+
 type OrtModule = typeof import("onnxruntime-web");
 
 const DEFAULT_CONFIG: VisionModelConfig = {
-  modelUrl: "/models/mobilenetv4_scrap_int8.onnx",
+  modelUrl: "/models/mobilenetv4_scrap.onnx",
   labelsUrl: "/models/classes.json",
   // Emitted by Vite as dist/assets/ort-wasm-simd-threaded.wasm (see
   // build.rollupOptions.output.assetFileNames in vite.config.ts).
@@ -63,13 +74,24 @@ export const SCRAP_CLASSES: ScrapClass[] = [
 let session: import("onnxruntime-web").InferenceSession | null = null;
 let ort: OrtModule | null = null;
 let labelsCache: ScrapClass[] | null = null;
-// Once the model cannot be loaded (e.g. it has not been shipped yet) we stop
-// re-hitting the network on every scan.
+// Set only for a *permanent* failure (the model is genuinely not shipped, or its
+// output width does not match classes.json). A transient network failure must
+// never set this, so the model is retried on the next launch / reconnect — that
+// is what lets "download once, then scan offline forever" actually work.
 let sessionUnavailable = false;
 let modelStatus: VisionModelStatus | null = null;
 // Verified class count of the loaded model; used to guard against a model whose
 // output width does not match classes.json.
 let verifiedClassCount: number | null = null;
+// A single in-flight load, shared by the startup warm-up and any early scan so
+// they never race into two downloads / two WASM sessions.
+let sessionPromise: Promise<import("onnxruntime-web").InferenceSession> | null = null;
+let primed = false;
+
+const statusListeners = new Set<VisionStatusListener>();
+
+/** Error flagged when the model is definitively absent (HTTP 404) — do not retry. */
+class PermanentModelError extends Error {}
 
 function toHazardLevel(value: unknown): HazardLevel {
   return HAZARD_LEVELS.includes(value as HazardLevel) ? (value as HazardLevel) : "low";
@@ -97,15 +119,71 @@ async function loadLabels(url: string): Promise<ScrapClass[]> {
   return SCRAP_CLASSES;
 }
 
+/**
+ * Download the model bytes ourselves (rather than letting onnxruntime fetch the
+ * URL) so we can (a) report progress, (b) tell a permanent 404 apart from a
+ * transient network failure, and (c) stream without buffering twice. The service
+ * worker's CacheFirst route for `*.onnx` caches the response, so this runs only
+ * on the very first launch that has connectivity.
+ */
+async function fetchModelBytes(url: string, onProgress?: VisionProgressHandler): Promise<Uint8Array> {
+  let res: Response;
+  try {
+    res = await fetch(url);
+  } catch (err) {
+    // Offline, DNS failure, connection reset — retryable on a later launch.
+    throw new Error(`Model download failed: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  if (res.status === 404) {
+    throw new PermanentModelError(`Model not found: ${url}`);
+  }
+  if (!res.ok) {
+    throw new Error(`Model download failed: HTTP ${res.status}`);
+  }
+
+  const total = Number(res.headers.get("content-length") ?? 0);
+  if (!res.body || !onProgress) {
+    const buf = new Uint8Array(await res.arrayBuffer());
+    onProgress?.({ loadedBytes: buf.length, totalBytes: total || buf.length, fraction: 1 });
+    return buf;
+  }
+
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let loaded = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      chunks.push(value);
+      loaded += value.length;
+      onProgress({
+        loadedBytes: loaded,
+        totalBytes: total || loaded,
+        fraction: total ? Math.min(1, loaded / total) : 0,
+      });
+    }
+  }
+  const out = new Uint8Array(loaded);
+  let offset = 0;
+  for (const chunk of chunks) {
+    out.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return out;
+}
+
 async function ensureSession(
   config: VisionModelConfig,
+  onProgress?: VisionProgressHandler,
 ): Promise<import("onnxruntime-web").InferenceSession> {
   if (session) return session;
   if (sessionUnavailable) {
     throw new Error(`On-device model unavailable: ${config.modelUrl}`);
   }
+  if (sessionPromise) return sessionPromise;
 
-  try {
+  sessionPromise = (async () => {
     const ortModule = await import("onnxruntime-web");
     ort = ortModule;
     ort.env.wasm.wasmPaths = config.wasmPaths;
@@ -117,28 +195,97 @@ async function ensureSession(
     const cores = navigator.hardwareConcurrency || 1;
     ort.env.wasm.numThreads = isolated ? Math.min(4, cores) : 1;
 
-    session = await ortModule.InferenceSession.create(config.modelUrl, {
+    const bytes = await fetchModelBytes(config.modelUrl, onProgress);
+    return ortModule.InferenceSession.create(bytes, {
       executionProviders: ["wasm"],
       graphOptimizationLevel: "all",
     });
+  })();
+
+  try {
+    session = await sessionPromise;
     return session;
   } catch (err) {
-    sessionUnavailable = true;
-    setModelStatus({
-      available: false,
-      verified: false,
-      reason: "model_missing",
-      modelUrl: config.modelUrl,
-      classCount: null,
-      message:
-        "No verified on-device classifier is bundled. Falling back to the server model (online) or manual selection (offline).",
-    });
+    // Always clear the in-flight promise so a later call can retry. Only a truly
+    // absent model is latched as permanently unavailable.
+    sessionPromise = null;
+    if (err instanceof PermanentModelError) {
+      sessionUnavailable = true;
+      setModelStatus({
+        available: false,
+        verified: false,
+        reason: "model_missing",
+        modelUrl: config.modelUrl,
+        classCount: null,
+        message:
+          "No on-device classifier is bundled. Connect once to download it, or pick the material manually.",
+      });
+    } else {
+      setModelStatus({
+        available: false,
+        verified: false,
+        reason: "load_error",
+        modelUrl: config.modelUrl,
+        classCount: null,
+        message: "The on-device model could not be downloaded yet — retrying when online.",
+      });
+    }
     throw err;
   }
 }
 
 function setModelStatus(status: VisionModelStatus): void {
   modelStatus = status;
+  for (const listener of statusListeners) {
+    try {
+      listener(status);
+    } catch {
+      // a listener must never break model loading
+    }
+  }
+}
+
+/** Subscribe to on-device model readiness changes (fires once immediately). */
+export function subscribeVisionStatus(listener: VisionStatusListener): () => void {
+  statusListeners.add(listener);
+  if (modelStatus) listener(modelStatus);
+  return () => {
+    statusListeners.delete(listener);
+  };
+}
+
+/** True once the model is loaded and ready for instant, offline inference. */
+export function isVisionModelReady(): boolean {
+  return session !== null;
+}
+
+/** True while the one-time model download/init is in flight. */
+export function isVisionModelLoading(): boolean {
+  return sessionPromise !== null;
+}
+
+/**
+ * Wait up to `timeoutMs` for an *already started* model load to finish. Returns
+ * false immediately when no load is in flight, so a scan never triggers a fresh
+ * multi-megabyte download on its critical path.
+ */
+export function waitForVisionSession(timeoutMs: number): Promise<boolean> {
+  if (session) return Promise.resolve(true);
+  const pending = sessionPromise;
+  if (!pending) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(session !== null), timeoutMs);
+    pending.then(
+      () => {
+        clearTimeout(timer);
+        resolve(true);
+      },
+      () => {
+        clearTimeout(timer);
+        resolve(false);
+      },
+    );
+  });
 }
 
 /**
@@ -150,6 +297,7 @@ function setModelStatus(status: VisionModelStatus): void {
  */
 export async function getVisionModelStatus(
   config: Partial<VisionModelConfig> = {},
+  onProgress?: VisionProgressHandler,
 ): Promise<VisionModelStatus> {
   const cfg = { ...DEFAULT_CONFIG, ...config };
   if (modelStatus && modelStatus.reason === "verified") return modelStatus;
@@ -161,14 +309,14 @@ export async function getVisionModelStatus(
         reason: "model_missing",
         modelUrl: cfg.modelUrl,
         classCount: null,
-        message: "No verified on-device classifier is bundled.",
+        message: "No on-device classifier is bundled.",
       }
     );
   }
 
   try {
     const [sess, classes] = await Promise.all([
-      ensureSession(cfg),
+      ensureSession(cfg, onProgress),
       loadLabels(cfg.labelsUrl),
     ]);
     if (sess.outputNames.length < 1) {
@@ -299,6 +447,29 @@ function rankPredictions(probs: number[], classes: ScrapClass[]): VisionPredicti
     });
 }
 
+/**
+ * Run a throwaway inference so the WASM kernels are compiled before the user's
+ * first real scan. Without this, the very first scan pays the JIT/compile cost
+ * and feels slow even though the model is already loaded.
+ */
+async function primeSession(
+  sess: import("onnxruntime-web").InferenceSession,
+  config: VisionModelConfig,
+): Promise<void> {
+  if (!ort || primed) return;
+  try {
+    const size = config.inputSize;
+    const inputName = config.inputName ?? sess.inputNames[0];
+    if (!inputName) return;
+    const zeros = new Float32Array(3 * size * size);
+    const tensor = new ort.Tensor("float32", zeros, [1, 3, size, size]);
+    await sess.run({ [inputName]: tensor });
+    primed = true;
+  } catch {
+    // Warm-up is best-effort; a failure must never break model loading.
+  }
+}
+
 export async function classifyScrap(
   source: Blob | HTMLImageElement,
   config: Partial<VisionModelConfig> = {},
@@ -358,19 +529,25 @@ export async function disposeVision(): Promise<void> {
     await session.release();
     session = null;
     ort = null;
+    sessionPromise = null;
     sessionUnavailable = false;
     modelStatus = null;
     verifiedClassCount = null;
+    primed = false;
   }
 }
 
 /**
  * Download + initialize the on-device model once, off the critical path.
  * The service worker's CacheFirst route for `*.onnx`/`*.wasm` keeps the
- * artifacts on device, so this download happens only on first run and later
- * launches/scans work fully offline. Returns false when no model is shipped.
+ * artifacts on device, so this download happens only on the first launch that
+ * has connectivity; later launches and every scan work fully offline. Returns
+ * false when no model is shipped.
  */
-export async function warmUpVision(): Promise<boolean> {
-  const status = await getVisionModelStatus();
+export async function warmUpVision(onProgress?: VisionProgressHandler): Promise<boolean> {
+  const status = await getVisionModelStatus({}, onProgress);
+  if (status.verified && session) {
+    await primeSession(session, DEFAULT_CONFIG);
+  }
   return status.verified;
 }

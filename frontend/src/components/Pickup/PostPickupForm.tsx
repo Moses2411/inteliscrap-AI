@@ -43,11 +43,13 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   const [role, setRole] = useState<UserRole>("seller");
   const [phone, setPhone] = useState(getSavedPhone() ?? "");
   const [address, setAddress] = useState("");
+  const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [posted, setPosted] = useState(false);
   const [sharePhone, setSharePhone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [canList, setCanList] = useState(true);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
@@ -62,11 +64,12 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
     setError(null);
     try {
       if (!otpSent) {
-        const { otp: returnedOtp } = await requestOtp(phone, role, addressRequired ? address : undefined);
-        if (returnedOtp) console.log("Demo OTP:", returnedOtp);
+        const { otp: returnedOtp, debug } = await requestOtp(phone, role, addressRequired ? address : undefined);
+        if (debug && returnedOtp) setDebugOtp(returnedOtp);
+        else if (returnedOtp) console.log("Demo OTP:", returnedOtp);
         setOtpSent(true);
       } else {
-        await verifyOtp(phone, "");
+        await verifyOtp(phone, otp);
         setAuthenticated(true);
       }
     } catch (err) {
@@ -210,8 +213,30 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
         {error && <div className="text-sm font-semibold text-red-600 dark:text-red-400" role="alert">{error}</div>}
 
-        <Button fullWidth type="submit" loading={busy} disabled={!phone || (addressRequired && !validAddress)}>
-          {otpSent ? "Verify code" : "Send verification code"}
+        {otpSent && (
+          <>
+            {debugOtp && (
+              <div className="rounded-2xl bg-brand-50 px-4 py-3 text-xs font-semibold text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
+                Demo OTP: <code className="font-mono">{debugOtp}</code>
+              </div>
+            )}
+            <input
+              className="input rounded-full border-transparent bg-slate-100 px-5 py-3 text-center text-2xl tracking-widest font-bold dark:border-transparent dark:bg-slate-800"
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              placeholder="123456"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+              autoComplete="one-time-code"
+              autoFocus
+              required
+            />
+          </>
+        )}
+
+        <Button fullWidth type="submit" loading={busy} disabled={!phone || (addressRequired && !validAddress) || (otpSent && otp.length !== 6)}>
+          {otpSent ? "Verify & continue" : "Send verification code"}
         </Button>
 
         <p className="text-center text-xs text-slate-400 dark:text-slate-500">

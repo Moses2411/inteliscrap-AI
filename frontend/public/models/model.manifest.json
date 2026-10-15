@@ -1,0 +1,26 @@
+{
+  "name": "mobilenetv4_scrap",
+  "version": "1.0.0",
+  "int8": false,
+  "input_shape": [
+    1,
+    3,
+    224,
+    224
+  ],
+  "normalize": "imagenet",
+  "classes_count": 8,
+  "classes_sha256": "84e1b08cd9e8fb542ac4a772d7443e8e7bfbcafcb04cd932070b1c02bde9ba57",
+  "exported_at": "2026-10-15T10:38:41.625195+00:00",
+  "source": "trained",
+  "top1": 0.72,
+  "top3": 0.88,
+  "macro_f1": 0.6895,
+  "weighted_f1": 0.7154,
+  "evaluated_on": "training\\data\\val",
+  "eval_n": 25,
+  "val_accuracy": 0.72,
+  "train_images": 68,
+  "val_images": 25,
+  "test_images": 0
+}
