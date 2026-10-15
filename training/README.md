@@ -15,7 +15,7 @@ measurably beats the manual picker.**
 | Step | Command | What it does |
 |---|---|---|
 | 1. Check data | `python training/dataset_check.py --data training/data` | Validates layout against `classes.json`, counts images, finds leakage/corrupt files. Refuses to proceed when unsafe. |
-| 2. Train | `python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap_int8.onnx` | Fine-tunes MobileNetV4, measures top-1/top-3/F1, exports int8 ONNX, verifies it, writes `model.manifest.json`. |
+| 2. Train | `python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap.onnx` | Fine-tunes MobileNetV4, measures top-1/top-3/F1, exports int8 ONNX, verifies it, writes `model.manifest.json`. |
 | 3. Evaluate | `python training/evaluate.py --data training/data/test` | Reproducible per-class metrics + confusion matrix on a held-out split. |
 | 4. Verify | `python training/verify_model.py --image path/to/photo.jpg` | Confirms input/output shape and class order match the browser contract. |
 
@@ -34,6 +34,10 @@ training/data/
 ├── val/<slug>/*.jpg     # required — used to pick the best epoch
 └── test/<slug>/*.jpg    # optional — kept untouched for the final report
 ```
+
+Accepted image extensions are `.jpg`, `.jpeg`, `.jfif`, `.png` and `.webp`
+(anything else is ignored). `.jfif` is common when images are saved from a phone
+browser, so it is treated as a first-class JPEG.
 
 `train.py` reads the class order from `classes.json`, so indices always line up
 with what the browser expects. A missing or extra folder is a hard error.

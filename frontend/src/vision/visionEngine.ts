@@ -44,7 +44,7 @@ export type VisionStatusListener = (status: VisionModelStatus) => void;
 type OrtModule = typeof import("onnxruntime-web");
 
 const DEFAULT_CONFIG: VisionModelConfig = {
-  modelUrl: "/models/mobilenetv4_scrap_int8.onnx",
+  modelUrl: "/models/mobilenetv4_scrap.onnx",
   labelsUrl: "/models/classes.json",
   // Emitted by Vite as dist/assets/ort-wasm-simd-threaded.wasm (see
   // build.rollupOptions.output.assetFileNames in vite.config.ts).

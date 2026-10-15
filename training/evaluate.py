@@ -8,7 +8,7 @@ the README and the model manifest come from a reproducible run, not a guess.
 
 Usage:
     python training/evaluate.py --data training/data/val
-    python training/evaluate.py --data training/data/test --model frontend/public/models/mobilenetv4_scrap_int8.onnx
+    python training/evaluate.py --data training/data/test --model frontend/public/models/mobilenetv4_scrap.onnx
     python training/evaluate.py --data training/data/val --json training/reports/eval.json
 
 Exit codes:
@@ -27,12 +27,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CLASSES_JSON = ROOT / "frontend" / "public" / "models" / "classes.json"
-DEFAULT_MODEL = ROOT / "frontend" / "public" / "models" / "mobilenetv4_scrap_int8.onnx"
+DEFAULT_MODEL = ROOT / "frontend" / "public" / "models" / "mobilenetv4_scrap.onnx"
 REPORTS_DIR = ROOT / "training" / "reports"
 
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
-IMAGE_EXTS = (".jpg", ".jpeg", ".png", ".webp")
+IMAGE_EXTS = (".jpg", ".jpeg", ".jfif", ".png", ".webp")
 
 
 def load_classes(classes_json: Path) -> list[dict]:

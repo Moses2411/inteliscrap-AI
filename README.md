@@ -244,7 +244,7 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 
 | Path | Requirements | How It Works |
 |---|---|---|
-| **Bundled ONNX classifier** | `frontend/public/models/mobilenetv4_scrap_int8.onnx` present | Runs the (ideally scrap-tuned) classifier in-browser via onnxruntime-web (WASM). Fully offline, no backend. Results carry `source: "onnx"`. |
+| **Bundled ONNX classifier** | `frontend/public/models/mobilenetv4_scrap.onnx` present | Runs the (ideally scrap-tuned) classifier in-browser via onnxruntime-web (WASM). Fully offline, no backend. Results carry `source: "onnx"`. |
 | **Server `/api/v1/analyze`** | `navigator.onLine` + Ollama reachable | POSTs the base64 image; the backend proxies to Ollama (`OLLAMA_VISION_MODEL`). Results carry `source: "server"`. |
 | **Manual selection** | No AI path available | The app never fabricates — it shows the scrap-classes grid and stores the pick with `source: "manual"` and zero AI confidence. |
 
@@ -455,14 +455,14 @@ Run it once you have labeled photos (a few hundred per class). No photos yet? `p
 ```bash
 pip install -r training/requirements.txt
 python training/dataset_check.py --data training/data
-python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap_int8.onnx
+python training/train.py --data training/data --out frontend/public/models/mobilenetv4_scrap.onnx
 python training/evaluate.py --data training/data/test
 python training/verify_model.py --image path/to/test_photo.jpg
 ```
 
-`train.py` refuses to train when the dataset does not exactly match `classes.json` (it would mislabel every prediction) and writes the **measured** accuracy into `model.manifest.json`. Bundling guidance: aim for `macro_f1 ≥ 0.70` with no class missed; the repo currently ships a **bootstrap** model (macro-F1 0.641, no class missed) trained on temporary web-scraped photos to enable instant offline scanning — replace it with field photos and retrain. See `training/README.md` and `frontend/public/models/README.md`. Otherwise the app's server / heuristic / manual fallbacks are the honest option.
+`train.py` refuses to train when the dataset does not exactly match `classes.json` (it would mislabel every prediction) and writes the **measured** accuracy into `model.manifest.json`. Bundling guidance: aim for `macro_f1 ≥ 0.70` with no class missed; the repo currently ships a model trained on **93 real field photos** (macro-F1 0.690, top-1 0.72; 3 of 8 classes still have no photos). Collect many more photos per class and retrain. See `training/README.md` and `frontend/public/models/README.md`. Otherwise the app's server / heuristic / manual fallbacks are the honest option.
 
-The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]` ImageNet-normalized input, one output of 8 logits whose index order equals `frontend/public/models/classes.json`. Trained output goes straight to `frontend/public/models/mobilenetv4_scrap_int8.onnx`. The onnxruntime WASM runtime is emitted automatically by Vite into `dist/assets/` (no manual `public/ort/` copy step), and the service worker caches both the model and the runtime so edge inference keeps working offline after the first load.
+The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]` ImageNet-normalized input, one output of 8 logits whose index order equals `frontend/public/models/classes.json`. Trained output goes straight to `frontend/public/models/mobilenetv4_scrap.onnx`. The onnxruntime WASM runtime is emitted automatically by Vite into `dist/assets/` (no manual `public/ort/` copy step), and the service worker caches both the model and the runtime so edge inference keeps working offline after the first load.
 
 ---
 

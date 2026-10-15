@@ -37,7 +37,7 @@ def classes_sha_matches(expected_sha: str) -> bool:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Verify the exported scrap classifier ONNX model")
-    parser.add_argument("--model", type=Path, default=ROOT / "frontend/public/models/mobilenetv4_scrap_int8.onnx")
+    parser.add_argument("--model", type=Path, default=ROOT / "frontend/public/models/mobilenetv4_scrap.onnx")
     parser.add_argument("--image", type=Path, default=None, help="optional image to classify for a sanity check")
     args = parser.parse_args()
 
