@@ -16,7 +16,7 @@ import { useMarketData } from "../../hooks/useDashboardData";
 import { useTranslation } from "../../hooks/useTranslation";
 import { getLocalScans } from "../../services/db";
 import { formatNairaEstimate, formatPhoneDisplay } from "../../utils/formatters";
-import { getSavedPhone } from "../../services/auth";
+import { getRole, getSavedPhone } from "../../services/auth";
 import type { ScrapScan } from "../../types";
 
 export default function HouseholdDashboard() {
@@ -34,6 +34,8 @@ export default function HouseholdDashboard() {
   }, []);
 
   const scannedValue = scans.reduce((acc, s) => acc + (s.estimated_naira_value || 0), 0);
+  // Collectors see the whole market board; households see only their own listings.
+  const isCollector = getRole() === "collector";
   const activeListings = market.data?.listings.filter((l) => l.status === "active" || l.status === "matched").length ?? 0;
   const topMaterials = [...(market.data?.materials ?? [])]
     .sort((a, b) => b.price_per_kg_naira - a.price_per_kg_naira)
@@ -87,11 +89,11 @@ export default function HouseholdDashboard() {
         </motion.div>
         <motion.div variants={pageItem} className="min-w-0">
           <StatCard
-            label="Active listings"
+            label={isCollector ? "Listings on the board" : "My active listings"}
             value={market.loading ? "—" : activeListings}
             icon={<LineChart className="h-5 w-5" />}
             iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
-            hint="On the market board"
+            hint={isCollector ? "Open offers to accept" : "On the market board"}
           />
         </motion.div>
         <motion.div variants={pageItem} className="min-w-0">

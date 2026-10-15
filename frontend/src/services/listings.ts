@@ -49,3 +49,24 @@ export async function createListing(
   if (!res.ok) throw new Error(`Listing creation failed: ${res.statusText}`);
   return res.json();
 }
+
+/**
+ * Collector claims a listing straight from the market board ("Accept offer").
+ * The listing becomes `scheduled` and shows up under "My jobs".
+ */
+export async function acceptListing(listingId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/v1/listings/${listingId}/accept`, {
+    method: "POST",
+    headers: authHeaders(),
+  });
+  if (!res.ok) {
+    let message = "Could not accept this offer — it may already be taken";
+    try {
+      const data = await res.json();
+      if (typeof data?.detail === "string") message = data.detail;
+    } catch {
+      // keep the default message
+    }
+    throw new Error(message);
+  }
+}

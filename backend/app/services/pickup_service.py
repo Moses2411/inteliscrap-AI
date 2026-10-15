@@ -13,6 +13,7 @@ from app.models import (
     User,
 )
 from app.services import messaging_service
+from app.services.matching_service import haversine_m
 
 
 async def get_pending_offers(
@@ -69,6 +70,61 @@ async def accept_pickup(db: AsyncSession, pickup: Pickup, listing: Listing) -> N
         .values(status=PickupStatus.expired)
     )
     await db.flush()
+
+
+async def claim_listing(
+    db: AsyncSession, listing: Listing, collector: User
+) -> Pickup | None:
+    """Collector claims a listing directly from the market board.
+
+    Returns the created pickup, or ``None`` when the listing can no longer be
+    claimed (already scheduled, completed or already taken by someone else).
+    """
+    if listing.status not in (ListingStatus.active, ListingStatus.matched):
+        return None
+
+    taken = await db.execute(
+        select(Pickup.id)
+        .where(
+            Pickup.listing_id == listing.id,
+            Pickup.status.in_(
+                [
+                    PickupStatus.accepted,
+                    PickupStatus.en_route,
+                    PickupStatus.arrived,
+                    PickupStatus.verified,
+                    PickupStatus.completed,
+                ]
+            ),
+        )
+        .limit(1)
+    )
+    if taken.first() is not None:
+        return None
+
+    distance_m = None
+    if (
+        listing.latitude is not None
+        and listing.longitude is not None
+        and collector.latitude is not None
+        and collector.longitude is not None
+    ):
+        distance_m = haversine_m(
+            listing.latitude, listing.longitude, collector.latitude, collector.longitude
+        )
+
+    pickup = Pickup(
+        listing_id=listing.id,
+        collector_id=collector.id,
+        status=PickupStatus.accepted,
+        accepted_at=datetime.utcnow(),
+        distance_m=distance_m,
+    )
+    db.add(pickup)
+    await db.flush()
+    # Mark accepted, move the listing to "scheduled" and expire rival offers.
+    await accept_pickup(db, pickup, listing)
+    return pickup
 
 
 async def enqueue_location_sms(

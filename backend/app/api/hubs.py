@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_role
 from app.database import get_db
-from app.models import MaterialCategory, User, UserRole
+from app.models import HubRecyclingRequest, MaterialCategory, User, UserRole
 from app.schemas import (
     HubDeliveryResponse,
     HubRecyclingRequestCreate,
@@ -18,6 +18,25 @@ from app.schemas import (
 from app.services import hub_service
 
 router = APIRouter(prefix="/api/v1/hubs", tags=["hubs"])
+
+
+async def _request_response(
+    db: AsyncSession, req: HubRecyclingRequest, hub_name: str
+) -> HubRecyclingRequestResponse:
+    material = await db.get(MaterialCategory, req.material_category_id)
+    return HubRecyclingRequestResponse(
+        id=req.id,
+        hub_id=req.hub_id,
+        hub_name=hub_name,
+        material_category_id=req.material_category_id,
+        material_name=material.name if material else "",
+        requested_kg=float(req.requested_kg),
+        fulfilled_kg=float(req.fulfilled_kg),
+        note=req.note,
+        requested_on=str(req.requested_on),
+        status=req.status,
+        created_at=req.created_at,
+    )
 
 
 @router.post("/register", response_model=RecyclingHubResponse)
@@ -108,29 +127,17 @@ async def list_hub_requests(
     db: AsyncSession = Depends(get_db),
 ):
     hub = await hub_service.get_hub_by_owner(db, user)
-    if hub is None:
-        raise HTTPException(status_code=404, detail="No recycling hub registered")
+    if hub is not None:
+        reqs = await hub_service.list_requests_for_hub(db, hub.id)
+        return [await _request_response(db, req, hub.name) for req in reqs]
 
-    reqs = await hub_service.list_requests_for_hub(db, hub.id)
-    result = []
-    for req in reqs:
-        mat = await db.get(MaterialCategory, req.material_category_id)
-        result.append(
-            HubRecyclingRequestResponse(
-                id=req.id,
-                hub_id=req.hub_id,
-                hub_name=hub.name,
-                material_category_id=req.material_category_id,
-                material_name=mat.name if mat else "",
-                requested_kg=float(req.requested_kg),
-                fulfilled_kg=float(req.fulfilled_kg),
-                note=req.note,
-                requested_on=str(req.requested_on),
-                status=req.status,
-                created_at=req.created_at,
-            )
-        )
-    return result
+    # No hub of their own: collectors and households (sellers) browse the
+    # demand published by every active hub so they know what is worth collecting.
+    if user.role not in (UserRole.seller, UserRole.collector, UserRole.admin):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+
+    rows = await hub_service.list_public_requests(db)
+    return [await _request_response(db, req, hub_row.name) for req, hub_row in rows]
 
 
 @router.get("/deliveries", response_model=list[HubDeliveryResponse])

@@ -64,7 +64,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
     setError(null);
     try {
       if (!otpSent) {
-        const { otp: returnedOtp, debug, retryAfter } = await requestOtp(phone, role, addressRequired ? address : undefined);
+        const { otp: returnedOtp, debug } = await requestOtp(phone, role, addressRequired ? address : undefined);
         if (debug && returnedOtp) setDebugOtp(returnedOtp);
         else if (returnedOtp) console.log("Demo OTP:", returnedOtp);
         setOtpSent(true);

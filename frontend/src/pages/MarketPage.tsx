@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   Camera,
+  Check,
   Clock,
   Factory,
   MapPin,
@@ -26,28 +27,73 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { PageMotion, pageItem } from "../components/ui/PageMotion";
 import { useMarketData } from "../hooks/useDashboardData";
 import { materialNameById } from "../services/market";
+import { acceptListing } from "../services/listings";
+import { getRole } from "../services/auth";
 import { formatDateTime, formatNairaEstimate, relativeTime } from "../utils/formatters";
 import { cn } from "../lib/cn";
 
-type Tab = "listings" | "prices" | "hubs";
+type Tab = "listings" | "requests" | "prices" | "hubs";
 
 export default function MarketPage() {
   const market = useMarketData();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get("tab");
-  const [tab, setTabState] = useState<Tab>(tabParam === "prices" || tabParam === "hubs" ? tabParam : "listings");
+
+  // Who sees what: collectors see the listing board (they accept the offers),
+  // households (sellers) see only their own listings, and both see the demand
+  // hubs are posting. Everyone sees the price guide and the hub directory.
+  const role = getRole();
+  const canSeeListings = role === "collector";
+  const canSeeHubRequests = role === "collector" || role === "seller";
+
+  const allowedTabs = useMemo<Tab[]>(
+    () => [
+      ...(canSeeListings ? (["listings"] as Tab[]) : []),
+      ...(canSeeHubRequests ? (["requests"] as Tab[]) : []),
+      "prices",
+      "hubs",
+    ],
+    [canSeeListings, canSeeHubRequests],
+  );
+  const defaultTab: Tab = canSeeListings ? "listings" : canSeeHubRequests ? "requests" : "prices";
+
+  const [tab, setTabState] = useState<Tab>(() => {
+    const requested = searchParams.get("tab") as Tab | null;
+    return requested && allowedTabs.includes(requested) ? requested : defaultTab;
+  });
   const [q, setQ] = useState("");
   const [hazardOnly, setHazardOnly] = useState(false);
+  const [acceptingId, setAcceptingId] = useState<string | null>(null);
+  const [acceptedIds, setAcceptedIds] = useState<Set<string>>(new Set());
+  const [acceptError, setAcceptError] = useState<{ id: string; message: string } | null>(null);
+
+  const activeTab: Tab = allowedTabs.includes(tab) ? tab : defaultTab;
 
   const setTab = (next: Tab) => {
     setTabState(next);
     setSearchParams({ tab: next }, { replace: true });
   };
 
+  async function onAcceptOffer(listingId: string) {
+    setAcceptingId(listingId);
+    setAcceptError(null);
+    try {
+      await acceptListing(listingId);
+      setAcceptedIds((prev) => new Set(prev).add(listingId));
+    } catch (err) {
+      setAcceptError({
+        id: listingId,
+        message: err instanceof Error ? err.message : "Could not accept this offer",
+      });
+    } finally {
+      setAcceptingId(null);
+    }
+  }
+
   const materials = market.data?.materials ?? [];
   const listings = market.data?.listings ?? [];
   const hubs = market.data?.hubs ?? [];
+  const hubRequests = market.data?.hubRequests ?? [];
 
   const query = q.trim().toLowerCase();
 
@@ -84,6 +130,18 @@ export default function MarketPage() {
     [hubs, query],
   );
 
+  const filteredRequests = useMemo(
+    () =>
+      hubRequests.filter((r) => {
+        if (!query) return true;
+        return (
+          r.material_name.toLowerCase().includes(query) ||
+          r.hub_name.toLowerCase().includes(query)
+        );
+      }),
+    [hubRequests, query],
+  );
+
   const maxVisiblePrice = useMemo(
     () => (filteredPrices.length ? Math.max(...filteredPrices.map((m) => m.price_per_kg_naira)) : 1),
     [filteredPrices],
@@ -113,27 +171,32 @@ export default function MarketPage() {
 
       {/* Search + tabs */}
       <motion.div variants={pageItem} className="space-y-3">
-        <SearchInput value={q} onChange={setQ} placeholder="Search materials, sellers or hubs…" className="max-w-md" />
+        <SearchInput value={q} onChange={setQ} placeholder="Search materials, hubs or requests…" className="max-w-md" />
         <SegmentedTabs<Tab>
-          value={tab}
+          value={activeTab}
           onChange={setTab}
           options={[
-            { value: "listings", label: "Listings", count: filteredListings.length },
-            { value: "prices", label: "Price guide", count: filteredPrices.length },
-            { value: "hubs", label: "Recycling hubs", count: filteredHubs.length },
+            ...(canSeeListings
+              ? [{ value: "listings" as const, label: "Listings", count: filteredListings.length }]
+              : []),
+            ...(canSeeHubRequests
+              ? [{ value: "requests" as const, label: "Hub buy requests", count: filteredRequests.length }]
+              : []),
+            { value: "prices" as const, label: "Price guide", count: filteredPrices.length },
+            { value: "hubs" as const, label: "Recycling hubs", count: filteredHubs.length },
           ]}
         />
       </motion.div>
 
       <motion.div
-        key={tab}
+        key={activeTab}
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25, ease: "easeOut" }}
         className="space-y-6"
       >
-      {/* ── Listings ─────────────────────────────────────────── */}
-      {tab === "listings" && (
+      {/* ── Listings (collectors) ────────────────────────────── */}
+      {activeTab === "listings" && (
         <>
           {market.loading ? (
             <div className="grid gap-4 md:grid-cols-2">
@@ -145,7 +208,7 @@ export default function MarketPage() {
             <EmptyState
               icon={<Tag className="h-6 w-6" />}
               title="No listings match"
-              subtitle="Try a different search, or post your own scrap for sale."
+              subtitle="Households post scrap here as they scan it. Try a different search — or scan your own lot."
               action={<Button size="sm" onClick={() => navigate("/scan")}>Scan & sell</Button>}
             />
           ) : (
@@ -190,13 +253,47 @@ export default function MarketPage() {
                       </span>
                     </div>
 
-                    <div className="mt-auto flex gap-2">
-                      <Button variant="secondary" size="sm" fullWidth href={l.contact_phone ? `tel:${l.contact_phone}` : undefined}>
-                        <Phone className="h-3.5 w-3.5" /> Contact seller
-                      </Button>
-                      <Button variant="soft" size="sm" onClick={() => navigate("/scan")}>
-                        Sell yours <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
+                    <div className="mt-auto space-y-2">
+                      <div className="flex gap-2">
+                        <Button variant="secondary" size="sm" fullWidth href={l.contact_phone ? `tel:${l.contact_phone}` : undefined}>
+                          <Phone className="h-3.5 w-3.5" /> Contact seller
+                        </Button>
+                        {acceptedIds.has(l.id) ? (
+                          <Button variant="soft" size="sm" disabled>
+                            <Check className="h-3.5 w-3.5" /> Accepted
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="soft"
+                            size="sm"
+                            onClick={() => onAcceptOffer(l.id)}
+                            loading={acceptingId === l.id}
+                            disabled={l.status !== "active" && l.status !== "matched"}
+                          >
+                            {l.status === "active" || l.status === "matched" ? (
+                              <>
+                                Accept offer <ArrowRight className="h-3.5 w-3.5" />
+                              </>
+                            ) : (
+                              "Unavailable"
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                      {acceptedIds.has(l.id) && (
+                        <button
+                          type="button"
+                          onClick={() => navigate("/my-pickups")}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-brand-600 hover:underline dark:text-brand-400"
+                        >
+                          Added to My jobs <ArrowRight className="h-3 w-3" />
+                        </button>
+                      )}
+                      {acceptError?.id === l.id && (
+                        <p className="text-[11px] font-semibold text-red-600 dark:text-red-400" role="alert">
+                          {acceptError.message}
+                        </p>
+                      )}
                     </div>
                   </Card>
                 );
@@ -206,8 +303,84 @@ export default function MarketPage() {
         </>
       )}
 
+      {/* ── Hub buy requests (collectors + households) ────────── */}
+      {activeTab === "requests" && (
+        <>
+          {market.loading ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {[0, 1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-32 w-full" />
+              ))}
+            </div>
+          ) : filteredRequests.length === 0 ? (
+            <EmptyState
+              icon={<Factory className="h-6 w-6" />}
+              title="No hub buy requests right now"
+              subtitle="Recycling hubs post what they are buying here. Check back soon, or list your own scrap."
+              action={<Button size="sm" onClick={() => navigate("/scan")}>Scan & list</Button>}
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {filteredRequests.map((r) => {
+                const progress =
+                  r.requested_kg > 0
+                    ? Math.min(100, Math.round((r.fulfilled_kg / r.requested_kg) * 100))
+                    : 0;
+                return (
+                  <Card key={r.id} hover className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                          <Factory className="h-5 w-5" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold text-slate-900 dark:text-white">
+                            {r.material_name || "Material"}
+                          </p>
+                          <p className="flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            {r.hub_name}
+                          </p>
+                        </div>
+                      </div>
+                      <StatusBadge status={r.status} />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <Badge tone="brand">
+                        <Tag className="h-3 w-3" /> {r.requested_kg} kg wanted
+                      </Badge>
+                      <Badge tone="slate">{r.fulfilled_kg} kg fulfilled</Badge>
+                      <span className="ml-auto text-[11px] text-slate-500 dark:text-slate-400">
+                        {relativeTime(r.requested_on)}
+                      </span>
+                    </div>
+
+                    <div
+                      className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800"
+                      aria-hidden="true"
+                    >
+                      <motion.div
+                        className="h-full rounded-full bg-brand-500 dark:bg-brand-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.max(progress, 4)}%` }}
+                        transition={{ type: "spring", stiffness: 120, damping: 20 }}
+                      />
+                    </div>
+
+                    {r.note && (
+                      <p className="text-xs text-slate-600 dark:text-slate-300">{r.note}</p>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </>
+      )}
+
       {/* ── Price guide ───────────────────────────────────────── */}
-      {tab === "prices" && (
+      {activeTab === "prices" && (
         <Card pad>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -295,7 +468,7 @@ export default function MarketPage() {
       )}
 
       {/* ── Hubs ──────────────────────────────────────────────── */}
-      {tab === "hubs" && (
+      {activeTab === "hubs" && (
         <>
           {market.loading ? (
             <div className="grid gap-4 md:grid-cols-2">

@@ -1,7 +1,8 @@
 import type { MaterialCategoryInfo } from "../types";
+import { authHeaders, getRole, getToken } from "./auth";
 import { fetchMaterials } from "./materials";
-import type { HubInfo } from "./hubs";
-import { listHubs } from "./hubs";
+import type { HubInfo, HubRequest } from "./hubs";
+import { fetchHubRequests, listHubs } from "./hubs";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -32,26 +33,46 @@ export interface MarketData {
   materials: MaterialCategoryInfo[];
   listings: MarketplaceListing[];
   hubs: HubInfo[];
+  hubRequests: HubRequest[];
 }
 
 export async function fetchListings(): Promise<MarketplaceListing[]> {
-  const res = await fetch(`${API_BASE}/api/v1/listings`);
+  const res = await fetch(`${API_BASE}/api/v1/listings`, { headers: authHeaders() });
   if (!res.ok) throw new Error("Failed to load listings");
   return res.json();
 }
 
-/** Public market snapshot: price guide + active listings + active hubs. */
+/** The signed-in user's own listings — the only board a household/seller sees. */
+export async function fetchMyListings(): Promise<MarketplaceListing[]> {
+  const res = await fetch(`${API_BASE}/api/v1/listings/mine`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to load your listings");
+  return res.json();
+}
+
+/**
+ * Public market snapshot: price guide + listings + active hubs + hub demand.
+ *
+ * Listings are collector-only (the market board is where they accept work), so
+ * households get *their own* listings instead. Hub buy-requests are visible to
+ * collectors and households. Each source degrades independently.
+ */
 export async function fetchMarketData(): Promise<MarketData> {
-  // materials() has its own cache; tolerate partial failures per-source
-  const [materials, listings, hubs] = await Promise.allSettled([
+  const role = getRole();
+  const loggedIn = getToken() != null;
+  const isCollector = role === "collector";
+  const seesHubDemand = role === "collector" || role === "seller";
+
+  const [materials, listings, hubs, hubRequests] = await Promise.allSettled([
     fetchMaterials(),
-    fetchListings(),
+    isCollector ? fetchListings() : loggedIn ? fetchMyListings() : Promise.resolve([]),
     listHubs(),
+    loggedIn && seesHubDemand ? fetchHubRequests() : Promise.resolve([]),
   ]);
   return {
     materials: materials.status === "fulfilled" ? materials.value : [],
     listings: listings.status === "fulfilled" ? listings.value : [],
     hubs: hubs.status === "fulfilled" ? hubs.value : [],
+    hubRequests: hubRequests.status === "fulfilled" ? hubRequests.value : [],
   };
 }
 

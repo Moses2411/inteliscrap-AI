@@ -85,6 +85,23 @@ async def list_requests_for_hub(db: AsyncSession, hub_id: str) -> list[HubRecycl
     return list(result.scalars().all())
 
 
+async def list_public_requests(
+    db: AsyncSession,
+) -> list[tuple[HubRecyclingRequest, RecyclingHub]]:
+    """Every request published by an active hub, newest first.
+
+    This is the marketplace view of hub demand: collectors and households
+    (sellers) use it to see what hubs are buying today before they collect.
+    """
+    result = await db.execute(
+        select(HubRecyclingRequest, RecyclingHub)
+        .join(RecyclingHub, HubRecyclingRequest.hub_id == RecyclingHub.id)
+        .where(RecyclingHub.is_active.is_(True))
+        .order_by(HubRecyclingRequest.requested_on.desc(), HubRecyclingRequest.created_at.desc())
+    )
+    return list(result.all())
+
+
 async def get_open_requests_for_hub_material(
     db: AsyncSession, hub_id: str, material_category_id: int
 ) -> list[HubRecyclingRequest]:

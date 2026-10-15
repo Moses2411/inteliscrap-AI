@@ -484,8 +484,10 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | POST | `/api/v1/analyze` | Send image for vision-model analysis (Ollama) |
 | GET | `/api/v1/tts` | Text-to-speech audio proxy |
 | POST | `/api/v1/listings` | Create a scrap listing from a scan (auto-dispatches to nearby collectors) |
-| GET | `/api/v1/listings` | List active listings |
-| GET | `/api/v1/listings/{listing_id}` | Get a single listing |
+| GET | `/api/v1/listings` | Market board of active listings — **collectors/admins only** (they accept the offers) |
+| GET | `/api/v1/listings/mine` | The caller's own listings (households/sellers) |
+| POST | `/api/v1/listings/{listing_id}/accept` | Collector claims a listing from the board ("Accept offer"); other pending offers expire |
+| GET | `/api/v1/listings/{listing_id}` | Get a single listing (collector/admin) |
 | POST/GET | `/api/v1/pickups/offers` | Offers dispatched to the current collector (H3 disk ring) |
 | POST | `/api/v1/pickups/{pickup_id}/accept` | Accept an offer (other pending offers expire) |
 | GET | `/api/v1/pickups/active` | List the collector's active/accepted jobs |
@@ -498,7 +500,7 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | GET | `/api/v1/hubs/` | List active recycling hubs |
 | GET | `/api/v1/hubs/me` | The current user's registered hub |
 | POST | `/api/v1/hubs/requests` | Hub publishes a daily buy request (material × quantity) |
-| GET | `/api/v1/hubs/requests` | Hub's own requests with live `fulfilled_kg` progress |
+| GET | `/api/v1/hubs/requests` | A hub owner sees their own requests; collectors and households (sellers) see demand across all active hubs |
 | GET | `/api/v1/hubs/deliveries` | Traceability: which collections/deliveries fed this hub |
 | POST | `/api/v1/hubs/subscribe` | Start a hub's monthly subscription (revenue) |
 | GET | `/api/v1/hubs/subscriptions` | List the hub's subscription history |
@@ -578,7 +580,7 @@ cd backend
 pytest -v
 ```
 
-**108 tests** across 14 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings, pickups, settlement fees, SMS outbox, hubs, impact aggregates, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
+**111 tests** across 14 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, settlement fees, SMS outbox, hubs (**role-aware request feed**), impact aggregates, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend
