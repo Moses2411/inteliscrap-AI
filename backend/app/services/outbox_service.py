@@ -11,6 +11,7 @@ Reliability contract:
   observability; successful sends record ``sent_at`` and ``provider_message_id``.
 """
 
+import logging
 import random
 from datetime import datetime, timedelta
 
@@ -18,14 +19,17 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import async_session_factory
 from app.models import SyncOutbox
 from app.services import messaging_service
+
+logger = logging.getLogger(__name__)
 
 MAX_ATTEMPTS = 5
 BASE_BACKOFF_SECONDS = 60
 MAX_BACKOFF_SECONDS = 3600
 
-SUPPORTED_EVENTS = {"sms.location", "sms.new_offer"}
+SUPPORTED_EVENTS = {"sms.location", "sms.new_offer", "sms.otp"}
 
 
 def _backoff_seconds(attempt: int) -> int:
@@ -57,6 +61,47 @@ async def _send(item: SyncOutbox) -> dict:
         raise ValueError(f"Unsupported outbox event type: {item.event_type}")
     payload = item.payload or {}
     return await messaging_service.send_sms(payload["phone_number"], payload["message"])
+
+
+async def send_now_or_enqueue(
+    phone_number: str,
+    message: str,
+    *,
+    event_type: str,
+    aggregate_type: str,
+    aggregate_id: str,
+) -> bool:
+    """Deliver an SMS promptly, without every caller having to block on the network.
+
+    Tries the provider once. On failure (or when the provider is not configured) the
+    message is persisted to the outbox so the background worker retries it with
+    backoff. This lets a latency-sensitive caller (e.g. OTP) respond instantly while
+    still guaranteeing the message is not lost.
+
+    Opens its own DB session so it is safe to run as a FastAPI background task,
+    after the request's session has been closed. Returns True when sent immediately.
+    """
+    try:
+        await messaging_service.send_sms(phone_number, message)
+        return True
+    except Exception as exc:  # noqa: BLE001 - fall through to the durable outbox
+        logger.warning("immediate SMS to %s failed (%s); queuing to outbox", phone_number, exc)
+
+    try:
+        async with async_session_factory() as session:
+            session.add(
+                SyncOutbox(
+                    aggregate_type=aggregate_type,
+                    aggregate_id=aggregate_id,
+                    event_type=event_type,
+                    payload={"phone_number": phone_number, "message": message},
+                    status="pending",
+                )
+            )
+            await session.commit()
+    except Exception:  # noqa: BLE001 - never let delivery bookkeeping break the caller
+        logger.exception("failed to enqueue outbox message for %s", phone_number)
+    return False
 
 
 async def process_pending(db: AsyncSession, limit: int = 100) -> int:

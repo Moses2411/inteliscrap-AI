@@ -4,6 +4,30 @@ const ROLE_KEY = "inteliscrap_role";
 const PHONE_KEY = "inteliscrap_phone";
 const ADDRESS_KEY = "inteliscrap_address";
 
+// Never let the login UI spin forever if the server is slow or the network hangs.
+const AUTH_TIMEOUT_MS = 15_000;
+
+/** Auth call failure with a user-actionable message and a coarse cause. */
+export class AuthRequestError extends Error {
+  constructor(
+    message: string,
+    readonly kind: "network" | "server",
+  ) {
+    super(message);
+    this.name = "AuthRequestError";
+  }
+}
+
+function timeoutSignal(ms: number): AbortSignal | undefined {
+  try {
+    return typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+      ? AbortSignal.timeout(ms)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 export type UserRole = "seller" | "collector" | "admin" | "ngo" | "recycling_hub" | "partner";
 
 export function getToken(): string | null {
@@ -88,27 +112,52 @@ export async function requestOtp(
   phoneNumber: string,
   role?: UserRole,
   address?: string,
-): Promise<{ otp?: string; debug: boolean }> {
+): Promise<{ otp?: string; debug: boolean; retryAfter: number }> {
   const body: { phone_number: string; role?: UserRole; address_text?: string } = { phone_number: phoneNumber };
   if (role) body.role = role;
   if (address) body.address_text = address;
-  const res = await fetch(`${API_BASE}/api/v1/auth/otp/request`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error("OTP request failed");
-  const data: { status: string; otp?: string; user_id: string } = await res.json();
-  return { otp: data.otp, debug: data.otp != null };
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/v1/auth/otp/request`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: timeoutSignal(AUTH_TIMEOUT_MS),
+    });
+  } catch {
+    throw new AuthRequestError(
+      "Couldn't reach the server. Check your connection and try again.",
+      "network",
+    );
+  }
+  if (!res.ok) {
+    throw new AuthRequestError(
+      "Couldn't send the code right now. Please try again in a moment.",
+      "server",
+    );
+  }
+  const data: { status: string; otp?: string; user_id: string; retry_after?: number } = await res.json();
+  return { otp: data.otp, debug: data.otp != null, retryAfter: data.retry_after ?? 0 };
 }
 
 export async function verifyOtp(phoneNumber: string, otpCode: string): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/v1/auth/otp/verify`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone_number: phoneNumber, otp_code: otpCode }),
-  });
-  if (!res.ok) throw new Error("OTP verification failed");
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/v1/auth/otp/verify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone_number: phoneNumber, otp_code: otpCode }),
+      signal: timeoutSignal(AUTH_TIMEOUT_MS),
+    });
+  } catch {
+    throw new AuthRequestError(
+      "Couldn't reach the server. Check your connection and try again.",
+      "network",
+    );
+  }
+  if (!res.ok) {
+    throw new AuthRequestError("That code didn't match or has expired. Try again.", "server");
+  }
   const data: { access_token: string; role: string } = await res.json();
   setToken(data.access_token);
   setRole(data.role as UserRole);
