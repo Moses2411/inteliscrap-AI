@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Check, Globe, LogOut, Menu, Moon, Recycle, Search, Sun, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, Globe, LogOut, Moon, Recycle, Search, Sun } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/cn";
 import { getNavForRole, ROLE_LABEL } from "../../lib/nav";
@@ -32,33 +32,11 @@ function Tooltip({ label }: { label: string }) {
   );
 }
 
-export function MobileMenuButton({ onClick, expanded }: { onClick: () => void; expanded: boolean }) {
-  const { t } = useTranslation();
-  return (
-    <button
-      id="mobile-menu-button"
-      onClick={onClick}
-      className="fixed left-4 top-4 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-card transition-all duration-150 hover:bg-slate-50 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 md:hidden"
-      aria-label={t("expand_sidebar")}
-      aria-expanded={expanded}
-      aria-controls="mobile-nav-drawer"
-    >
-      <Menu className="h-5 w-5" strokeWidth={2} />
-    </button>
-  );
-}
-
-interface Props {
-  mobileOpen?: boolean;
-  onMobileClose?: () => void;
-}
-
-export default function Sidebar({ mobileOpen = false, onMobileClose }: Props) {
+export default function Sidebar() {
   const { t, locale } = useTranslation();
   const { theme, toggleTheme, setSelectedLanguage } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
-  const drawerRef = useRef<HTMLElement>(null);
   const role = getRole();
   const phone = getSavedPhone();
   const userName = formatPhoneDisplay(phone) ?? "Guest";
@@ -118,24 +96,7 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: Props) {
     };
   }, [langOpen]);
 
-  // Mobile drawer: focus first item on open, Escape closes + restores focus
-  useEffect(() => {
-    if (!mobileOpen) return;
-    const id = window.setTimeout(() => {
-      drawerRef.current?.querySelector<HTMLElement>("button, a, input")?.focus();
-    }, 60);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onMobileClose?.();
-        document.getElementById("mobile-menu-button")?.focus();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.clearTimeout(id);
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [mobileOpen, onMobileClose]);
+  // Mobile drawer removed — mobile navigation is handled by BottomNav.
 
   const handleAsideEnter = () => {
     if (!collapsed) return;
@@ -164,7 +125,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: Props) {
 
   const handleNav = (path: string) => {
     navigate(path);
-    onMobileClose?.();
   };
 
   const isActive = (path: string) =>
@@ -380,7 +340,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: Props) {
           onClick={() => {
             clearToken();
             navigate("/login");
-            onMobileClose?.();
           }}
           className={cn(
             "flex h-10 w-full items-center rounded-xl text-sm font-medium transition-all duration-150",
@@ -417,47 +376,6 @@ export default function Sidebar({ mobileOpen = false, onMobileClose }: Props) {
 
   return (
     <>
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
-            onClick={onMobileClose}
-            aria-hidden="true"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Mobile drawer */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.aside
-            ref={drawerRef}
-            id="mobile-nav-drawer"
-            initial={{ x: -280 }}
-            animate={{ x: 0 }}
-            exit={{ x: -280 }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="fixed left-3 top-3 z-50 flex h-[calc(100vh-1.5rem)] w-64 flex-col rounded-[20px] border border-slate-200/80 bg-white shadow-card-lg dark:border-slate-800 dark:bg-slate-900 md:hidden"
-            role="navigation"
-            aria-label="Mobile navigation"
-          >
-            <button
-              onClick={onMobileClose}
-              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
-              aria-label="Close menu"
-            >
-              <X className="h-4 w-4" />
-            </button>
-            {sidebarContent}
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
       {/* Desktop sidebar */}
       <aside
         onMouseEnter={handleAsideEnter}

@@ -36,6 +36,10 @@ export async function getLocalScans(): Promise<ScrapScan[]> {
   return db.scans.orderBy("captured_at").reverse().filter(s => !s.is_deleted).toArray();
 }
 
+export async function getScanById(id: string): Promise<ScrapScan | undefined> {
+  return db.scans.get(id);
+}
+
 export async function cachePrices(prices: PriceMatrixEntry[]): Promise<void> {
   await db.prices.bulkPut(prices);
 }

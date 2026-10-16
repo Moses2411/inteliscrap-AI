@@ -185,5 +185,17 @@
   "skip_to_content": "Gawa n'ihu na isiokwu",
   "confirm_listing": "Confirm Listing",
   "list_scrap": "List Scrap",
-  "listing_confirm_desc": "Review and confirm your listing. The collector will weigh and confirm the final price at pickup."
+  "listing_confirm_desc": "Review and confirm your listing. The collector will weigh and confirm the final price at pickup.",
+  "history_subtitle": "Nchụpụta gị gara aga na nhụ ọrụ ha",
+  "total_scans": "Haabụ nchụpụta",
+  "pending_sync": "Na-echere nhụ ọrụ",
+  "filter": "Filter",
+  "group_by_date": "Hazikwa site na Ụbọchị",
+  "no_scans_yet_desc": "Nye foto ahịhịa ka ị malite",
+  "all": "Niile",
+  "stop": "Kwụsị",
+  "listening": "Anụ ego…",
+  "audio_report": "Ozi olu",
+  "listen_to_result": "Anụ nke a",
+  "listen_to_result_hint": "Anụ maka ngwa ahịa, ọnụahịa na ndụmọdụ nchekwa."
 }

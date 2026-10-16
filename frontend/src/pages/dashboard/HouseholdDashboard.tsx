@@ -57,16 +57,66 @@ export default function HouseholdDashboard() {
         <PageHeader
           title={`${greeting}, ${displayName} 👋`}
           subtitle="Snap scrap, see the fair price, sell to verified collectors."
-          actions={
-            <div className="flex items-center gap-2">
-              {market.isPreview && <PreviewPill />}
-              <Button size="sm" onClick={() => navigate("/scan")}>
-                <Camera className="h-3.5 w-3.5" />
-                Scan scrap
-              </Button>
-            </div>
-          }
+          actions={market.isPreview ? <PreviewPill /> : undefined}
         />
+      </motion.div>
+
+      {/* Primary scan CTA — the one unmistakable action, placed first so new users see it instantly */}
+      <motion.div variants={pageItem}>
+        <motion.button
+          type="button"
+          onClick={() => navigate("/scan")}
+          aria-label="Scan scrap — start here"
+          initial="rest"
+          animate="rest"
+          whileHover="hover"
+          whileTap="tap"
+          variants={{
+            rest: { y: 0 },
+            hover: { y: -3, transition: { type: "spring", stiffness: 380, damping: 24 } },
+            tap: { scale: 0.985, transition: { duration: 0.12 } },
+          }}
+          className="group relative w-full overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-500 to-teal-600 p-1.5 text-left shadow-card-lg ring-1 ring-brand-400/30 dark:from-brand-700 dark:via-brand-600 dark:to-teal-700 dark:ring-brand-500/30"
+        >
+          {/* soft glow blob */}
+          <motion.div
+            variants={{
+              rest: { scale: 1 },
+              hover: { scale: 1.2, transition: { type: "spring", stiffness: 260, damping: 20 } },
+            }}
+            className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/15 blur-2xl"
+            aria-hidden="true"
+          />
+
+          <div className="relative flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
+            {/* attention-drawing icon tile */}
+            <span className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white backdrop-blur">
+              <Camera className="h-7 w-7" aria-hidden="true" />
+              <span
+                className="pointer-events-none absolute inset-0 rounded-2xl border-2 border-white/40 motion-safe:animate-pulse-ring"
+                aria-hidden="true"
+              />
+            </span>
+
+            <div className="min-w-0 flex-1">
+              <p className="text-lg font-extrabold tracking-tight text-white sm:text-xl">Scan your scrap now</p>
+              <p className="mt-1 max-w-md text-sm leading-relaxed text-emerald-50">
+                Point your camera — on-device AI names the material, flags hazards and shows the fair Naira price, even offline.
+              </p>
+            </div>
+
+            {/* dominant, high-contrast action pill */}
+            <motion.span
+              variants={{
+                rest: { scale: 1 },
+                hover: { scale: 1.05, transition: { type: "spring", stiffness: 400, damping: 18 } },
+              }}
+              className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-2xl bg-white px-6 py-3.5 text-sm font-bold text-brand-700 shadow-lg sm:w-auto"
+            >
+              Start scanning <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </motion.span>
+          </div>
+        </motion.button>
       </motion.div>
 
       {/* KPI row */}
@@ -116,49 +166,6 @@ export default function HouseholdDashboard() {
       <motion.div variants={pageItem} className="grid gap-6 lg:grid-cols-5">
         {/* Left: scan history + focus */}
         <div className="flex h-full flex-col gap-4 lg:col-span-3">
-          <motion.button
-            type="button"
-            onClick={() => navigate("/scan")}
-            initial="rest"
-            animate="rest"
-            whileHover="hover"
-            whileTap="tap"
-            variants={{
-              rest: { y: 0 },
-              hover: { y: -3, transition: { type: "spring", stiffness: 380, damping: 24 } },
-              tap: { scale: 0.985, transition: { duration: 0.12 } },
-            }}
-            className="group relative w-full shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-600 to-teal-800 p-5 text-left shadow-card-lg dark:from-brand-800 dark:via-brand-700 dark:to-teal-950"
-          >
-            <motion.div
-              variants={{
-                rest: { scale: 1 },
-                hover: { scale: 1.18, transition: { type: "spring", stiffness: 260, damping: 20 } },
-              }}
-              className="absolute -right-8 -top-8 h-36 w-36 rounded-full bg-white/10 blur-xl"
-            />
-            <div className="relative flex items-center justify-between gap-4">
-              <div>
-                <p className="flex items-center gap-2 text-sm font-bold text-white">
-                  <Camera className="h-4 w-4" />
-                  Know what your scrap is worth
-                </p>
-                <p className="mt-1.5 max-w-sm text-sm text-emerald-50">
-                  On-device AI tells you the material, the hazards and the fair Naira price — even offline.
-                </p>
-                <motion.span
-                  variants={{ rest: { x: 0 }, hover: { x: 5, transition: { type: "spring", stiffness: 400, damping: 25 } } }}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-bold text-white backdrop-blur"
-                >
-                  Scan now <ArrowRight className="h-3.5 w-3.5" />
-                </motion.span>
-              </div>
-              <div className="hidden h-16 w-16 items-center justify-center rounded-3xl bg-white/15 text-white backdrop-blur sm:flex">
-                <Recycle className="h-8 w-8" />
-              </div>
-            </div>
-          </motion.button>
-
           <Card pad className="flex flex-1 flex-col">
             <SectionHeader
               title="Recent scans"

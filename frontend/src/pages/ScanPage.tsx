@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Camera, Download, Recycle, Zap, WifiOff, ShieldCheck, AlertTriangle } from "lucide-react";
 import { LiveScanner } from "../components/Scanner/LiveScanner";
@@ -81,7 +81,15 @@ function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
   const { t } = useTranslation();
   const { selected_language, cached_prices, setCurrentScan } = useApp();
   const { analyze, loadingProgress } = useVision();
-  const { speakReport, pause, resume, status: ttsStatus } = useAudioTTS();
+  const { speakReport, pause, resume, stop, status: ttsStatus, progress: ttsProgress } = useAudioTTS();
+
+  // Stop any ongoing read-aloud when the workspace unmounts
+  useEffect(() => stop, [stop]);
+
+  const resetResult = useCallback(() => {
+    stop();
+    setResult(null);
+  }, [stop]);
   const edgeModel = useEdgeModel();
 
   const finishWith = useCallback(
@@ -254,16 +262,18 @@ function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
           onReadAloud={() =>
             speakReport(result.material_class, estimated_value, result.toxicity_hazards, selected_language)
           }
-          onScanAgain={() => setResult(null)}
+          onScanAgain={resetResult}
           onConfirmMaterial={handleConfirmMaterial}
           onDisambiguate={handleResolveMaterial}
           onChooseManually={() => {
-            setResult(null);
+            resetResult();
             setManualMode(true);
           }}
           ttsStatus={ttsStatus}
+          ttsProgress={ttsProgress}
           onPause={pause}
           onResume={resume}
+          onStop={stop}
         />
         <PostPickupForm analysis={result} onReset={() => setResult(null)} />
       </motion.div>

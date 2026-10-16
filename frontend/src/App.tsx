@@ -10,6 +10,7 @@ import MarketPage from "./pages/MarketPage";
 import HomeDashboard from "./pages/dashboard/HomeDashboard";
 import ScanPage from "./pages/ScanPage";
 import HistoryPage from "./pages/HistoryPage";
+import ScanDetailPage from "./pages/ScanDetailPage";
 import PickupsPage from "./pages/PickupsPage";
 import MyPickupsPage from "./pages/MyPickupsPage";
 import HubDashboard from "./pages/dashboard/HubDashboard";
@@ -53,6 +54,7 @@ function ShellRoutes() {
         <Route path="/market" element={<MarketPage />} />
         <Route path="/scan" element={<ScanPage />} />
         <Route path="/history" element={<HistoryPage />} />
+        <Route path="/history/:id" element={<ScanDetailPage />} />
         <Route
           path="/pickups"
           element={

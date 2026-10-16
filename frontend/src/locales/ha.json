@@ -185,5 +185,17 @@
   "skip_to_content": "Tsallaka zuwa manyan abin ciki",
   "confirm_listing": "Tabbatar da Rubutu",
   "list_scrap": "Rubuta Kaya",
-  "listing_confirm_desc": "Duba kuma tabbatar da rubutunka. Mai auriya zai daurki da kuma yi tabbatar da farashin karshe a wannan auriya."
+  "listing_confirm_desc": "Duba kuma tabbatar da rubutunka. Mai auriya zai daurki da kuma yi tabbatar da farashin karshe a wannan auriya.",
+  "history_subtitle": "Bincikenku na baya da Matsayin daidaitawa",
+  "total_scans": "Jimlar bincike",
+  "pending_sync": "Daidaitawa ta jira",
+  "filter": "Tace",
+  "group_by_date": "Raba bisa ranar",
+  "no_scans_yet_desc": "Dauki hoton saka-jiki don farawa",
+  "all": "Duka",
+  "stop": "Daina",
+  "listening": "Ina saurara…",
+  "audio_report": "Rahoton sauti",
+  "listen_to_result": "Saurara da wannan sakamako",
+  "listen_to_result_hint": "Saurara da kayan, farashi da shawarwarin kariya a sauƙaƙe."
 }

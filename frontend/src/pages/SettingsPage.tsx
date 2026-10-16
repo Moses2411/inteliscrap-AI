@@ -1,9 +1,10 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Bell,
-  Crown,
+  Check,
+  ChevronDown,
   Globe,
   Languages,
   LogOut,
@@ -35,12 +36,14 @@ import type { Language } from "../types";
 const LANG_OPTIONS: { value: Language; label: string }[] = [
   { value: "en", label: "English" },
   { value: "ha", label: "Hausa" },
-  { value: "pcm", label: "Pidgin (Nigeria)" },
+  { value: "pcm", label: "Nigerian Pidgin" },
+  { value: "yo", label: "Yoruba" },
+  { value: "ig", label: "Igbo" },
 ];
 
 function Row({ icon, title, desc, children }: { icon: ReactNode; title: string; desc?: string; children?: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 py-3.5 first:pt-0 last:pb-0">
       <div className="flex min-w-0 items-start gap-3">
         <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
           {icon}
@@ -55,9 +58,99 @@ function Row({ icon, title, desc, children }: { icon: ReactNode; title: string; 
   );
 }
 
+function LanguageDropdown({ label }: { label: string }) {
+  const { selected_language, setSelectedLanguage } = useApp();
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false);
+        wrapRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const current = LANG_OPTIONS.find((l) => l.value === selected_language);
+
+  return (
+    <div ref={wrapRef} className="relative shrink-0">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        className={cn(
+          "flex h-10 min-w-36 items-center justify-between gap-2 rounded-xl border px-3.5 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/30",
+          "border-slate-200 bg-white text-slate-700 hover:border-brand-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700",
+          open && "border-brand-400 ring-2 ring-brand-500/20 dark:border-brand-600",
+        )}
+      >
+        <span className="truncate">{current?.label ?? "English"}</span>
+        <ChevronDown
+          className={cn("h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200", open && "rotate-180")}
+          strokeWidth={2.5}
+          aria-hidden="true"
+        />
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+            role="listbox"
+            aria-label={label}
+            className="absolute right-0 top-full z-50 mt-2 min-w-44 origin-top-right overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-card-lg dark:border-slate-700 dark:bg-slate-800"
+          >
+            {LANG_OPTIONS.map((l) => {
+              const selected = l.value === selected_language;
+              return (
+                <button
+                  key={l.value}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    setSelectedLanguage(l.value);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "flex h-11 w-full items-center justify-between gap-3 rounded-xl px-3 text-sm font-semibold transition-colors",
+                    selected
+                      ? "bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300"
+                      : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700",
+                  )}
+                >
+                  <span className="truncate">{l.label}</span>
+                  {selected && <Check className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" strokeWidth={2.5} aria-hidden="true" />}
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { t, locale } = useTranslation();
-  const { selected_language, setSelectedLanguage, is_online, theme, toggleTheme } = useApp();
+  const { selected_language, is_online, theme, toggleTheme } = useApp();
   const navigate = useNavigate();
   const phone = getSavedPhone();
   const role = getRole();
@@ -175,18 +268,7 @@ export default function SettingsPage() {
             </Row>
 
             <Row icon={<Languages className="h-4 w-4" />} title={t("language")} desc="Interface, hazards & voice">
-              <select
-                value={selected_language}
-                onChange={(e) => setSelectedLanguage(e.target.value as Language)}
-                aria-label={t("language")}
-                className="input !w-36 text-xs font-bold"
-              >
-                {LANG_OPTIONS.map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
+              <LanguageDropdown label={t("language")} />
             </Row>
 
             <div className="py-3.5">

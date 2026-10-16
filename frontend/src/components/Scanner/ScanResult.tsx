@@ -33,8 +33,10 @@ interface Props {
   onDisambiguate?: (slug: string) => void;
   onChooseManually?: () => void;
   ttsStatus?: TtsStatus;
+  ttsProgress?: TtsProgress | null;
   onPause?: () => void;
   onResume?: () => void;
+  onStop?: () => void;
 }
 
 type SafetyKey = keyof typeof import("../../locales/en.json")["safety_instructions"];
@@ -154,8 +156,10 @@ export default function ScanResult({
   onDisambiguate,
   onChooseManually,
   ttsStatus = "idle",
+  ttsProgress = null,
   onPause,
   onResume,
+  onStop,
 }: Props) {
   const { t } = useTranslation();
   const { selected_language } = useApp();

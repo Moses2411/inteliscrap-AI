@@ -126,66 +126,72 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-950">
-      {/* Blurred photo backdrop */}
+      {/* Full-bleed photo backdrop */}
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: "linear-gradient(rgba(15,23,42,0.55), rgba(15,23,42,0.75)), url(/baban-bola.jpg)" }}
+        style={{ backgroundImage: "url(/baban-bola.jpg)" }}
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-black/40 backdrop-blur-md" />
+      <div aria-hidden="true" className="absolute inset-0 bg-slate-950/45 backdrop-blur-[3px]" />
 
-      <div className="relative flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8">
-        <div className="grid w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-900/5 sm:max-w-6xl lg:min-h-[calc(100dvh-4rem)] lg:max-w-7xl lg:grid-cols-[2fr_3fr] dark:bg-slate-900 dark:ring-white/10">
-          {/* Brand panel */}
-          <div className="relative hidden w-[46%] overflow-hidden bg-cover bg-center bg-no-repeat p-10 text-white lg:flex lg:flex-col lg:justify-between" style={{ backgroundImage: "linear-gradient(rgba(15,23,42,0.6), rgba(15,23,42,0.8)), url(/baban-bola.jpg)" }}>
-            <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-2xl" />
-            <div className="absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-gold-400/20 blur-3xl" />
+      <div className="relative flex min-h-screen items-center justify-center p-4 sm:p-6">
+        <div className="grid w-full max-w-6xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-900/5 sm:max-w-[1280px] lg:min-h-[85vh] lg:grid-cols-[11fr_9fr] dark:bg-slate-900 dark:ring-white/10">
+          {/* ── Image panel (left) — inset card with rounded-[20px], voyger-style chips ── */}
+          <div className="relative hidden h-full p-3 lg:block">
+            <div className="relative h-full w-full overflow-hidden rounded-[20px]">
+              <img
+                src="/baban-bola.jpg"
+                alt="A Baban Bola collector buying scrap from a seller on a Lagos street"
+                className="absolute inset-0 h-full w-full object-cover object-[50%_58%]"
+              />
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-slate-950/20"
+              />
 
-            <div className="relative flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
-                <Recycle className="h-6 w-6" />
+              {/* Location chip → dot + pin line, top-left */}
+              <div className="absolute left-8 top-8 flex flex-col items-start">
+                <span className="h-3 w-3 rounded-full border-2 border-white/90 bg-white/40 shadow-md backdrop-blur" />
+                <span className="h-10 w-px bg-white/60" aria-hidden="true" />
+                <span className="flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-2 text-[11px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-md">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                    <MapPin className="h-3 w-3" aria-hidden="true" />
+                  </span>
+                  Zaria Market
+                  <span className="font-normal text-white/70">Live scrap prices</span>
+                </span>
               </div>
-              <div>
-                <p className="text-lg font-extrabold tracking-tight">InteliScrap AI</p>
-                <p className="text-xs font-semibold text-brand-100">Circular economy marketplace</p>
+
+              {/* Stat card, right side */}
+              <div className="absolute right-6 top-1/3 rounded-2xl bg-white/15 px-4 py-3 text-white ring-1 ring-white/25 backdrop-blur-md">
+                <p className="text-lg font-extrabold leading-none">94%</p>
+                <p className="mt-1 text-[11px] font-semibold leading-tight text-white/80">
+                  material accuracy, fully on-device
+                </p>
               </div>
-            </div>
 
-            <div className="relative space-y-6">
-              <h1 className="max-w-md text-4xl font-extrabold leading-tight tracking-tight">
-                Every kilogram of scrap, fairly valued.
-              </h1>
-              <ul className="space-y-3.5">
-                <li className="flex items-center gap-3 text-sm">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/15"><MapPin className="h-4 w-4" /></span>
-                  Address-based pickup for sellers & collectors
-                </li>
-                <li className="flex items-center gap-3 text-sm">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/15"><Recycle className="h-4 w-4" /></span>
-                  On-device AI identifies materials & hazards — even offline
-                </li>
-                <li className="flex items-center gap-3 text-sm">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/15"><ShieldCheck className="h-4 w-4" /></span>
-                  EPR-auditable manifests for every settled collection
-                </li>
-              </ul>
+              {/* Bottom pill */}
+              <span className="absolute bottom-8 left-8 rounded-full bg-white/15 px-3.5 py-2 text-[11px] font-semibold text-white ring-1 ring-white/25 backdrop-blur-md">
+                Nigeria&apos;s major languages
+              </span>
             </div>
-
-            <p className="relative text-xs text-brand-100">Built for informal recycling economies worldwide.</p>
           </div>
 
-          {/* Form */}
-          <div className="flex flex-1 items-center justify-center p-6">
-            <div className="w-full max-w-md">
-              <div className="mb-8 flex items-center gap-3 lg:hidden">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white">
-                  <Recycle className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-base font-extrabold text-slate-900 dark:text-white">InteliScrap AI</p>
-                  <p className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">Market & Pickup</p>
-                </div>
-              </div>
+          {/* ── Form panel (right) — navbar-style logo lockup, left-aligned heading ── */}
+          <div className="flex flex-col justify-center px-8 py-10 sm:px-10 sm:py-10 xl:px-14">
+            <a href="/" className="mb-8 flex items-center gap-2.5">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm">
+                <Recycle className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="leading-tight">
+                <span className="block whitespace-nowrap text-base font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  InteliScrap AI
+                </span>
+                <span className="block whitespace-nowrap text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  Circular economy marketplace
+                </span>
+              </span>
+            </a>
 
               <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                 {step === "role" ? "Welcome back" : step === "otp" ? "Enter the code" : "Register your hub"}
@@ -198,106 +204,109 @@ export default function LoginPage() {
                     : "Almost there — tell us about your recycling hub so you can start publishing buy requests."}
               </p>
 
-              {step === "role" ? (
-                <div className="mt-6 space-y-5">
-                  <div
-                    role="radiogroup"
-                    aria-label="Account role"
-                    className="grid grid-cols-2 gap-2.5"
-                    onKeyDown={(e) => {
-                      if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
-                      e.preventDefault();
-                      const idx = ROLES.findIndex((r) => r.role === role);
-                      const delta = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
-                      const next = ROLES[(idx + delta + ROLES.length) % ROLES.length];
-                      if (next) {
-                        setRole(next.role);
-                        const buttons = e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]');
-                        buttons[(idx + delta + ROLES.length) % ROLES.length]?.focus();
-                      }
-                    }}
-                  >
-                    {ROLES.map((r) => {
-                      const active = role === r.role;
-                      return (
-                        <button
-                          key={r.role}
-                          type="button"
-                          role="radio"
-                          aria-checked={active}
-                          onClick={() => setRole(r.role)}
-                          className={cn(
-                            "relative flex flex-col items-start gap-1 rounded-2xl border-2 p-3.5 text-left transition-all duration-150 active:scale-[0.98]",
-                            active
-                              ? "border-brand-500 bg-brand-50/70 shadow-glow dark:bg-brand-950/50"
-                              : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600",
-                          )}
-                        >
-                          {active && (
-                            <span className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-white">
-                              <Check className="h-3 w-3" />
-                            </span>
-                          )}
-                          <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl", active ? "bg-brand-500/15 text-brand-600 dark:text-brand-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400")}>
-                            {r.icon}
+            {step === "role" ? (
+              <form
+                className="mt-8 space-y-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  sendCode();
+                }}
+              >
+                <div
+                  role="radiogroup"
+                  aria-label="Account role"
+                  className="grid grid-cols-2 gap-2.5"
+                  onKeyDown={(e) => {
+                    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(e.key)) return;
+                    e.preventDefault();
+                    const idx = ROLES.findIndex((r) => r.role === role);
+                    const delta = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : -1;
+                    const next = ROLES[(idx + delta + ROLES.length) % ROLES.length];
+                    if (next) {
+                      setRole(next.role);
+                      const buttons = e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]');
+                      buttons[(idx + delta + ROLES.length) % ROLES.length]?.focus();
+                    }
+                  }}
+                >
+                  {ROLES.map((r) => {
+                    const active = role === r.role;
+                    return (
+                      <button
+                        key={r.role}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setRole(r.role)}
+                        className={cn(
+                          "relative flex flex-col items-start gap-1 rounded-2xl border-2 p-3.5 text-left transition-all duration-150 active:scale-[0.98]",
+                          active
+                            ? "border-brand-500 bg-brand-50/70 shadow-glow dark:bg-brand-950/50"
+                            : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600",
+                        )}
+                      >
+                        {active && (
+                          <span className="absolute right-2.5 top-2.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-white">
+                            <Check className="h-3 w-3" />
                           </span>
-                          <span className="mt-1 text-[13px] font-bold leading-tight text-slate-800 dark:text-slate-100">{r.label}</span>
-                          <span className="text-[11px] leading-tight text-slate-400">{r.blurb}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                        )}
+                        <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl", active ? "bg-brand-500/15 text-brand-600 dark:text-brand-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400")}>
+                          {r.icon}
+                        </span>
+                        <span className="mt-1 text-[13px] font-bold leading-tight text-slate-800 dark:text-slate-100">{r.label}</span>
+                        <span className="text-[11px] leading-tight text-slate-400">{r.blurb}</span>
+                      </button>
+                    );
+                  })}
+                </div>
 
-                  <div>
-                    <label className="label" htmlFor="phone">Phone number</label>
-                    <input
-                      id="phone"
-                      type="tel"
-                      inputMode="tel"
-                      placeholder="+234 801 234 5678"
-                      className="input rounded-full border-transparent bg-slate-100 px-5 py-3 dark:border-transparent dark:bg-slate-800"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                    />
-                  </div>
+                <div>
+                  <label className="label" htmlFor="phone">Phone number</label>
+                  <input
+                    id="phone"
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="+234 801 234 5678"
+                    className="input rounded-full border-transparent bg-slate-100 px-5 py-3 dark:border-transparent dark:bg-slate-800"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                </div>
 
-                  {/* Address field for seller and collector */}
-                  {addressRequired && (
-                    <div>
-                      <label className="label" htmlFor="address">Pickup address</label>
-                      <input
-                        id="address"
-                        type="text"
-                        placeholder="e.g. 123 Main Street, City"
-                        className="input rounded-full border-transparent bg-slate-100 px-5 py-3 dark:border-transparent dark:bg-slate-800"
-                        value={address}
-                        onChange={(e) => setAddress(e.target.value)}
-                        required
-                      />
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        Required for pickup scheduling. Used to match you with nearby collectors.
-                      </p>
-                    </div>
+                {/* Address: sellers only — kept mounted but collapsed for other roles so height never jumps */}
+                <div
+                  className={cn(
+                    "transition-all duration-300 ease-out",
+                    addressRequired ? "grid grid-rows-[1fr] opacity-100" : "grid grid-rows-[0fr] opacity-0",
                   )}
-
-                  <div className="ErrorNote" role="alert" style={error ? {} : { display: 'none' }}>
-                    {error && <span>{error}</span>}
+                >
+                  <div className="overflow-hidden">
+                    <label className="label" htmlFor="address">Pickup address</label>
+                    <input
+                      id="address"
+                      type="text"
+                      placeholder="e.g. 123 Main Street, City"
+                      className="input rounded-full border-transparent bg-slate-100 px-5 py-3 dark:border-transparent dark:bg-slate-800"
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      required={addressRequired}
+                      aria-hidden={!addressRequired}
+                      tabIndex={addressRequired ? 0 : -1}
+                    />
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      Required for pickup scheduling. Used to match you with nearby collectors.
+                    </p>
                   </div>
+                </div>
 
+                {/* Reserved slot for error + phone warning — keeps button position static (CLS) */}
+                <div className="min-h-[3.5rem] pt-1" aria-live="polite">
+                  {error && <ErrorNote message={error} />}
                   {phone && !validPhone && (
-                    <p className="text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                    <p className="mt-1 text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
                       Enter a valid phone number, e.g. +234 801 234 5678
                     </p>
                   )}
-
-                  <Button fullWidth size="lg" className="rounded-full" onClick={sendCode} loading={busy} disabled={!validPhone || (addressRequired && !validAddress)}>
-                    Send verification code
-                  </Button>
-
-                  <p className="text-center text-xs text-slate-400 dark:text-slate-500">
-                    New here? Your account is created automatically when you verify — no
-                    passwords to forget.
-                  </p>
                 </div>
               ) : step === "otp" ? (
                 <div className="mt-6 space-y-5">
@@ -328,6 +337,39 @@ export default function LoginPage() {
                     />
                   </div>
 
+                <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                  New here? Your account is created automatically when you verify — no
+                  passwords to forget.
+                </p>
+              </form>
+            ) : (
+              <form
+                className="mt-8 space-y-5"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  confirmOtp();
+                }}
+              >
+                {debugOtp && (
+                  <div className="rounded-2xl bg-brand-50 px-4 py-3 text-xs font-semibold text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
+                    Demo mode — your code is <span className="font-mono text-sm font-extrabold">{debugOtp}</span>
+                  </div>
+                )}
+                <div>
+                  <label className="label" htmlFor="otp">6-digit code</label>
+                  <input
+                    id="otp"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    className="input rounded-full border-transparent bg-slate-100 px-5 py-3.5 text-center font-mono text-lg tracking-[0.4em] dark:border-transparent dark:bg-slate-800"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                    placeholder="••••••"
+                  />
+                </div>
+                {/* Reserved slot for error — keeps button position static (CLS) */}
+                <div className="min-h-[3rem]" aria-live="polite">
                   {error && <ErrorNote message={error} />}
 
                   <Button fullWidth size="lg" className="rounded-full" onClick={confirmOtp} loading={busy} disabled={otp.length !== 6}>

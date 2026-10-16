@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
-  Banknote,
   HardHat,
   Loader2,
   MapPin,
@@ -11,7 +10,6 @@ import {
   PackageCheck,
   Store,
   Truck,
-  Wallet,
 } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatCard } from "../../components/ui/StatCard";
@@ -157,20 +155,16 @@ export default function CollectorDashboard() {
           <StatCard
             label="Earnings (30d)"
             value={isPreview ? formatCompactNaira(153000) : "—"}
-            icon={<Wallet className="h-5 w-5" />}
             trend={incomeDelta}
             trendLabel="vs last month"
-          >
+          />
 
-          </StatCard>
         </motion.div>
 
         <motion.div variants={pageItem}>
           <StatCard
             label="Active jobs"
             value={jobs.length}
-            icon={<Truck className="h-5 w-5" />}
-            iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
           />
         </motion.div>
 
@@ -178,8 +172,6 @@ export default function CollectorDashboard() {
           <StatCard
             label="Available offers"
             value={offers.length}
-            icon={<PackageCheck className="h-5 w-5" />}
-            iconClass="bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300"
           />
         </motion.div>
 
@@ -187,8 +179,6 @@ export default function CollectorDashboard() {
           <StatCard
             label="Jobs value"
             value={formatCompactNairaEstimate(jobsValue)}
-            icon={<Banknote className="h-5 w-5" />}
-            iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
           />
         </motion.div>
       </motion.div>

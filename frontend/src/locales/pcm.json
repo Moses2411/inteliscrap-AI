@@ -186,5 +186,17 @@
   "skip_to_content": "Go straight to main content",
   "confirm_listing": "Confirm Listing",
   "list_scrap": "List Scrap",
-  "listing_confirm_desc": "Check and confirm your listing. The collector go weigh and confirm the final price at pickup."
+  "listing_confirm_desc": "Check and confirm your listing. The collector go weigh and confirm the final price at pickup.",
+  "history_subtitle": "Di scans wey you don take and di sync status",
+  "total_scans": "Total scans",
+  "pending_sync": "Wey dey wait sync",
+  "filter": "Filter",
+  "group_by_date": "Group am by date",
+  "no_scans_yet_desc": "Snap photo of scrap to start",
+  "all": "All",
+  "stop": "Stop am",
+  "listening": "I dey listen…",
+  "audio_report": "Audio report",
+  "listen_to_result": "Listen dis result",
+  "listen_to_result_hint": "Hear the material, price and safety advice wey dem talk."
 }
