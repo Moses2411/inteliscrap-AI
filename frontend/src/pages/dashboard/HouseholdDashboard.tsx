@@ -10,6 +10,7 @@ import { PreviewPill } from "../../components/ui/PreviewPill";
 import { Button } from "../../components/ui/Button";
 import { ActivityFeed, type ActivityItem } from "../../components/ui/ActivityFeed";
 import { EmptyState } from "../../components/ui/EmptyState";
+import { HandoverConfirmCard } from "../../components/Pickup/HandoverConfirmCard";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useMarketData } from "../../hooks/useDashboardData";
@@ -105,6 +106,11 @@ export default function HouseholdDashboard() {
             hint="Material prices tracked"
           />
         </motion.div>
+      </motion.div>
+
+      {/* Proof-of-handover: confirmations hold new listings until resolved. */}
+      <motion.div variants={pageItem}>
+        <HandoverConfirmCard />
       </motion.div>
 
       <motion.div variants={pageItem} className="grid gap-6 lg:grid-cols-5">

@@ -16,6 +16,7 @@ import HubDashboard from "./pages/dashboard/HubDashboard";
 import ImpactDashboard from "./pages/dashboard/ImpactDashboard";
 import PartnerDashboard from "./pages/dashboard/PartnerDashboard";
 import SalesReportDashboard from "./pages/dashboard/SalesReportDashboard";
+import DisputesPage from "./pages/DisputesPage";
 import SettingsPage from "./pages/SettingsPage";
 
 function RequireRole({ roles, children }: { roles: UserRole[]; children: ReactNode }) {
@@ -97,6 +98,14 @@ function ShellRoutes() {
           element={
             <RequireRole roles={["partner", "admin"]}>
               <PartnerDashboard />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/disputes"
+          element={
+            <RequireRole roles={["admin"]}>
+              <DisputesPage />
             </RequireRole>
           }
         />

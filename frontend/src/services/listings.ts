@@ -46,7 +46,16 @@ export async function createListing(
     headers: authHeaders(),
     body: JSON.stringify(payload),
   });
-  if (!res.ok) throw new Error(`Listing creation failed: ${res.statusText}`);
+  if (!res.ok) {
+    let message = `Listing creation failed: ${res.statusText}`;
+    try {
+      const data = await res.json();
+      if (typeof data?.detail === "string") message = data.detail;
+    } catch {
+      // keep the default message
+    }
+    throw new Error(message);
+  }
   return res.json();
 }
 
