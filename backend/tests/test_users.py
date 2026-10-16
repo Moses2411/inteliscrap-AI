@@ -36,24 +36,34 @@ async def test_update_location_requires_auth(client, test_session):
 
 
 @pytest.mark.asyncio
-async def test_update_role_persists_and_grants_collector_access(client, test_session):
+async def test_role_cannot_be_changed_via_api(client, test_session):
     headers, user = await _seller_headers(test_session, phone="+2348070000003")
 
-    blocked = await client.get("/api/v1/pickups/offers", headers=headers)
-    assert blocked.status_code == 403
-
+    # The role-switch endpoint is gone — one phone number, one account type.
     resp = await client.patch(
         "/api/v1/users/me/role", json={"role": "collector"}, headers=headers
     )
-    assert resp.status_code == 200
-    assert resp.json()["role"] == "collector"
-    assert user.role == UserRole.collector
+    assert resp.status_code == 404
+    assert user.role == UserRole.seller
 
-    allowed = await client.get("/api/v1/pickups/offers", headers=headers)
-    assert allowed.status_code == 200
+    # A collector-only route stays forbidden for the seller account.
+    blocked = await client.get("/api/v1/pickups/offers", headers=headers)
+    assert blocked.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_update_role_requires_auth(client, test_session):
-    resp = await client.patch("/api/v1/users/me/role", json={"role": "collector"})
-    assert resp.status_code == 401
+async def test_reauthentication_does_not_change_role(client, test_session):
+    """Logging in again (even choosing a different role) keeps the account type."""
+    user = User(id="uloc-lock", phone_number="+2348070000004", role=UserRole.seller)
+    test_session.add(user)
+    await test_session.flush()
+
+    resp = await client.post(
+        "/api/v1/auth/otp/request",
+        json={"phone_number": "+2348070000004", "role": "collector"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["account_exists"] is True
+    assert body["role"] == "seller"
+    assert user.role == UserRole.seller

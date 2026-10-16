@@ -264,10 +264,6 @@ class OTPRequest(BaseModel):
     address_text: Optional[str] = None
 
 
-class RoleUpdate(BaseModel):
-    role: UserRole
-
-
 class OTPVerify(BaseModel):
     phone_number: str
     otp_code: str

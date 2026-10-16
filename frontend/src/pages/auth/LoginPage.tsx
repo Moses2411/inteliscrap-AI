@@ -38,6 +38,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [roleNote, setRoleNote] = useState<string | null>(null);
 
   // Users type spaces/dashes (the placeholder itself has spaces) — strip them
   // for validation and before sending to the API so lookups match consistently.
@@ -51,13 +52,22 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     setDebugOtp(null);
+    setRoleNote(null);
     try {
-      const { otp: code, debug, retryAfter } = await requestOtp(
+      const { otp: code, debug, retryAfter, role: serverRole, accountExists } = await requestOtp(
         normalizedPhone,
         role,
         addressRequired ? address : undefined,
       );
       if (debug && code) setDebugOtp(code);
+      // One phone number = one account type. If this number already has an
+      // account, that account's role wins — tell the user before they verify.
+      if (accountExists && serverRole && serverRole !== role) {
+        setRole(serverRole);
+        setRoleNote(
+          `This number is already registered as a ${serverRole.replace("_", " ")} account — you'll sign in as that.`,
+        );
+      }
       setStep("otp");
       setCooldown(retryAfter > 0 ? retryAfter : 30);
     } catch (e) {
@@ -269,6 +279,11 @@ export default function LoginPage() {
                 </div>
               ) : (
                 <div className="mt-6 space-y-5">
+                  {roleNote && (
+                    <div className="rounded-xl bg-sky-50 px-3.5 py-2.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:ring-sky-900">
+                      {roleNote}
+                    </div>
+                  )}
                   {debugOtp && (
                     <div className="rounded-2xl bg-brand-50 px-4 py-3 text-xs font-semibold text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
                       Demo OTP: <code className="font-mono">{debugOtp}</code>

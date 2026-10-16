@@ -97,22 +97,11 @@ export async function syncRoleFromServer(): Promise<UserRole | null> {
   }
 }
 
-export async function updateRole(role: UserRole): Promise<void> {
-  const res = await fetch(`${API_BASE}/api/v1/users/me/role`, {
-    method: "PATCH",
-    headers: authHeaders(),
-    body: JSON.stringify({ role }),
-  });
-  if (!res.ok) throw new Error("Role update failed");
-  const data: { role: string } = await res.json();
-  setRole(data.role as UserRole);
-}
-
 export async function requestOtp(
   phoneNumber: string,
   role?: UserRole,
   address?: string,
-): Promise<{ otp?: string; debug: boolean; retryAfter: number }> {
+): Promise<{ otp?: string; debug: boolean; retryAfter: number; role?: UserRole; accountExists: boolean }> {
   const body: { phone_number: string; role?: UserRole; address_text?: string } = { phone_number: phoneNumber };
   if (role) body.role = role;
   if (address) body.address_text = address;
@@ -136,8 +125,21 @@ export async function requestOtp(
       "server",
     );
   }
-  const data: { status: string; otp?: string; user_id: string; retry_after?: number } = await res.json();
-  return { otp: data.otp, debug: data.otp != null, retryAfter: data.retry_after ?? 0 };
+  const data: {
+    status: string;
+    otp?: string;
+    user_id: string;
+    retry_after?: number;
+    role?: string;
+    account_exists?: boolean;
+  } = await res.json();
+  return {
+    otp: data.otp,
+    debug: data.otp != null,
+    retryAfter: data.retry_after ?? 0,
+    role: data.role as UserRole | undefined,
+    accountExists: data.account_exists ?? false,
+  };
 }
 
 export async function verifyOtp(phoneNumber: string, otpCode: string): Promise<string> {

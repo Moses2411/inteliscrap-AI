@@ -57,7 +57,8 @@ async def test_mock_otp_code_verifies(client):
 
 
 @pytest.mark.asyncio
-async def test_explicit_role_applies_to_existing_user(client, test_session):
+async def test_explicit_role_ignored_for_existing_user(client, test_session):
+    """One phone number is bound to one account type for life."""
     from app.models import User, UserRole
 
     phone = "+2348080000050"
@@ -68,13 +69,15 @@ async def test_explicit_role_applies_to_existing_user(client, test_session):
         "/api/v1/auth/otp/request", json={"phone_number": phone, "role": "collector"}
     )
     assert resp.status_code == 200
+    assert resp.json()["account_exists"] is True
+    assert resp.json()["role"] == "seller"
 
     from sqlalchemy import select
 
     user = (
         await test_session.execute(select(User).where(User.phone_number == phone))
     ).scalar_one()
-    assert user.role == UserRole.collector
+    assert user.role == UserRole.seller
 
 
 @pytest.mark.asyncio
