@@ -131,8 +131,8 @@ async def handle_voice(db: AsyncSession, params: dict) -> dict:
         pickup_id, listing_id = offers[index - 1]
         pickup = await db.get(Pickup, pickup_id)
         listing = await db.get(Listing, listing_id)
-        await pickup_service.accept_pickup(db, pickup, listing)
-        await pickup_service.enqueue_location_sms(db, collector, pickup, listing)
+        pin = await pickup_service.accept_pickup(db, pickup, listing)
+        await pickup_service.enqueue_location_sms(db, collector, pickup, listing, pin)
         return {**_say("An karba. An aiko maka SMS da cikakken adireshin. Na gode!"), "Reject": {}}
 
     return {"Reject": {}}

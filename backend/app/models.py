@@ -80,6 +80,8 @@ class PickupStatus(str, enum.Enum):
     en_route = "en_route"
     arrived = "arrived"
     verified = "verified"
+    pending_confirmation = "pending_confirmation"
+    disputed = "disputed"
     completed = "completed"
     cancelled = "cancelled"
     expired = "expired"
@@ -246,6 +248,22 @@ class Pickup(Base):
     ussd_session_id = Column(String(64), nullable=True)
     ivr_call_sid = Column(String(64), nullable=True)
     reject_reason = Column(String(255), nullable=True)
+    # ── Proof-of-handover (verified data) ──────────────────────────
+    # The collector gets a PIN at accept time and reads it to the seller, who
+    # enters it to confirm the handover. Only the hash is stored. An unresolved
+    # handover holds new leads (collector) and new listings (seller).
+    pin_hash = Column(String(128), nullable=True)
+    pin_attempts = Column(Integer, nullable=False, default=0, server_default="0")
+    pin_expires_at = Column(DateTime, nullable=True)
+    confirm_deadline = Column(DateTime, nullable=True)
+    confirmed_at = Column(DateTime, nullable=True)
+    disputed_at = Column(DateTime, nullable=True)
+    dispute_reason = Column(String(255), nullable=True)
+    # What the collector recorded at handover, replayed when the seller confirms.
+    handover_weight_kg = Column(Numeric(10, 3), nullable=True)
+    handover_unit_price_naira = Column(Numeric(12, 2), nullable=True)
+    handover_payment_method = Column(String(20), nullable=True)
+    handover_hub_id = Column(String(36), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 

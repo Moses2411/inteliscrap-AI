@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models import PaymentMethod, UserRole
@@ -116,6 +116,26 @@ class SettlementRequest(BaseModel):
     unit_price_naira: Optional[float] = None
     payment_method: Optional[PaymentMethod] = PaymentMethod.cash
     hub_id: Optional[str] = None
+
+
+class HandoverRequest(BaseModel):
+    """What the collector records when the goods change hands."""
+
+    weight_kg: float = Field(gt=0)
+    unit_price_naira: Optional[float] = None
+    payment_method: Optional[PaymentMethod] = PaymentMethod.cash
+    hub_id: Optional[str] = None
+
+
+class HandoverConfirmRequest(BaseModel):
+    """The seller enters the 6-digit PIN the collector read out."""
+
+    pin: str = Field(min_length=4, max_length=8)
+
+
+class DisputeResolveRequest(BaseModel):
+    resolution: Literal["confirm", "cancel"]
+    reason: Optional[str] = None
 
 
 class TransactionResponse(BaseModel):
@@ -313,6 +333,39 @@ class PickupJobResponse(PickupOfferResponse):
     longitude: Optional[float] = None
     scheduled_at: Optional[datetime] = None
     accepted_at: Optional[datetime] = None
+    # Proof-of-handover state surfaced to both parties.
+    confirm_deadline: Optional[datetime] = None
+    confirmed_at: Optional[datetime] = None
+    disputed_at: Optional[datetime] = None
+    dispute_reason: Optional[str] = None
+    handover_weight_kg: Optional[float] = None
+    awaiting_confirmation: bool = False
+
+
+class PickupAcceptResponse(PickupJobResponse):
+    """Accept response carries the one-time PIN for the collector."""
+
+    handover_pin: str
+
+
+class HoldStatusResponse(BaseModel):
+    on_hold: bool
+    open_handovers: int = 0
+
+
+class DisputeItemResponse(PickupJobResponse):
+    """Admin view of a disputed handover, with both parties to contact."""
+
+    seller_id: str
+    collector_id: Optional[str] = None
+    seller_phone: Optional[str] = None
+    collector_phone: Optional[str] = None
+
+
+class DisputeResolveResponse(BaseModel):
+    pickup_id: str
+    pickup_status: str
+    transaction_id: Optional[str] = None
 
 
 # ── Recycling Hub schemas ────────────────────────────────────────────

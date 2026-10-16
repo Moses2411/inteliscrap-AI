@@ -4,10 +4,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models import Listing, ListingStatus, MaterialCategory, User
 from app.schemas import ListingCreate
-from app.services import matching_service, subscription_service
+from app.services import matching_service, pickup_service, subscription_service
 
 
 async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate) -> Listing:
+    # Compliance hold: a seller with an unresolved handover cannot post new
+    # listings until every open pickup is confirmed complete.
+    if await pickup_service.has_open_handover(db, seller_id=seller.id):
+        raise ValueError(
+            "You have an open handover to confirm before posting new listings"
+        )
+
     # Check subscription limits
     allowed, error = await subscription_service.can_create_listing(db, seller)
     if not allowed:

@@ -21,7 +21,10 @@ async def create_listing(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Material category not found"
         )
-    return await listing_service.create_listing(db, user, payload)
+    try:
+        return await listing_service.create_listing(db, user, payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
 @router.get("", response_model=list[ListingResponse])
@@ -58,16 +61,25 @@ async def accept_listing(
     Creates the pickup, marks the listing scheduled and expires any other
     pending offers on it — first accept wins.
     """
+    await pickup_service.escalate_overdue_handovers(db)
+    if await pickup_service.has_open_handover(db, collector_id=collector.id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Finish your open handovers before accepting new leads",
+        )
+
     listing = await listing_service.get_listing(db, listing_id)
     if listing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
 
-    pickup = await pickup_service.claim_listing(db, listing, collector)
-    if pickup is None:
+    claimed = await pickup_service.claim_listing(db, listing, collector)
+    if claimed is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="This listing is no longer available",
         )
+    pickup, pin = claimed
+    await pickup_service.enqueue_location_sms(db, collector, pickup, listing, pin)
     return listing
 
 

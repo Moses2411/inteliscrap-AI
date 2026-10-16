@@ -39,6 +39,14 @@ class Settings(BaseSettings):
     price_stale_hours: int = 72
     enable_realtime_prices: bool = False
 
+    # Proof-of-handover
+    # A collector confirms delivery with a 6-digit PIN the seller enters. New
+    # leads/listings are held while a handover is unresolved; if it is not
+    # confirmed within the window it is escalated to "disputed" for an admin.
+    handover_pin_ttl_hours: int = 168
+    handover_confirm_window_hours: int = 4
+    handover_pin_max_attempts: int = 5
+
     # Telco flags
     sms_enabled: bool = False
     ussd_enabled: bool = True
