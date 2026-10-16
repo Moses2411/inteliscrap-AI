@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Boxes,
@@ -23,8 +23,7 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { useHubData, useMarketData } from "../../hooks/useDashboardData";
-import { createHubRequest, subscribeHub } from "../../services/hubs";
-import { fetchMomoConfig } from "../../services/payments";
+import { createHubRequest } from "../../services/hubs";
 import { MomoCheckout } from "../../components/payments/MomoCheckout";
 import { formatKg, formatNaira, formatNairaEstimate, formatDateTime } from "../../utils/formatters";
 import { cn } from "../../lib/cn";
@@ -42,21 +41,8 @@ export default function HubDashboard() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // Subscription states
-  const [subscribing, setSubscribing] = useState(false);
-  const [subError, setSubError] = useState<string | null>(null);
+  // Subscription checkout (shows a "coming soon" popup while MoMo is disabled).
   const [checkoutOpen, setCheckoutOpen] = useState(false);
-  const [momoEnabled, setMomoEnabled] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    fetchMomoConfig()
-      .then((c) => active && setMomoEnabled(c.enabled))
-      .catch(() => active && setMomoEnabled(false));
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const data = hub.data;
   const requests = data?.requests ?? [];
@@ -102,24 +88,11 @@ export default function HubDashboard() {
     }
   }, [form, hub]);
 
-  const subscribe = useCallback(async () => {
-    setSubError(null);
-    // With MoMo wired up, collect a real payment first. Fall back to the direct
-    // activation path only when mobile money isn't configured (e.g. local demo).
-    if (momoEnabled) {
-      setCheckoutOpen(true);
-      return;
-    }
-    setSubscribing(true);
-    try {
-      await subscribeHub(HUB_PLAN);
-      hub.refresh();
-    } catch (err) {
-      setSubError(err instanceof Error ? err.message : "Failed to subscribe");
-    } finally {
-      setSubscribing(false);
-    }
-  }, [hub, momoEnabled]);
+  // Payments aren't live yet: open the checkout, which shows a "coming soon"
+  // popup while MTN MoMo is unconfigured, and the real flow once it's enabled.
+  const subscribe = useCallback(() => {
+    setCheckoutOpen(true);
+  }, []);
 
   const deliveryColumns: Column<(typeof deliveries)[number]>[] = [
     {
@@ -297,7 +270,7 @@ export default function HubDashboard() {
                   canRequest ? (
                     <Button size="sm" onClick={() => setSheetOpen(true)}>New request</Button>
                   ) : (
-                    <Button size="sm" variant="gold" onClick={subscribe} loading={subscribing}>
+                    <Button size="sm" variant="gold" onClick={subscribe}>
                       Subscribe — {formatNaira(HUB_PLAN.amount_naira)}/mo
                     </Button>
                   )
@@ -392,11 +365,6 @@ export default function HubDashboard() {
 
           <Card pad>
             <h2 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">Subscription</h2>
-            {subError && (
-              <div className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:bg-red-950/60 dark:text-red-300" role="alert">
-                {subError}
-              </div>
-            )}
             {activeSub ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -419,7 +387,6 @@ export default function HubDashboard() {
                   fullWidth
                   className="!mt-2"
                   onClick={subscribe}
-                  loading={subscribing}
                 >
                   <RefreshCw className="h-3.5 w-3.5" /> Renew / upgrade
                 </Button>
@@ -430,7 +397,7 @@ export default function HubDashboard() {
                 title="No active plan"
                 subtitle="Pro gives you unlimited buy requests and EPR export."
                 action={
-                  <Button size="sm" variant="gold" onClick={subscribe} loading={subscribing}>
+                  <Button size="sm" variant="gold" onClick={subscribe}>
                     Subscribe — {formatNaira(HUB_PLAN.amount_naira)}/mo
                   </Button>
                 }
