@@ -47,6 +47,28 @@ class Settings(BaseSettings):
     handover_confirm_window_hours: int = 4
     handover_pin_max_attempts: int = 5
 
+    # MTN MoMo Collections (Request to Pay) — subscription payments.
+    # The subscription key is the Collections product key from the MoMo
+    # Developer Portal (primary *or* secondary). The API user (a UUID) and API
+    # key are created once from that key via POST /api/v1/payments/momo/provision
+    # in the sandbox, then pasted here (or into Render env vars). Left disabled
+    # by default so nothing tries to reach MTN until it is explicitly switched on.
+    momo_enabled: bool = False
+    momo_base_url: str = "https://sandbox.momodeveloper.mtn.com"
+    momo_subscription_key: str = ""
+    momo_api_user: str = ""
+    momo_api_key: str = ""
+    momo_target_environment: str = "sandbox"
+    momo_currency: str = "EUR"
+    # Public base URL MoMo can POST the final payment status back to (the Render
+    # backend URL). When blank, callbacks are skipped and the app relies on
+    # status polling instead.
+    momo_callback_base_url: str = ""
+    momo_http_timeout_s: int = 20
+    momo_token_skew_s: int = 60
+    # Country code used to turn local numbers (0803...) into MSISDNs (234803...).
+    momo_msisdn_country_code: str = "234"
+
     # Telco flags
     sms_enabled: bool = False
     ussd_enabled: bool = True

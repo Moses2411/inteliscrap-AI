@@ -11,6 +11,7 @@ import { createListing, checkListingAllowed } from "../../services/listings";
 import { getCategoryBySlug } from "../../services/materials";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { MomoCheckout } from "../payments/MomoCheckout";
 import type { VisionAnalysis } from "../../types";
 
 interface Props {
@@ -53,6 +54,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   const [subscriptionChecked, setSubscriptionChecked] = useState(false);
   const [canList, setCanList] = useState(true);
   const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const currentRoleConfig = ROLE_OPTIONS.find((o) => o.value === role);
   const addressRequired = currentRoleConfig?.requiresAddress ?? false;
@@ -266,19 +268,40 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
   if (!canList && subscriptionError) {
     return (
-      <Card className="border-l-4 border-l-amber-500 bg-amber-50 ring-amber-200 dark:bg-amber-950/50 dark:ring-amber-900">
-        <div className="text-center py-6">
-          <svg className="mx-auto h-10 w-10 text-amber-600 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <p className="mt-2 font-semibold text-amber-800 dark:text-amber-200">Subscription limit reached</p>
-          <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">{subscriptionError}</p>
-          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Upgrade to Quarterly Pro (₦2,500/quarter) for unlimited listings.</p>
-          <Button fullWidth className="mt-4" onClick={onReset}>
-            {t("scan_again")}
-          </Button>
-        </div>
-      </Card>
+      <>
+        <Card className="border-l-4 border-l-amber-500 bg-amber-50 ring-amber-200 dark:bg-amber-950/50 dark:ring-amber-900">
+          <div className="text-center py-6">
+            <svg className="mx-auto h-10 w-10 text-amber-600 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="mt-2 font-semibold text-amber-800 dark:text-amber-200">Subscription limit reached</p>
+            <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">{subscriptionError}</p>
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Upgrade to Quarterly Pro (₦2,500/quarter) for unlimited listings.</p>
+            <Button fullWidth className="mt-4" variant="gold" onClick={() => setUpgradeOpen(true)}>
+              Upgrade with MTN MoMo
+            </Button>
+            <Button fullWidth className="mt-2" variant="ghost" onClick={onReset}>
+              {t("scan_again")}
+            </Button>
+          </div>
+        </Card>
+        <MomoCheckout
+          open={upgradeOpen}
+          onClose={() => setUpgradeOpen(false)}
+          purpose="user_subscription"
+          plan="quarterly"
+          amountNaira={2500}
+          title="Upgrade to Quarterly Pro"
+          description="Unlimited listings for three months. Pay in seconds with MTN MoMo."
+          onSuccess={() => {
+            setUpgradeOpen(false);
+            // Re-check eligibility so the form unlocks without a reload.
+            setSubscriptionChecked(false);
+            setCanList(true);
+            setSubscriptionError(null);
+          }}
+        />
+      </>
     );
   }
 

@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Bell,
+  Crown,
   Globe,
   Languages,
   LogOut,
@@ -22,9 +23,11 @@ import { Button } from "../components/ui/Button";
 import { Toggle } from "../components/ui/Toggle";
 import { Avatar } from "../components/ui/Avatar";
 import { PageMotion, pageItem } from "../components/ui/PageMotion";
+import { MomoCheckout } from "../components/payments/MomoCheckout";
 import { useApp } from "../store/appStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { clearToken, getRole, getSavedPhone } from "../services/auth";
+import { fetchSubscriptionStatus, type SubscriptionStatus } from "../services/subscription";
 import { formatPhoneDisplay } from "../utils/formatters";
 import { previewEnabled, setPreviewEnabled } from "../lib/demoData";
 import type { Language } from "../types";
@@ -63,6 +66,21 @@ export default function SettingsPage() {
   const [playing, setPlaying] = useState(false);
   const [preview, setPreview] = useState(previewEnabled());
   const [allowNotifications, setAllowNotifications] = useState(() => localStorage.getItem("is_notify") !== "0");
+  const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  const showSubscription = role === "seller" || role === "collector";
+
+  useEffect(() => {
+    if (!showSubscription) return;
+    let active = true;
+    fetchSubscriptionStatus()
+      .then((s) => active && setSubStatus(s))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [showSubscription]);
 
   function onNotifyToggle(v: boolean) {
     setAllowNotifications(v);
@@ -252,6 +270,49 @@ export default function SettingsPage() {
         </Card>
       </motion.div>
 
+      {/* Subscription */}
+      {showSubscription && (
+        <motion.div variants={pageItem}>
+          <Card>
+            <SectionHeader
+              title={
+                <span className="flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-amber-500" />
+                  Subscription
+                </span>
+              }
+              subtitle="Free accounts can post up to 4 listings a week. Quarterly Pro removes the limit."
+              className="mb-3"
+            />
+            {subStatus?.plan === "quarterly" ? (
+              <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/40">
+                <div>
+                  <p className="text-sm font-bold text-emerald-800 dark:text-emerald-200">Quarterly Pro</p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                    {subStatus.expires_at
+                      ? `Renews ${new Date(subStatus.expires_at).toLocaleDateString()}`
+                      : "Active"}
+                  </p>
+                </div>
+                <Badge tone="green">unlimited</Badge>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                <div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Free plan</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {subStatus ? `${subStatus.listings_this_week}/${subStatus.weekly_limit} listings this week` : "Weekly listing limit"}
+                  </p>
+                </div>
+                <Button size="sm" variant="gold" onClick={() => setUpgradeOpen(true)}>
+                  Upgrade
+                </Button>
+              </div>
+            )}
+          </Card>
+        </motion.div>
+      )}
+
       {/* About */}
       <motion.div variants={pageItem}>
         <Card>
@@ -281,6 +342,22 @@ export default function SettingsPage() {
           </p>
         </Card>
       </motion.div>
+
+      {showSubscription && (
+        <MomoCheckout
+          open={upgradeOpen}
+          onClose={() => setUpgradeOpen(false)}
+          purpose="user_subscription"
+          plan="quarterly"
+          amountNaira={2500}
+          title="Upgrade to Quarterly Pro"
+          description="Unlimited listings for three months. Pay in seconds with MTN MoMo."
+          onSuccess={() => {
+            setUpgradeOpen(false);
+            fetchSubscriptionStatus().then(setSubStatus).catch(() => {});
+          }}
+        />
+      )}
     </PageMotion>
   );
 }

@@ -511,6 +511,13 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | GET | `/api/v1/hubs/deliveries` | Traceability: which collections/deliveries fed this hub |
 | POST | `/api/v1/hubs/subscribe` | Start a hub's monthly subscription (revenue) |
 | GET | `/api/v1/hubs/subscriptions` | List the hub's subscription history |
+| GET | `/api/v1/payments/momo/config` | Whether MTN MoMo is enabled (safe to call unauthenticated) |
+| POST | `/api/v1/payments/momo/checkout` | Start a MoMo Request-to-Pay for a user or hub subscription; returns a `reference_id` |
+| GET | `/api/v1/payments/{reference_id}` | Poll a payment's status (owner only) |
+| POST | `/api/v1/payments/{reference_id}/refresh` | Ask the server to poll MoMo directly (used when no callback URL is configured) |
+| POST | `/api/v1/payments/momo/callback/{reference_id}` | MoMo webhook: final status, activates the subscription exactly once |
+| POST | `/api/v1/payments/momo/provision` | **Admin, debug only** — create a sandbox API user + key from the product key |
+| GET | `/api/v1/payments` | The caller's payment history |
 | GET | `/api/v1/compliance/manifesto` | EPR compliance export (API-key auth, `X-API-Key` header) |
 | GET | `/docs` | Swagger API documentation |
 
@@ -519,10 +526,40 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 Registered recycling hubs (recyclers/aggregators) publish **daily buy requests** — what quantity of which recyclable they need for that day. Collectors see it as a live public demand board:
 
 1. A hub account registers straight after phone verification on the login screen (seller/collector accounts are promoted to `recycling_hub` too) via `POST /api/v1/hubs/register`.
-2. The hub subscribes (`POST /api/v1/hubs/subscribe`, renewable `next_billing_at`) — this is the platform's primary recurring B2B revenue stream, and **an active subscription is required before any buy request can be published**.
+2. The hub subscribes (`POST /api/v1/hubs/subscribe`, renewable `next_billing_at`) — this is the platform's primary recurring B2B revenue stream, and **an active subscription is required before any buy request can be published**. With MTN MoMo configured, the hub desk routes this through the MoMo checkout below instead of activating directly.
 3. Hub posts a daily request: `POST /api/v1/hubs/requests` with `material_category_id`, `requested_kg`, and the date.
 4. When a settled pickup's seller hub matches a registered hub **and** that hub has an open request for the same material, the settlement writes a `HubDelivery` (the traceability link) and adds the quantity to the request's `fulfilled_kg`.
 5. When `fulfilled_kg >= requested_kg`, the request flips to `filled` automatically — the live progress board stays honest without manual entry.
+
+### Subscription payments — MTN MoMo (Collections / Request-to-Pay)
+
+Both seller "Quarterly Pro" (₦2,500) and hub "Pro" (₦25,000/month) plans are collected with MTN MoMo's **Collections API** (`requesttopay`). The client never sets the price — the server prices the plan, records a `payment_transactions` row, pushes a prompt to the payer's phone, and activates the subscription **exactly once** when MoMo reports `SUCCESSFUL`.
+
+**Flow**
+
+1. `POST /api/v1/payments/momo/checkout` with `{ plan, phone_number, purpose }` (`purpose` = `user_subscription` | `hub_subscription`). The local number is normalised to an MSISDN (e.g. `0803…` → `234803…`) and MoMo returns `202`; the response carries our `reference_id`.
+2. The payer approves the prompt on their phone.
+3. MoMo posts the final status to `POST /api/v1/payments/momo/callback/{reference_id}` **or** the app polls `POST /api/v1/payments/{reference_id}/refresh`, which asks MoMo directly. Either path lands in the same idempotent activation (guarded by `payment_transactions.applied`), so a callback and a poll can race safely.
+
+**Configuration** (backend env — `backend/.env` locally, Render env vars in production)
+
+| Variable | Purpose |
+|---|---|
+| `MOMO_ENABLED` | `true` to turn payments on (default `false`, so nothing calls MTN until set) |
+| `MOMO_SUBSCRIPTION_KEY` | Subscription key for the **Collections** product (Products → *Collections* → Subscribe; MTN's guide says use the **primary** key). ⚠️ This is a *different* product from **Collection Widget** (a web checkout button) — a widget key will be rejected by the Collection API |
+| `MOMO_API_USER` | API user UUID for Collections |
+| `MOMO_API_KEY` | API key bound to that API user |
+| `MOMO_BASE_URL` | `https://sandbox.momodeveloper.mtn.com` (sandbox) or the country production proxy |
+| `MOMO_TARGET_ENVIRONMENT` | `sandbox`, or the country value in production |
+| `MOMO_CURRENCY` | `EUR` in the sandbox; the local currency in production |
+| `MOMO_CALLBACK_BASE_URL` | Public backend URL MoMo can POST to (e.g. the Render URL); blank ⇒ polling only |
+| `MOMO_MSISDN_COUNTRY_CODE` | Country code used to expand local numbers (default `234`) |
+
+**Getting the API user + key (sandbox).** Besides the subscription key you need an API user + API key. In the sandbox these are self-provisioned: sign in as an admin and call `POST /api/v1/payments/momo/provision` (debug builds only) — it returns the `api_user` and `api_key` to paste into the env above, then `MOMO_ENABLED=true` and restart.
+
+> **Which product to subscribe to?** Server-initiated subscription charges use the **Collections** product (Request-to-Pay): the backend pushes a prompt to the payer's phone and the payer approves it. The **Collection Widget** product is a separate web checkout button (USSD/QR) and uses its own key — subscribe to **Collections** for this integration. In the sandbox, MTN's test MSISDNs (e.g. `46733123450` for success, `46733123451` for failure) can be used to exercise the full flow without a real wallet.
+
+The UI (`MomoCheckout`) is surfaced on the Settings page (seller upgrade), the listing-limit upsell after a scan, and the hub dashboard's subscribe button. When `MOMO_ENABLED=false` the hub desk falls back to the direct `POST /api/v1/hubs/subscribe` activation so local demos keep working.
 
 ### Compliance Manifesto (EPR) Export
 
@@ -587,7 +624,7 @@ cd backend
 pytest -v
 ```
 
-**120 tests** across 15 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), impact aggregates, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
+**135 tests** across 16 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend
@@ -660,6 +697,7 @@ inteliscrap-AI/
 │   │   │   ├── listings.py           # Scrap listings + auto-dispatch
 │   │   │   ├── materials.py          # Material categories
 │   │   │   ├── outbox.py             # SMS outbox inspection/process
+│   │   │   ├── payments.py           # MTN MoMo subscription checkout / callback / polling
 │   │   │   ├── pickups.py            # OFFERS / ACCEPT / ACTIVE
 │   │   │   ├── prices.py             # GET/PUT price matrix
 │   │   │   ├── sync.py               # POST /api/v1/sync (bidirectional)
@@ -671,7 +709,9 @@ inteliscrap-AI/
 │   │   ├── services/
 │   │   │   ├── analyze_service.py    # Ollama API call + prompt template (configurable model)
 │   │   │   ├── matching_service.py   # Uber H3 hex-grid, disk-ring, top-N dispatch
+│   │   │   ├── momo_service.py       # MTN MoMo Collections client (token, RTP, status)
 │   │   │   ├── outbox_service.py     # SMS outbox worker (Africa's Talking)
+│   │   │   ├── payment_service.py    # Checkout orchestration + one-time activation
 │   │   │   ├── price_service.py      # Price matrix upsert logic
 │   │   │   ├── sync_service.py       # Conflict resolution (timestamp wins)
 │   │   │   ├── user_service.py       # User CRUD + H3 index
@@ -680,10 +720,10 @@ inteliscrap-AI/
 │   │   │       messaging · ivr · voice services
 │   │   └── middleware/
 │   │       └── cors.py               # CORS configuration
-│   ├── tests/                        # 62 async tests (pytest + pytest-asyncio)
+│   ├── tests/                        # 135 async tests across 16 suites (pytest + pytest-asyncio)
 │   │   ├── conftest.py               # Async test fixtures (SQLite)
-│   │   └── test_{health,sync,matching,auth,ussd,listings,pickups,
-│   │             settlement,outbox,hubs,impact,users}.py
+│   │   └── test_{health,sync,matching,auth,ussd,listings,pickups,handover,
+│   │             settlement,outbox,hubs,payments,impact,users}.py
 │   ├── alembic/                      # Database migrations
 │   ├── requirements.txt
 │   ├── pyproject.toml                # deps + Ruff + pytest config
@@ -704,6 +744,7 @@ inteliscrap-AI/
 │   │   │   ├── sync.ts               # API sync client
 │   │   │   ├── pickups.ts            # Offers/accept/active API client
 │   │   │   ├── camera.ts             # WebRTC + file upload utilities
+│   │   │   ├── payments.ts           # MTN MoMo checkout + status client
 │   │   │   └── auth · hubs · impact · listings · market · materials ·
 │   │   │       compliance · location · language clients
 │   │   ├── vision/

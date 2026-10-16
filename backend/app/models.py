@@ -101,6 +101,18 @@ class PaymentMethod(str, enum.Enum):
     bank_transfer = "bank_transfer"
 
 
+class PaymentStatus(str, enum.Enum):
+    pending = "pending"
+    successful = "successful"
+    failed = "failed"
+    cancelled = "cancelled"
+
+
+class PaymentPurpose(str, enum.Enum):
+    user_subscription = "user_subscription"
+    hub_subscription = "hub_subscription"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -524,4 +536,44 @@ class Brand(Base):
     )
     listings = relationship("Listing", back_populates="brand")
     transactions = relationship("Transaction", back_populates="brand")
+
+
+class PaymentTransaction(Base):
+    """A mobile-money checkout attempt for a subscription.
+
+    One row is created per checkout. ``reference_id`` is the ``X-Reference-Id``
+    we send to MTN MoMo and is the idempotency key both for MoMo and for our own
+    activation step: ``applied`` guards against activating (or extending) a
+    subscription twice if a callback and a poll both report success.
+    """
+
+    __tablename__ = "payment_transactions"
+
+    id = Column(String(36), primary_key=True, index=True, default=_uuid)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    hub_id = Column(String(36), ForeignKey("recycling_hubs.id"), nullable=True, index=True)
+    purpose = Column(_db_enum(PaymentPurpose), nullable=False, index=True)
+    plan = Column(String(40), nullable=False)
+    amount = Column(Numeric(12, 2), nullable=False)
+    currency = Column(String(8), nullable=False, default="EUR")
+    provider = Column(String(30), nullable=False, default="mtn_momo")
+    # UUID handed to MoMo as X-Reference-Id; unique so retries can't duplicate.
+    reference_id = Column(String(64), nullable=False, unique=True, index=True)
+    external_id = Column(String(64), nullable=True)
+    payer_msisdn = Column(String(20), nullable=False)
+    status = Column(
+        _db_enum(PaymentStatus), nullable=False, default=PaymentStatus.pending, index=True
+    )
+    provider_status = Column(String(30), nullable=True)
+    provider_financial_tx_id = Column(String(120), nullable=True)
+    failure_reason = Column(String(255), nullable=True)
+    # True once the successful payment has been turned into a subscription.
+    applied = Column(Boolean, nullable=False, default=False)
+    raw_payload = Column(JSON, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User")
+    hub = relationship("RecyclingHub")
 

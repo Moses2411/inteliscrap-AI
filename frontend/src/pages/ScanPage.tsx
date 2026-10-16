@@ -244,7 +244,7 @@ function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        className="space-y-4"
+        className="mx-auto w-full max-w-md space-y-4"
       >
         <h1 className="sr-only">{t("material")}</h1>
         <ScanResult
@@ -265,9 +265,7 @@ function ScanWorkspace({ role }: { role: "seller" | "collector" }) {
           onPause={pause}
           onResume={resume}
         />
-        <div className="mx-auto max-w-md">
-          <PostPickupForm analysis={result} onReset={() => setResult(null)} />
-        </div>
+        <PostPickupForm analysis={result} onReset={() => setResult(null)} />
       </motion.div>
     );
   }

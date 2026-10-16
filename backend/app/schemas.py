@@ -2,7 +2,7 @@ from datetime import date, datetime
 from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import PaymentMethod, UserRole
+from app.models import PaymentMethod, PaymentPurpose, UserRole
 
 
 class ScrapScanCreate(BaseModel):
@@ -250,6 +250,48 @@ class SubscriptionPurchaseRequest(BaseModel):
     payment_method: PaymentMethod = PaymentMethod.mobile_money
     payment_reference: Optional[str] = None
     gtin: Optional[str] = None  # barcode/EAN captured at scan → own-brand attribution
+
+
+class MomoCheckoutRequest(BaseModel):
+    """Start a MoMo Request-to-Pay for a subscription."""
+
+    plan: str = "quarterly"
+    phone_number: str = Field(min_length=6, max_length=20)
+    purpose: PaymentPurpose = PaymentPurpose.user_subscription
+
+
+class MomoCheckoutResponse(BaseModel):
+    reference_id: str
+    status: str
+    purpose: str
+    plan: str
+    amount: float
+    currency: str
+    payer_msisdn: str
+    message: str
+
+
+class PaymentStatusResponse(BaseModel):
+    reference_id: str
+    status: str
+    purpose: str
+    plan: str
+    amount: float
+    currency: str
+    payer_msisdn: str
+    provider_status: Optional[str] = None
+    provider_financial_tx_id: Optional[str] = None
+    failure_reason: Optional[str] = None
+    applied: bool = False
+    completed_at: Optional[datetime] = None
+    subscription: Optional[SubscriptionStatusResponse] = None
+
+
+class MomoConfigResponse(BaseModel):
+    enabled: bool
+    environment: str
+    currency: str
+    callback_configured: bool
 
 
 class ListingResponse(BaseModel):

@@ -80,6 +80,7 @@
   "header_scrap_type": "Type of scrap",
   "estimated_value": "Estimated Value",
   "price_estimate_note": "Na estimate o — market price fit change. Una agree the final price when dem come pick am.",
+  "price_pending": "Price no dey offline. Connect make you see today price.",
   "read_aloud": "Read Am aloud",
   "open_camera": "Open Camera",
   "upload_image": "Upload Image",

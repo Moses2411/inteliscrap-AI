@@ -1,12 +1,21 @@
-import { useEffect, useRef, useState } from "react";
-import { HelpCircle } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { motion, MotionConfig, type Variants } from "framer-motion";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  HelpCircle,
+  Pause,
+  Play,
+  ScanLine,
+  ShieldCheck,
+  Volume2,
+} from "lucide-react";
 import type { VisionAnalysis, VisionCandidate, HazardLevel } from "../../types";
 import { formatNairaEstimate, formatConfidence } from "../../utils/formatters";
 import { useTranslation, getLocale } from "../../hooks/useTranslation";
 import { useApp } from "../../store/appStore";
 import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import HazardBadge from "../ui/HazardBadge";
+import { cn } from "../../lib/cn";
 import type { TtsStatus } from "../../hooks/useAudioTTS";
 import {
   detectFamily,
@@ -28,14 +37,15 @@ interface Props {
   onResume?: () => void;
 }
 
-const HAZARD_LEVEL_STYLE: Record<HazardLevel, { accent: string; label: string }> = {
-  low: { accent: "border-l-green-400", label: "hazard_safe" },
-  medium: { accent: "border-l-yellow-400", label: "hazard_caution" },
-  high: { accent: "border-l-orange-400", label: "hazard_caution" },
-  critical: { accent: "border-l-red-500", label: "hazard_high_risk" },
-};
-
 type SafetyKey = keyof typeof import("../../locales/en.json")["safety_instructions"];
+
+/** Severity presentation for the verdict hero. Theme-independent (dark surface). */
+const LEVEL_META: Record<HazardLevel, { labelKey: string; dot: string; chip: string; pulse: boolean }> = {
+  low: { labelKey: "hazard_safe", dot: "bg-emerald-400", chip: "text-emerald-100 ring-emerald-400/25", pulse: false },
+  medium: { labelKey: "hazard_caution", dot: "bg-amber-400", chip: "text-amber-100 ring-amber-400/25", pulse: false },
+  high: { labelKey: "hazard_caution", dot: "bg-orange-400", chip: "text-orange-100 ring-orange-400/25", pulse: false },
+  critical: { labelKey: "hazard_high_risk", dot: "bg-red-400", chip: "text-red-100 ring-red-400/30", pulse: true },
+};
 
 const HAZARD_CONFIG = [
   { test: (h: string[]) => h.length === 0, key: "hazard_safe" },
@@ -60,15 +70,103 @@ function determineSafetyKey(hazards: string[]): SafetyKey {
   return "default";
 }
 
-export default function ScanResult({ result, estimated_value, hazard_level, onReadAloud, onScanAgain, onConfirmMaterial, onDisambiguate, onChooseManually, ttsStatus = "idle", onPause, onResume }: Props) {
+const listVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06, delayChildren: 0.04 } },
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] } },
+};
+
+/**
+ * Animated circular gauge that turns the model's confidence into a single,
+ * glanceable figure. Sits on the dark verdict surface so it reads as an
+ * instrument panel rather than another text row.
+ */
+function ConfidenceRing({ value, label }: { value: number; label: string }) {
+  const gradId = useId();
+  const size = 78;
+  const stroke = 7;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const pct = Math.max(0, Math.min(1, value));
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="-rotate-90"
+        role="img"
+        aria-label={`${label} ${formatConfidence(pct)}`}
+      >
+        <defs>
+          <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#a3e635" />
+            <stop offset="45%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+        </defs>
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke="rgba(255,255,255,0.12)"
+          strokeWidth={stroke}
+        />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={`url(#${gradId})`}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          initial={{ strokeDashoffset: circumference }}
+          animate={{ strokeDashoffset: circumference * (1 - pct) }}
+          transition={{ duration: 1, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-mono text-base font-bold leading-none tabular-nums text-white">
+          {formatConfidence(pct)}
+        </span>
+        <span className="mt-0.5 text-[8px] font-semibold uppercase tracking-[0.14em] text-white/50">
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export default function ScanResult({
+  result,
+  estimated_value,
+  hazard_level,
+  onReadAloud,
+  onScanAgain,
+  onConfirmMaterial,
+  onDisambiguate,
+  onChooseManually,
+  ttsStatus = "idle",
+  onPause,
+  onResume,
+}: Props) {
   const { t } = useTranslation();
   const { selected_language } = useApp();
-  const levelStyle = hazard_level ? HAZARD_LEVEL_STYLE[hazard_level] : null;
   const sourceTag = result.source ? `source_${result.source}` : null;
-  const hazardKey = levelStyle ? levelStyle.label : getHazardKey(result.toxicity_hazards ?? []);
+  const hazardKey = hazard_level
+    ? LEVEL_META[hazard_level].labelKey
+    : getHazardKey(result.toxicity_hazards ?? []);
   const badgeLevel: HazardLevel =
     hazard_level ??
     (hazardKey === "hazard_high_risk" ? "critical" : hazardKey === "hazard_caution" ? "medium" : "low");
+  const levelMeta = LEVEL_META[badgeLevel];
   const safetyKey = determineSafetyKey(result.toxicity_hazards ?? []);
   const confirmCandidates = result.uncertain ? result.candidates ?? [] : [];
   const showConfirm =
@@ -82,7 +180,8 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
   const resolution = family ? resolveDisambiguation(family, answers) : null;
   const question = resolution?.question ?? null;
   const localeData = getLocale(selected_language);
-  const translatedSafety = (localeData.safety_instructions as Record<string, string>)?.[safetyKey] ?? result.safety_instructions;
+  const translatedSafety =
+    (localeData.safety_instructions as Record<string, string>)?.[safetyKey] ?? result.safety_instructions;
   const autoReadRef = useRef(false);
 
   useEffect(() => {
@@ -110,9 +209,7 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
     if (ttsStatus === "playing") {
       return (
         <Button variant="secondary" className="flex-1" onClick={onPause}>
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
-          </svg>
+          <Pause className="h-4 w-4" aria-hidden="true" />
           {t("pause")}
         </Button>
       );
@@ -121,9 +218,7 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
     if (ttsStatus === "paused") {
       return (
         <Button variant="secondary" className="flex-1" onClick={onResume}>
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
-          </svg>
+          <Play className="h-4 w-4" aria-hidden="true" />
           {t("continue")}
         </Button>
       );
@@ -131,135 +226,232 @@ export default function ScanResult({ result, estimated_value, hazard_level, onRe
 
     return (
       <Button variant="secondary" className="flex-1" onClick={onReadAloud}>
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-        </svg>
+        <Volume2 className="h-4 w-4" aria-hidden="true" />
         {t("read_aloud")}
       </Button>
     );
   }
 
+  const microLabel = "text-[10px] font-semibold uppercase tracking-[0.16em]";
+
   return (
-    <div className="space-y-4">
-      <Card className={`space-y-3 ${levelStyle ? `border-l-4 ${levelStyle.accent}` : ""}`}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-medium text-slate-500 dark:text-slate-400">{t("material")}</h2>
-            {sourceTag && (
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                {t(sourceTag)}
+    <MotionConfig reducedMotion="user">
+      <motion.div variants={listVariants} initial="hidden" animate="show" className="space-y-4">
+        {/* ── Verdict hero ─────────────────────────────────────────── */}
+        <motion.section
+          variants={itemVariants}
+          aria-labelledby="scan-material-heading"
+          className="relative overflow-hidden rounded-3xl bg-obsidian-950 p-5 text-white shadow-bento ring-1 ring-white/10"
+        >
+          <div className="pointer-events-none absolute inset-0 bg-gradient-mesh" aria-hidden="true" />
+          <div className="pointer-events-none absolute -right-20 -top-24 h-52 w-52 rounded-full bg-brand-500/20 blur-3xl" aria-hidden="true" />
+          <div className="pointer-events-none absolute -left-24 bottom-0 h-40 w-40 rounded-full bg-emerald-400/10 blur-3xl" aria-hidden="true" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand-400/60 to-transparent" aria-hidden="true" />
+
+          <div className="relative space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                  <ScanLine className="h-4 w-4 text-brand-300" aria-hidden="true" />
+                </span>
+                <div className="min-w-0">
+                  <p className={cn(microLabel, "text-white/45")}>{t("result")}</p>
+                  {sourceTag && (
+                    <p className="truncate text-[11px] font-medium text-white/70">{t(sourceTag)}</p>
+                  )}
+                </div>
+              </div>
+              <span
+                className={cn(
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[11px] font-semibold ring-1",
+                  levelMeta.chip,
+                )}
+              >
+                <span
+                  className={cn("h-1.5 w-1.5 rounded-full", levelMeta.dot, levelMeta.pulse && "animate-pulse-soft")}
+                  aria-hidden="true"
+                />
+                {t(levelMeta.labelKey)}
               </span>
-            )}
-          </div>
-          <HazardBadge level={badgeLevel} />
-        </div>
-        <p className="text-2xl font-bold text-slate-900 dark:text-slate-100">{result.material_class}</p>
-
-        <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3 dark:border-slate-800">
-          <div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">{t("estimated_value")}</span>
-            <p className="text-xl font-bold text-brand-600 dark:text-brand-400">{formatNairaEstimate(estimated_value)}</p>
-          </div>
-          <div>
-            <span className="text-xs text-slate-500 dark:text-slate-400">{t("confidence")}</span>
-            <p className="text-xl font-semibold text-slate-900 dark:text-slate-100">{formatConfidence(result.confidence)}</p>
-          </div>
-        </div>
-        <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">{t("price_estimate_note")}</p>
-      </Card>
-
-      {showConfirm && (
-        <Card className="space-y-3 border-l-4 border-amber-400 dark:border-amber-600">
-          <div className="flex items-start gap-2.5">
-            <HelpCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden="true" />
-            <div>
-              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("uncertain_title")}</h3>
-              <p className="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t("uncertain_hint")}</p>
             </div>
-          </div>
-          {family && onDisambiguate && question && (
-            <div className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 dark:bg-slate-900/60 dark:ring-slate-800">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                {t("disambiguate_title")}
-              </p>
-              <p className="mt-1 text-sm font-medium text-slate-900 dark:text-slate-100">{t(question.titleKey)}</p>
-              {question.hintKey && (
-                <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">{t(question.hintKey)}</p>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <p className={cn(microLabel, "text-white/45")}>{t("material")}</p>
+                <h2
+                  id="scan-material-heading"
+                  className="mt-1 text-[28px] font-bold leading-[1.08] tracking-tight text-white"
+                >
+                  {result.material_class}
+                </h2>
+              </div>
+              <ConfidenceRing value={result.confidence} label={t("confidence")} />
+            </div>
+
+            <div className="h-px w-full bg-gradient-to-r from-white/15 via-white/5 to-transparent" aria-hidden="true" />
+
+            <div>
+              <p className={cn(microLabel, "text-white/45")}>{t("estimated_value")}</p>
+              {estimated_value > 0 ? (
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="font-mono text-[26px] font-bold leading-none tracking-tight text-brand-300">
+                    {formatNairaEstimate(estimated_value)}
+                  </span>
+                  <span className="text-xs font-medium text-white/50">{t("per_kg")}</span>
+                </div>
+              ) : (
+                <p className="mt-1 text-sm leading-relaxed text-white/60">{t("price_pending")}</p>
               )}
-              <div className="mt-2 grid grid-cols-2 gap-2" role="group" aria-label={t(question.titleKey)}>
-                {question.options.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => handleAnswer(question.id, option.id)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-800 transition-all hover:border-brand-400 hover:shadow-sm active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
-                  >
-                    {t(option.labelKey)}
-                  </button>
-                ))}
+            </div>
+
+            <p className="text-[11px] leading-relaxed text-white/45">{t("price_estimate_note")}</p>
+          </div>
+        </motion.section>
+
+        {/* ── Uncertainty / confirmation ────────────────────────────── */}
+        {showConfirm && (
+          <motion.section
+            variants={itemVariants}
+            className="space-y-3 rounded-3xl border border-amber-200/70 bg-amber-50/60 p-4 shadow-card ring-1 ring-amber-200/50 dark:border-amber-900/50 dark:bg-amber-950/20 dark:ring-amber-900/40"
+          >
+            <div className="flex items-start gap-3">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600 ring-1 ring-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:ring-amber-900/50">
+                <HelpCircle className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t("uncertain_title")}</h3>
+                <p className="mt-0.5 text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                  {t("uncertain_hint")}
+                </p>
               </div>
             </div>
-          )}
 
-          <div className="grid grid-cols-1 gap-2" role="group" aria-label={t("uncertain_title")}>
-            {confirmCandidates.map((candidate) => (
-              <button
-                key={candidate.material_slug}
-                type="button"
-                onClick={() => onConfirmMaterial?.(candidate)}
-                className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition-all hover:border-brand-400 hover:shadow-sm active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900"
-              >
-                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">{candidate.material_class}</span>
-                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{formatConfidence(candidate.confidence)}</span>
-              </button>
-            ))}
-          </div>
-          {onChooseManually && (
-            <Button variant="secondary" fullWidth onClick={onChooseManually}>
-              {t("choose_manually")}
+            {family && onDisambiguate && question && (
+              <div className="rounded-2xl bg-white/70 p-3 shadow-sm ring-1 ring-amber-200/60 dark:bg-slate-900/60 dark:ring-amber-900/40">
+                <p className={cn(microLabel, "text-slate-500 dark:text-slate-400")}>{t("disambiguate_title")}</p>
+                <p className="mt-1.5 text-sm font-medium text-slate-900 dark:text-slate-100">{t(question.titleKey)}</p>
+                {question.hintKey && (
+                  <p className="mt-0.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+                    {t(question.hintKey)}
+                  </p>
+                )}
+                <div className="mt-2.5 grid grid-cols-2 gap-2" role="group" aria-label={t(question.titleKey)}>
+                  {question.options.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => handleAnswer(question.id, option.id)}
+                      className="rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-800 shadow-sm transition-all hover:border-brand-400 hover:bg-brand-50/40 hover:shadow-md active:scale-[0.99] dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-brand-600"
+                    >
+                      {t(option.labelKey)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-2" role="group" aria-label={t("uncertain_title")}>
+              {confirmCandidates.map((candidate) => (
+                <button
+                  key={candidate.material_slug}
+                  type="button"
+                  onClick={() => onConfirmMaterial?.(candidate)}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-left shadow-sm transition-all hover:border-brand-400 hover:shadow-md active:scale-[0.99] dark:border-slate-700 dark:bg-slate-900"
+                >
+                  <span className="flex min-w-0 items-center gap-2.5">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950/60 dark:text-brand-300">
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {candidate.material_class}
+                    </span>
+                  </span>
+                  <span className="font-mono text-xs font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+                    {formatConfidence(candidate.confidence)}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {onChooseManually && (
+              <Button variant="secondary" fullWidth onClick={onChooseManually}>
+                {t("choose_manually")}
+              </Button>
+            )}
+          </motion.section>
+        )}
+
+        {/* ── Coarse-estimate disclaimer ───────────────────────────── */}
+        {(result.source === "heuristic" || result.source === "manual") && (
+          <motion.div
+            variants={itemVariants}
+            role="note"
+            className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50/70 px-3.5 py-3 text-xs leading-relaxed text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
+          >
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>{t("estimate_disclaimer")}</span>
+          </motion.div>
+        )}
+
+        {/* ── Toxicity hazards ─────────────────────────────────────── */}
+        {result.toxicity_hazards && result.toxicity_hazards.length > 0 && (
+          <motion.section
+            variants={itemVariants}
+            className="overflow-hidden rounded-3xl border border-red-200/70 bg-white shadow-card dark:border-red-900/40 dark:bg-slate-900"
+          >
+            <div className="flex items-center gap-2.5 border-b border-red-100 bg-red-50/70 px-4 py-3 dark:border-red-900/40 dark:bg-red-950/25">
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600 ring-1 ring-red-200 dark:bg-red-950/60 dark:text-red-300 dark:ring-red-900/50">
+                <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <h3 className="text-sm font-semibold text-red-700 dark:text-red-300">{t("hazards_detected")}</h3>
+            </div>
+            <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+              {result.toxicity_hazards.map((h, i) => {
+                const hazardKey = `hazards.${h}`;
+                const translatedHazard = t(hazardKey);
+                return (
+                  <li key={i} className="flex items-start gap-2.5 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" aria-hidden="true" />
+                    <span>{translatedHazard !== hazardKey ? translatedHazard : h}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </motion.section>
+        )}
+
+        {/* ── Safety guidance ──────────────────────────────────────── */}
+        {translatedSafety && (
+          <motion.section
+            variants={itemVariants}
+            className="flex items-start gap-3 rounded-3xl border border-brand-200/70 bg-brand-50/70 p-4 shadow-card dark:border-brand-900/50 dark:bg-brand-950/25"
+          >
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 ring-1 ring-brand-200 dark:bg-brand-950/60 dark:text-brand-300 dark:ring-brand-900/50">
+              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            </span>
+            <div>
+              <h3 className="text-sm font-semibold text-brand-800 dark:text-brand-200">{t("safety_title")}</h3>
+              <p className="mt-0.5 text-sm leading-relaxed text-brand-800/90 dark:text-brand-300">
+                {translatedSafety}
+              </p>
+            </div>
+          </motion.section>
+        )}
+
+        {/* ── Actions ──────────────────────────────────────────────── */}
+        <motion.div
+          variants={itemVariants}
+          className="flex gap-3 rounded-2xl border border-slate-200/80 bg-white/70 p-2 shadow-card backdrop-blur dark:border-slate-800 dark:bg-slate-900/70"
+        >
+          {renderTtsButton()}
+          {onScanAgain && (
+            <Button className="flex-1" onClick={onScanAgain}>
+              <ScanLine className="h-4 w-4" aria-hidden="true" />
+              {t("scan_again")}
             </Button>
           )}
-        </Card>
-      )}
-
-      {(result.source === "heuristic" || result.source === "manual") && (
-        <div className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-900">
-          {t("estimate_disclaimer")}
-        </div>
-      )}
-
-      {result.toxicity_hazards && result.toxicity_hazards.length > 0 && (
-        <Card className="space-y-2 border-l-4 border-red-400 dark:border-red-600">
-          <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">{t("hazards_detected")}</h3>
-          <ul className="space-y-1">
-            {result.toxicity_hazards.map((h, i) => {
-              const hazardKey = `hazards.${h}` as const;
-              const translatedHazard = t(hazardKey);
-              return (
-                <li key={i} className="flex items-start gap-2 text-sm text-red-600 dark:text-red-400">
-                  <span className="mt-0.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-red-500" />
-                  {translatedHazard !== hazardKey ? translatedHazard : h}
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-      )}
-
-      {translatedSafety && (
-        <Card className="bg-brand-50 ring-brand-200 dark:bg-brand-950/50 dark:ring-brand-900">
-          <p className="text-sm text-brand-800 dark:text-brand-300">{translatedSafety}</p>
-        </Card>
-      )}
-
-      <div className="flex gap-3">
-        {renderTtsButton()}
-        {onScanAgain && (
-          <Button className="flex-1" onClick={onScanAgain}>
-            {t("scan_again")}
-          </Button>
-        )}
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    </MotionConfig>
   );
 }

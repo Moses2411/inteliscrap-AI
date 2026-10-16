@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Boxes,
@@ -24,6 +24,8 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { useHubData, useMarketData } from "../../hooks/useDashboardData";
 import { createHubRequest, subscribeHub } from "../../services/hubs";
+import { fetchMomoConfig } from "../../services/payments";
+import { MomoCheckout } from "../../components/payments/MomoCheckout";
 import { formatKg, formatNaira, formatNairaEstimate, formatDateTime } from "../../utils/formatters";
 import { cn } from "../../lib/cn";
 import HubRegistrationForm from "../../components/Hub/HubRegistrationForm";
@@ -43,6 +45,18 @@ export default function HubDashboard() {
   // Subscription states
   const [subscribing, setSubscribing] = useState(false);
   const [subError, setSubError] = useState<string | null>(null);
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [momoEnabled, setMomoEnabled] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    fetchMomoConfig()
+      .then((c) => active && setMomoEnabled(c.enabled))
+      .catch(() => active && setMomoEnabled(false));
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const data = hub.data;
   const requests = data?.requests ?? [];
@@ -90,6 +104,12 @@ export default function HubDashboard() {
 
   const subscribe = useCallback(async () => {
     setSubError(null);
+    // With MoMo wired up, collect a real payment first. Fall back to the direct
+    // activation path only when mobile money isn't configured (e.g. local demo).
+    if (momoEnabled) {
+      setCheckoutOpen(true);
+      return;
+    }
     setSubscribing(true);
     try {
       await subscribeHub(HUB_PLAN);
@@ -99,7 +119,7 @@ export default function HubDashboard() {
     } finally {
       setSubscribing(false);
     }
-  }, [hub]);
+  }, [hub, momoEnabled]);
 
   const deliveryColumns: Column<(typeof deliveries)[number]>[] = [
     {
@@ -507,6 +527,18 @@ export default function HubDashboard() {
           </p>
         </div>
       </Sheet>
+
+      {/* MoMo subscription checkout */}
+      <MomoCheckout
+        open={checkoutOpen}
+        onClose={() => setCheckoutOpen(false)}
+        purpose="hub_subscription"
+        plan={HUB_PLAN.plan_name}
+        amountNaira={HUB_PLAN.amount_naira}
+        title="Subscribe with MTN MoMo"
+        description="Pay for your hub plan. Once approved, you can publish unlimited buy requests."
+        onSuccess={() => hub.refresh()}
+      />
     </PageMotion>
   );
 }
