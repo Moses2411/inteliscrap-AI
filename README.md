@@ -488,18 +488,25 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | GET | `/api/v1/listings/mine` | The caller's own listings (households/sellers) |
 | POST | `/api/v1/listings/{listing_id}/accept` | Collector claims a listing from the board ("Accept offer"); other pending offers expire |
 | GET | `/api/v1/listings/{listing_id}` | Get a single listing (collector/admin) |
-| POST/GET | `/api/v1/pickups/offers` | Offers dispatched to the current collector (H3 disk ring) |
-| POST | `/api/v1/pickups/{pickup_id}/accept` | Accept an offer (other pending offers expire) |
-| GET | `/api/v1/pickups/active` | List the collector's active/accepted jobs |
+| POST/GET | `/api/v1/pickups/offers` | Offers dispatched to the current collector (H3 disk ring); returns `[]` while a handover is unconfirmed |
+| POST | `/api/v1/pickups/{pickup_id}/accept` | Accept an offer (other pending offers expire); issues the 6-digit handover PIN |
+| GET | `/api/v1/pickups/active` | List the collector's active jobs (accepted → pending confirmation) |
+| GET | `/api/v1/pickups/hold` | Whether the collector is barred from new leads by an open handover |
+| POST | `/api/v1/pickups/{pickup_id}/pin` | Re-issue the handover PIN (collector; invalidates the previous code) |
+| POST | `/api/v1/pickups/{pickup_id}/handover` | Collector records the collected weight → `pending_confirmation` |
+| POST | `/api/v1/pickups/{pickup_id}/confirm` | Seller enters the PIN → settles the pickup (verified by both parties) |
+| GET | `/api/v1/pickups/awaiting-confirmation` | Open handovers on the caller's own listings (the ones holding them) |
+| GET | `/api/v1/admin/disputes` | **Admin** — unconfirmed handovers that passed their window |
+| POST | `/api/v1/admin/pickups/{pickup_id}/resolve` | **Admin** — `confirm` or `cancel` a dispute (releases the hold) |
 | POST | `/api/v1/ussd_callback` | Africa's Talking USSD callback (registration + preset-location menus, plain-text menu) |
 | GET/POST | `/api/v1/voice/*` | Voice callbacks (register/accepted pickups via IVR) |
-| POST | `/api/v1/transactions` | Platform fee settlement on completed pickups |
+| POST | `/api/v1/pickups/{pickup_id}/settle` | **Admin-only** manual settlement (collectors can no longer settle unilaterally) |
 | GET | `/api/v1/impact/*` | Impact dashboard aggregates (summary, daily, by-material) |
 | GET/POST | `/api/v1/outbox/*` | SMS outbox inspection/processing |
-| POST | `/api/v1/hubs/register` | Register a recycling hub (owner becomes `recycling_hub` role) |
+| POST | `/api/v1/hubs/register` | Register a recycling hub (any seller, collector or hub account; owner becomes `recycling_hub` role) |
 | GET | `/api/v1/hubs/` | List active recycling hubs |
 | GET | `/api/v1/hubs/me` | The current user's registered hub |
-| POST | `/api/v1/hubs/requests` | Hub publishes a daily buy request (material × quantity) |
+| POST | `/api/v1/hubs/requests` | Hub publishes a daily buy request (material × quantity) — **requires an active subscription** |
 | GET | `/api/v1/hubs/requests` | A hub owner sees their own requests; collectors and households (sellers) see demand across all active hubs |
 | GET | `/api/v1/hubs/deliveries` | Traceability: which collections/deliveries fed this hub |
 | POST | `/api/v1/hubs/subscribe` | Start a hub's monthly subscription (revenue) |
@@ -511,11 +518,11 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 
 Registered recycling hubs (recyclers/aggregators) publish **daily buy requests** — what quantity of which recyclable they need for that day. Collectors see it as a live public demand board:
 
-1. Hub registers via `POST /api/v1/hubs/register` (account role becomes `recycling_hub`).
-2. Hub posts a daily request: `POST /api/v1/hubs/requests` with `material_category_id`, `requested_kg`, and the date.
-3. When a settled pickup's seller hub matches a registered hub **and** that hub has an open request for the same material, the settlement writes a `HubDelivery` (the traceability link) and adds the quantity to the request's `fulfilled_kg`.
-4. When `fulfilled_kg >= requested_kg`, the request flips to `filled` automatically — the live progress board stays honest without manual entry.
-5. Hubs pay a **monthly subscription** (`POST /api/v1/hubs/subscribe`, renewable `next_billing_at`) — this is the platform's primary recurring B2B revenue stream.
+1. A hub account registers straight after phone verification on the login screen (seller/collector accounts are promoted to `recycling_hub` too) via `POST /api/v1/hubs/register`.
+2. The hub subscribes (`POST /api/v1/hubs/subscribe`, renewable `next_billing_at`) — this is the platform's primary recurring B2B revenue stream, and **an active subscription is required before any buy request can be published**.
+3. Hub posts a daily request: `POST /api/v1/hubs/requests` with `material_category_id`, `requested_kg`, and the date.
+4. When a settled pickup's seller hub matches a registered hub **and** that hub has an open request for the same material, the settlement writes a `HubDelivery` (the traceability link) and adds the quantity to the request's `fulfilled_kg`.
+5. When `fulfilled_kg >= requested_kg`, the request flips to `filled` automatically — the live progress board stays honest without manual entry.
 
 ### Compliance Manifesto (EPR) Export
 
@@ -580,7 +587,7 @@ cd backend
 pytest -v
 ```
 
-**111 tests** across 14 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, settlement fees, SMS outbox, hubs (**role-aware request feed**), impact aggregates, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
+**120 tests** across 15 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), impact aggregates, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend

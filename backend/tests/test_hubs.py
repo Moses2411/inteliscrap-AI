@@ -6,6 +6,8 @@ from app.models import (
     CompliancePartner,
     HubDelivery,
     HubRecyclingRequest,
+    HubSubscription,
+    HubSubscriptionStatus,
     Listing,
     MaterialCategory,
     NGOImpactLog,
@@ -54,6 +56,19 @@ async def _seed_hub(test_session):
     return seller, hub_owner, collector, material, hub
 
 
+async def _activate_subscription(test_session, hub) -> HubSubscription:
+    """Give a hub an active plan so it may publish buy requests."""
+    sub = HubSubscription(
+        hub_id=hub.id,
+        plan_name="Pro",
+        amount_naira=50000,
+        status=HubSubscriptionStatus.active,
+    )
+    test_session.add(sub)
+    await test_session.flush()
+    return sub
+
+
 # ── Hub Registration ─────────────────────────────────────────────────
 
 
@@ -97,6 +112,46 @@ async def test_register_hub_conflict(client, test_session):
 
 
 @pytest.mark.asyncio
+async def test_recycling_hub_role_can_register_own_hub(client, test_session):
+    """A phone that signed up as a hub must be able to register its hub."""
+    user = User(
+        id="self-reg-hub",
+        phone_number="+2348060000030",
+        role=UserRole.recycling_hub,
+    )
+    test_session.add(user)
+    await test_session.flush()
+    token = security.create_access_token("self-reg-hub", UserRole.recycling_hub.value)
+    resp = await client.post(
+        "/api/v1/hubs/register",
+        json={"name": "Self Serve Hub", "city": "Zaria"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "Self Serve Hub"
+    refreshed = await test_session.get(User, "self-reg-hub")
+    assert refreshed.role == UserRole.recycling_hub
+
+
+@pytest.mark.asyncio
+async def test_register_hub_denied_for_unrelated_role(client, test_session):
+    user = User(
+        id="ngo-reg",
+        phone_number="+2348060000031",
+        role=UserRole.ngo,
+    )
+    test_session.add(user)
+    await test_session.flush()
+    token = security.create_access_token("ngo-reg", UserRole.ngo.value)
+    resp = await client.post(
+        "/api/v1/hubs/register",
+        json={"name": "NGO Hub", "city": "Zaria"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
 async def test_list_hubs(client, test_session):
     await _seed_hub(test_session)
     resp = await client.get("/api/v1/hubs/")
@@ -111,6 +166,7 @@ async def test_list_hubs(client, test_session):
 @pytest.mark.asyncio
 async def test_create_hub_request(client, test_session):
     _, _, _, material, hub = await _seed_hub(test_session)
+    await _activate_subscription(test_session, hub)
     token = security.create_access_token("hub-owner", UserRole.recycling_hub.value)
     resp = await client.post(
         "/api/v1/hubs/requests",
@@ -131,8 +187,26 @@ async def test_create_hub_request(client, test_session):
 
 
 @pytest.mark.asyncio
+async def test_create_hub_request_requires_active_subscription(client, test_session):
+    _, _, _, material, hub = await _seed_hub(test_session)
+    token = security.create_access_token("hub-owner", UserRole.recycling_hub.value)
+    resp = await client.post(
+        "/api/v1/hubs/requests",
+        json={
+            "material_category_id": material.id,
+            "requested_kg": 10.0,
+            "requested_on": "2026-09-08T00:00:00",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 402
+    assert "subscription" in resp.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
 async def test_list_hub_requests(client, test_session):
     _, _, _, material, hub = await _seed_hub(test_session)
+    await _activate_subscription(test_session, hub)
     token = security.create_access_token("hub-owner", UserRole.recycling_hub.value)
     await client.post(
         "/api/v1/hubs/requests",
@@ -155,6 +229,7 @@ async def test_list_hub_requests(client, test_session):
 @pytest.mark.asyncio
 async def test_seller_and_collector_see_hub_requests(client, test_session):
     _, _, _, material, hub = await _seed_hub(test_session)
+    await _activate_subscription(test_session, hub)
     hub_token = security.create_access_token("hub-owner", UserRole.recycling_hub.value)
     await client.post(
         "/api/v1/hubs/requests",

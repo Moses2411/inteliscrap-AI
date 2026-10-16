@@ -23,10 +23,13 @@ import { EmptyState } from "../../components/ui/EmptyState";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { useHubData, useMarketData } from "../../hooks/useDashboardData";
-import { createHubRequest, registerHub } from "../../services/hubs";
+import { createHubRequest, subscribeHub } from "../../services/hubs";
 import { formatKg, formatNaira, formatNairaEstimate, formatDateTime } from "../../utils/formatters";
-import { syncRoleFromServer } from "../../services/auth";
 import { cn } from "../../lib/cn";
+import HubRegistrationForm from "../../components/Hub/HubRegistrationForm";
+
+// Publishing buy requests requires an active hub plan.
+const HUB_PLAN = { plan_name: "Pro", amount_naira: 25000 };
 
 export default function HubDashboard() {
   const hub = useHubData();
@@ -37,10 +40,9 @@ export default function HubDashboard() {
   const [formError, setFormError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
-  // Hub registration states
-  const [regForm, setRegForm] = useState({ name: "", address_text: "", city: "Zaria", contact_phone: "" });
-  const [regSubmitting, setRegSubmitting] = useState(false);
-  const [regError, setRegError] = useState<string | null>(null);
+  // Subscription states
+  const [subscribing, setSubscribing] = useState(false);
+  const [subError, setSubError] = useState<string | null>(null);
 
   const data = hub.data;
   const requests = data?.requests ?? [];
@@ -48,6 +50,7 @@ export default function HubDashboard() {
   const subscriptions = data?.subscriptions ?? [];
   const openRequests = requests.filter((r) => r.status === "open");
   const activeSub = subscriptions.find((s) => s.status === "active");
+  const canRequest = !!activeSub;
 
   const hasHub = !!data?.hub;
   const deliveredKg = deliveries.reduce((a, d) => a + d.weight_kg, 0);
@@ -85,30 +88,18 @@ export default function HubDashboard() {
     }
   }, [form, hub]);
 
-  const submitRegistration = useCallback(async () => {
-    setRegError(null);
-    if (!regForm.name.trim()) {
-      setRegError("Hub name is required.");
-      return;
-    }
-    setRegSubmitting(true);
+  const subscribe = useCallback(async () => {
+    setSubError(null);
+    setSubscribing(true);
     try {
-      await registerHub({
-        name: regForm.name.trim(),
-        address_text: regForm.address_text.trim() || undefined,
-        city: regForm.city.trim() || "Zaria",
-        contact_phone: regForm.contact_phone.trim() || undefined,
-      });
-      // Sync role from server (backend changes role to recycling_hub after registration)
-      await syncRoleFromServer();
+      await subscribeHub(HUB_PLAN);
       hub.refresh();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to register hub";
-      setRegError(message);
+      setSubError(err instanceof Error ? err.message : "Failed to subscribe");
     } finally {
-      setRegSubmitting(false);
+      setSubscribing(false);
     }
-  }, [regForm, hub]);
+  }, [hub]);
 
   const deliveryColumns: Column<(typeof deliveries)[number]>[] = [
     {
@@ -163,60 +154,7 @@ export default function HubDashboard() {
         <motion.div variants={pageItem}>
           <PageHeader title="Register your recycling hub" subtitle="Start publishing daily buy requests" />
           <Card pad className="max-w-md">
-            <form onSubmit={(e) => { e.preventDefault(); submitRegistration(); }} className="space-y-4">
-              <div>
-                <label className="label" htmlFor="hub-name">Hub name</label>
-                <input
-                  id="hub-name"
-                  type="text"
-                  placeholder="e.g. GreenCycle Hub"
-                  className="input"
-                  value={regForm.name}
-                  onChange={(e) => setRegForm({ ...regForm, name: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="hub-address">Address (optional)</label>
-                <input
-                  id="hub-address"
-                  type="text"
-                  placeholder="e.g. Along Kano Road, Samaru"
-                  className="input"
-                  value={regForm.address_text}
-                  onChange={(e) => setRegForm({ ...regForm, address_text: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="hub-city">City</label>
-                <input
-                  id="hub-city"
-                  type="text"
-                  className="input"
-                  value={regForm.city}
-                  onChange={(e) => setRegForm({ ...regForm, city: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="label" htmlFor="hub-phone">Contact phone (optional)</label>
-                <input
-                  id="hub-phone"
-                  type="tel"
-                  placeholder="+23480xxxxxxxx"
-                  className="input"
-                  value={regForm.contact_phone}
-                  onChange={(e) => setRegForm({ ...regForm, contact_phone: e.target.value })}
-                />
-              </div>
-              {regError && (
-                <div className="rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:bg-red-950/60 dark:text-red-300">
-                  {regError}
-                </div>
-              )}
-              <Button fullWidth type="submit" loading={regSubmitting} className="pt-2">
-                Register hub
-              </Button>
-            </form>
+            <HubRegistrationForm onRegistered={hub.refresh} />
           </Card>
         </motion.div>
       ) : (
@@ -236,7 +174,12 @@ export default function HubDashboard() {
                     <RefreshCw className="h-3.5 w-3.5" />
                     Refresh
                   </Button>
-                  <Button size="sm" onClick={() => { setSaved(false); setSheetOpen(true); }}>
+                  <Button
+                    size="sm"
+                    onClick={() => { setSaved(false); setSheetOpen(true); }}
+                    disabled={!canRequest}
+                    title={!canRequest ? "Subscribe to publish buy requests" : undefined}
+                  >
                     <PackagePlus className="h-3.5 w-3.5" />
                     New buy request
                   </Button>
@@ -306,6 +249,12 @@ export default function HubDashboard() {
               <Badge tone="brand">{requests.length} requests</Badge>
             </div>
 
+            {!hub.loading && !canRequest && (
+              <div className="mb-4 rounded-xl bg-amber-50 px-3.5 py-2.5 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900">
+                An active subscription is required to publish buy requests. Subscribe below to start.
+              </div>
+            )}
+
             {hub.loading ? (
               <div className="space-y-4">
                 {[0, 1, 2].map((i) => (
@@ -319,8 +268,20 @@ export default function HubDashboard() {
               <EmptyState
                 icon={<Boxes className="h-6 w-6" />}
                 title="No buy requests yet"
-                subtitle="Publish your first daily request so collectors know what you need."
-                action={<Button size="sm" onClick={() => setSheetOpen(true)}>New request</Button>}
+                subtitle={
+                  canRequest
+                    ? "Publish your first daily request so collectors know what you need."
+                    : "Subscribe to a plan to publish your first buy request."
+                }
+                action={
+                  canRequest ? (
+                    <Button size="sm" onClick={() => setSheetOpen(true)}>New request</Button>
+                  ) : (
+                    <Button size="sm" variant="gold" onClick={subscribe} loading={subscribing}>
+                      Subscribe — {formatNaira(HUB_PLAN.amount_naira)}/mo
+                    </Button>
+                  )
+                }
               />
             ) : (
               <ul className="space-y-3">
@@ -411,6 +372,11 @@ export default function HubDashboard() {
 
           <Card pad>
             <h2 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">Subscription</h2>
+            {subError && (
+              <div className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:bg-red-950/60 dark:text-red-300" role="alert">
+                {subError}
+              </div>
+            )}
             {activeSub ? (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -427,7 +393,14 @@ export default function HubDashboard() {
                     {activeSub.next_billing_at ? formatDateTime(activeSub.next_billing_at) : "—"}
                   </span>
                 </div>
-                <Button variant="secondary" size="sm" fullWidth className="!mt-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  fullWidth
+                  className="!mt-2"
+                  onClick={subscribe}
+                  loading={subscribing}
+                >
                   <RefreshCw className="h-3.5 w-3.5" /> Renew / upgrade
                 </Button>
               </div>
@@ -436,7 +409,11 @@ export default function HubDashboard() {
                 icon={<Crown className="h-6 w-6" />}
                 title="No active plan"
                 subtitle="Pro gives you unlimited buy requests and EPR export."
-                action={<Button size="sm">Subscribe — ₦25,000/mo</Button>}
+                action={
+                  <Button size="sm" variant="gold" onClick={subscribe} loading={subscribing}>
+                    Subscribe — {formatNaira(HUB_PLAN.amount_naira)}/mo
+                  </Button>
+                }
               />
             )}
           </Card>

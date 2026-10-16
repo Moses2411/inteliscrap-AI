@@ -12,7 +12,9 @@ import {
   Truck,
 } from "lucide-react";
 import { requestOtp, verifyOtp, type UserRole } from "../../services/auth";
+import { fetchMyHubOrNull } from "../../services/hubs";
 import { Button } from "../../components/ui/Button";
+import HubRegistrationForm from "../../components/Hub/HubRegistrationForm";
 import { cn } from "../../lib/cn";
 
 const ROLES: Array<{ role: UserRole; label: string; blurb: string; icon: ReactNode; requiresAddress: boolean }> = [
@@ -32,7 +34,7 @@ export default function LoginPage() {
   const [role, setRole] = useState<UserRole>("seller");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [step, setStep] = useState<"role" | "otp">("role");
+  const [step, setStep] = useState<"role" | "otp" | "hub">("role");
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,13 +92,31 @@ export default function LoginPage() {
     setError(null);
     try {
       await verifyOtp(normalizedPhone, otp.trim());
-      navigate(from, { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : "That code didn't match or has expired. Try again.");
-    } finally {
       setBusy(false);
+      return;
     }
-  }, [normalizedPhone, otp, navigate, from]);
+
+    // A hub account can't do anything until it registers its hub, so collect
+    // that here — right after sign-in — instead of failing later with a 403.
+    if (role === "recycling_hub") {
+      try {
+        const existing = await fetchMyHubOrNull();
+        if (!existing) {
+          setStep("hub");
+          setBusy(false);
+          return;
+        }
+      } catch {
+        // Can't tell whether a hub exists — continue to the dashboard, which
+        // shows the registration form when one is still needed.
+      }
+    }
+
+    navigate(from, { replace: true });
+    setBusy(false);
+  }, [normalizedPhone, otp, navigate, from, role]);
 
   const ErrorNote = ({ message }: { message: string }) => (
     <div className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/60 dark:text-red-300" role="alert">
@@ -168,12 +188,14 @@ export default function LoginPage() {
               </div>
 
               <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                {step === "role" ? "Welcome back" : "Enter the code"}
+                {step === "role" ? "Welcome back" : step === "otp" ? "Enter the code" : "Register your hub"}
               </h2>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {step === "role"
                   ? "Choose how you use InteliScrap, then verify your phone — we'll text you a 6-digit code."
-                  : `A 6-digit code was sent to ${phone}.`}
+                  : step === "otp"
+                    ? `A 6-digit code was sent to ${phone}.`
+                    : "Almost there — tell us about your recycling hub so you can start publishing buy requests."}
               </p>
 
               {step === "role" ? (
@@ -277,7 +299,7 @@ export default function LoginPage() {
                     passwords to forget.
                   </p>
                 </div>
-              ) : (
+              ) : step === "otp" ? (
                 <div className="mt-6 space-y-5">
                   {roleNote && (
                     <div className="rounded-xl bg-sky-50 px-3.5 py-2.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:ring-sky-900">
@@ -322,6 +344,16 @@ export default function LoginPage() {
                     >
                       {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend code"}
                     </button>
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-6 space-y-5">
+                  <HubRegistrationForm
+                    submitLabel="Register hub & continue"
+                    onRegistered={() => navigate(from, { replace: true })}
+                  />
+                  <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                    You can update these details later from your hub desk.
                   </p>
                 </div>
               )}

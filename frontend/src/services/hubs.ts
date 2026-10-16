@@ -66,6 +66,18 @@ export async function fetchMyHub(): Promise<HubInfo> {
 }
 
 /**
+ * Like {@link fetchMyHub} but resolves to `null` (instead of throwing) when the
+ * account has no hub yet. Used after hub login to decide whether to show the
+ * registration form. Other failures (network, server) still throw.
+ */
+export async function fetchMyHubOrNull(): Promise<HubInfo | null> {
+  const res = await fetch(`${API_BASE}/api/v1/hubs/me`, { headers: authHeaders() });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to load hub");
+  return res.json();
+}
+
+/**
  * Requests visible to the current user. A hub owner gets their own feed; a
  * collector or household (seller) gets every active hub's demand.
  */
@@ -133,6 +145,33 @@ export async function registerHub(payload: RegisterHubPayload): Promise<HubInfo>
   });
   if (!res.ok) {
     let message = "Failed to register hub";
+    try {
+      const errorData = await res.json();
+      message = errorData.detail || message;
+    } catch {
+      // Ignore JSON parse error, use default message
+    }
+    throw new Error(message);
+  }
+  return res.json();
+}
+
+export interface SubscribeHubPayload {
+  plan_name?: string;
+  amount_naira: number;
+  payment_method?: string;
+  payment_reference?: string;
+}
+
+/** Subscribe the signed-in hub to a plan so it can publish buy requests. */
+export async function subscribeHub(payload: SubscribeHubPayload): Promise<HubSubscription> {
+  const res = await fetch(`${API_BASE}/api/v1/hubs/subscribe`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    let message = "Failed to subscribe";
     try {
       const errorData = await res.json();
       message = errorData.detail || message;
