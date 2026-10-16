@@ -8,6 +8,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import { Sheet } from "../ui/Sheet";
+import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
 import { Badge } from "../ui/Badge";
 import { getSavedPhone } from "../../services/auth";
@@ -162,6 +163,22 @@ export function MomoCheckout({
   const momoOff = config !== null && !config.enabled;
   const configLoading = config === null;
 
+  // Payments aren't wired up on this build — show a friendly "coming soon"
+  // popup instead of the checkout form.
+  if (open && momoOff) {
+    return (
+      <Modal open onClose={onClose} title="Payment integration coming soon">
+        <p>
+          Mobile money payments aren&apos;t available just yet — we&apos;re still
+          finishing the MTN MoMo integration. Please check back soon.
+        </p>
+        <Button className="mt-4" fullWidth onClick={onClose}>
+          Got it
+        </Button>
+      </Modal>
+    );
+  }
+
   return (
     <Sheet open={open} onClose={onClose} title={title}>
       <div className="space-y-4">
@@ -181,13 +198,6 @@ export function MomoCheckout({
 
         {description && phase === "form" && (
           <p className="text-sm text-slate-600 dark:text-slate-400">{description}</p>
-        )}
-
-        {momoOff && (
-          <div className="rounded-xl bg-amber-50 px-3.5 py-3 text-xs font-semibold text-amber-700 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:ring-amber-900">
-            Mobile money payments aren&apos;t enabled on this build yet. Set the MTN MoMo
-            credentials on the server to turn this on.
-          </div>
         )}
 
         {phase === "form" && (
