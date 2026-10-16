@@ -19,7 +19,7 @@ async def request_otp(
     db: AsyncSession = Depends(get_db),
 ):
     # Store/reuse the code synchronously (fast, DB-only)...
-    user, otp, retry_after = await auth_service.request_otp(db, payload)
+    user, otp, retry_after, account_exists = await auth_service.request_otp(db, payload)
 
     # ...then deliver the SMS *after* the response. This is the whole point: the
     # client never waits on the SMS provider. If the provider is slow, unreachable
@@ -44,6 +44,10 @@ async def request_otp(
         "user_id": user.id,
         "retry_after": retry_after,
         "sms_scheduled": sms_scheduled,
+        # The account type is fixed to the phone number for life. Tell the
+        # client what it is so the UI never claims otherwise.
+        "role": user.role.value,
+        "account_exists": account_exists,
     }
 
 

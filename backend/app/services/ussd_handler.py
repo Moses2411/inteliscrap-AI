@@ -85,8 +85,8 @@ async def _new_pickups_flow(db: AsyncSession, collector: User, rest: list[str]) 
         )
 
     if rest[1] == "1":
-        await pickup_service.accept_pickup(db, pickup, listing)
-        await pickup_service.enqueue_location_sms(db, collector, pickup, listing)
+        pin = await pickup_service.accept_pickup(db, pickup, listing)
+        await pickup_service.enqueue_location_sms(db, collector, pickup, listing, pin)
         return "END An karba. An aiko maka SMS da cikakken adireshin. Na gode!"
 
     return MAIN_MENU

@@ -89,9 +89,12 @@ async def test_settle_rejects_non_positive_weight(test_session):
 
 
 @pytest.mark.asyncio
-async def test_settle_endpoint(client, test_session):
+async def test_settle_endpoint_admin_only(client, test_session):
     _, _, _, _, _ = await _seed(test_session)
-    token = security.create_access_token("settle-collector", UserRole.collector.value)
+    token = security.create_access_token("settle-admin", UserRole.admin.value)
+    admin = User(id="settle-admin", phone_number="+2348050000004", role=UserRole.admin)
+    test_session.add(admin)
+    await test_session.flush()
     resp = await client.post(
         "/api/v1/pickups/settle-pickup/settle",
         json={"weight_kg": 5.0},
@@ -105,15 +108,15 @@ async def test_settle_endpoint(client, test_session):
 
 
 @pytest.mark.asyncio
-async def test_settle_rejects_other_collector(client, test_session):
+async def test_settle_rejects_collector(client, test_session):
+    """Collectors can no longer settle unilaterally — the seller confirms."""
     await _seed(test_session)
-    other = User(id="settle-other", phone_number="+2348050000003", role=UserRole.collector)
-    test_session.add(other)
-    await test_session.flush()
-    other_token = security.create_access_token("settle-other", UserRole.collector.value)
+    collector_token = security.create_access_token(
+        "settle-collector", UserRole.collector.value
+    )
     resp = await client.post(
         "/api/v1/pickups/settle-pickup/settle",
         json={"weight_kg": 5.0},
-        headers={"Authorization": f"Bearer {other_token}"},
+        headers={"Authorization": f"Bearer {collector_token}"},
     )
     assert resp.status_code == 403

@@ -1,8 +1,8 @@
 from datetime import date, datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models import PaymentMethod, UserRole
+from app.models import PaymentMethod, PaymentPurpose, UserRole
 
 
 class ScrapScanCreate(BaseModel):
@@ -116,6 +116,26 @@ class SettlementRequest(BaseModel):
     unit_price_naira: Optional[float] = None
     payment_method: Optional[PaymentMethod] = PaymentMethod.cash
     hub_id: Optional[str] = None
+
+
+class HandoverRequest(BaseModel):
+    """What the collector records when the goods change hands."""
+
+    weight_kg: float = Field(gt=0)
+    unit_price_naira: Optional[float] = None
+    payment_method: Optional[PaymentMethod] = PaymentMethod.cash
+    hub_id: Optional[str] = None
+
+
+class HandoverConfirmRequest(BaseModel):
+    """The seller enters the 6-digit PIN the collector read out."""
+
+    pin: str = Field(min_length=4, max_length=8)
+
+
+class DisputeResolveRequest(BaseModel):
+    resolution: Literal["confirm", "cancel"]
+    reason: Optional[str] = None
 
 
 class TransactionResponse(BaseModel):
@@ -232,6 +252,48 @@ class SubscriptionPurchaseRequest(BaseModel):
     gtin: Optional[str] = None  # barcode/EAN captured at scan → own-brand attribution
 
 
+class MomoCheckoutRequest(BaseModel):
+    """Start a MoMo Request-to-Pay for a subscription."""
+
+    plan: str = "quarterly"
+    phone_number: str = Field(min_length=6, max_length=20)
+    purpose: PaymentPurpose = PaymentPurpose.user_subscription
+
+
+class MomoCheckoutResponse(BaseModel):
+    reference_id: str
+    status: str
+    purpose: str
+    plan: str
+    amount: float
+    currency: str
+    payer_msisdn: str
+    message: str
+
+
+class PaymentStatusResponse(BaseModel):
+    reference_id: str
+    status: str
+    purpose: str
+    plan: str
+    amount: float
+    currency: str
+    payer_msisdn: str
+    provider_status: Optional[str] = None
+    provider_financial_tx_id: Optional[str] = None
+    failure_reason: Optional[str] = None
+    applied: bool = False
+    completed_at: Optional[datetime] = None
+    subscription: Optional[SubscriptionStatusResponse] = None
+
+
+class MomoConfigResponse(BaseModel):
+    enabled: bool
+    environment: str
+    currency: str
+    callback_configured: bool
+
+
 class ListingResponse(BaseModel):
     id: str
     seller_id: str
@@ -262,10 +324,6 @@ class OTPRequest(BaseModel):
     role: Optional[UserRole] = None
     full_name: Optional[str] = None
     address_text: Optional[str] = None
-
-
-class RoleUpdate(BaseModel):
-    role: UserRole
 
 
 class OTPVerify(BaseModel):
@@ -317,6 +375,39 @@ class PickupJobResponse(PickupOfferResponse):
     longitude: Optional[float] = None
     scheduled_at: Optional[datetime] = None
     accepted_at: Optional[datetime] = None
+    # Proof-of-handover state surfaced to both parties.
+    confirm_deadline: Optional[datetime] = None
+    confirmed_at: Optional[datetime] = None
+    disputed_at: Optional[datetime] = None
+    dispute_reason: Optional[str] = None
+    handover_weight_kg: Optional[float] = None
+    awaiting_confirmation: bool = False
+
+
+class PickupAcceptResponse(PickupJobResponse):
+    """Accept response carries the one-time PIN for the collector."""
+
+    handover_pin: str
+
+
+class HoldStatusResponse(BaseModel):
+    on_hold: bool
+    open_handovers: int = 0
+
+
+class DisputeItemResponse(PickupJobResponse):
+    """Admin view of a disputed handover, with both parties to contact."""
+
+    seller_id: str
+    collector_id: Optional[str] = None
+    seller_phone: Optional[str] = None
+    collector_phone: Optional[str] = None
+
+
+class DisputeResolveResponse(BaseModel):
+    pickup_id: str
+    pickup_status: str
+    transaction_id: Optional[str] = None
 
 
 # ── Recycling Hub schemas ────────────────────────────────────────────

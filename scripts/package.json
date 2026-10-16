@@ -1,0 +1,8 @@
+{
+  "name": "inteliscrap-scripts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "momo:provision": "node ../frontend/scripts/momo-provision.mjs"
+  }
+}

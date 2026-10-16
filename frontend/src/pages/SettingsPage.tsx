@@ -24,12 +24,13 @@ import { Button } from "../components/ui/Button";
 import { Toggle } from "../components/ui/Toggle";
 import { Avatar } from "../components/ui/Avatar";
 import { PageMotion, pageItem } from "../components/ui/PageMotion";
+import { MomoCheckout } from "../components/payments/MomoCheckout";
 import { useApp } from "../store/appStore";
 import { useTranslation } from "../hooks/useTranslation";
-import { clearToken, getRole, getSavedPhone, setRole, updateRole, type UserRole } from "../services/auth";
+import { clearToken, getRole, getSavedPhone } from "../services/auth";
+import { fetchSubscriptionStatus, type SubscriptionStatus } from "../services/subscription";
 import { formatPhoneDisplay } from "../utils/formatters";
 import { previewEnabled, setPreviewEnabled } from "../lib/demoData";
-import { cn } from "../lib/cn";
 import type { Language } from "../types";
 
 const LANG_OPTIONS: { value: Language; label: string }[] = [
@@ -38,15 +39,6 @@ const LANG_OPTIONS: { value: Language; label: string }[] = [
   { value: "pcm", label: "Nigerian Pidgin" },
   { value: "yo", label: "Yoruba" },
   { value: "ig", label: "Igbo" },
-];
-
-const ROLE_OPTIONS: UserRole[] = [
-  "seller",
-  "collector",
-  "recycling_hub",
-  "ngo",
-  "partner",
-  "admin",
 ];
 
 function Row({ icon, title, desc, children }: { icon: ReactNode; title: string; desc?: string; children?: ReactNode }) {
@@ -167,6 +159,21 @@ export default function SettingsPage() {
   const [playing, setPlaying] = useState(false);
   const [preview, setPreview] = useState(previewEnabled());
   const [allowNotifications, setAllowNotifications] = useState(() => localStorage.getItem("is_notify") !== "0");
+  const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
+  const showSubscription = role === "seller" || role === "collector";
+
+  useEffect(() => {
+    if (!showSubscription) return;
+    let active = true;
+    fetchSubscriptionStatus()
+      .then((s) => active && setSubStatus(s))
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [showSubscription]);
 
   function onNotifyToggle(v: boolean) {
     setAllowNotifications(v);
@@ -200,16 +207,6 @@ export default function SettingsPage() {
   function onPreviewToggle(v: boolean) {
     setPreview(v);
     setPreviewEnabled(v);
-    navigate("/dashboard", { replace: true });
-  }
-
-  async function switchRole(r: UserRole) {
-    try {
-      await updateRole(r);
-    } catch {
-      // Offline preview — the cached role is re-synced from the server on boot.
-      setRole(r);
-    }
     navigate("/dashboard", { replace: true });
   }
 
@@ -327,39 +324,76 @@ export default function SettingsPage() {
         </Card>
       </motion.div>
 
-      {/* Role switcher (dev/demo) */}
+      {/* Account type — fixed to the phone number */}
       <motion.div variants={pageItem}>
         <Card>
           <SectionHeader
             title={
               <span className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-brand-600 dark:text-brand-400" />
-                Switch workspace
+                Account type
               </span>
             }
-            subtitle="Preview the dedicated dashboard for each user group — sellers, collectors, hubs, NGOs, PROs and admins."
+            subtitle="Your account type is fixed to your phone number and can't be changed. One phone number is one account — this keeps collector, buyer and compliance records trustworthy."
             className="mb-3"
           />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {ROLE_OPTIONS.map((r) => (
-              <motion.button
-                key={r}
-                onClick={() => switchRole(r)}
-                whileTap={{ scale: 0.97 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                className={cn(
-                  "rounded-xl border px-3 py-3 text-left text-xs font-bold capitalize transition-colors",
-                  role === r
-                    ? "border-brand-500 bg-brand-50 text-brand-700 shadow-glow dark:bg-brand-950/60 dark:text-brand-300"
-                    : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-slate-600",
-                )}
-              >
-                {r.replace("_", " ")}
-              </motion.button>
-            ))}
+          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+            <UserRound className="h-4 w-4 shrink-0 text-slate-400" />
+            <span className="text-sm font-bold capitalize text-slate-800 dark:text-slate-100">
+              {role ? role.replace("_", " ") : "guest"}
+            </span>
+            <Badge tone="brand" className="ml-auto">
+              {role ? "fixed" : "guest"}
+            </Badge>
           </div>
+          <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+            Need a different account type? Register a separate phone number for it.
+          </p>
         </Card>
       </motion.div>
+
+      {/* Subscription */}
+      {showSubscription && (
+        <motion.div variants={pageItem}>
+          <Card>
+            <SectionHeader
+              title={
+                <span className="flex items-center gap-2">
+                  <Crown className="h-4 w-4 text-amber-500" />
+                  Subscription
+                </span>
+              }
+              subtitle="Free accounts can post up to 4 listings a week. Quarterly Pro removes the limit."
+              className="mb-3"
+            />
+            {subStatus?.plan === "quarterly" ? (
+              <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950/40">
+                <div>
+                  <p className="text-sm font-bold text-emerald-800 dark:text-emerald-200">Quarterly Pro</p>
+                  <p className="text-xs text-emerald-700 dark:text-emerald-300">
+                    {subStatus.expires_at
+                      ? `Renews ${new Date(subStatus.expires_at).toLocaleDateString()}`
+                      : "Active"}
+                  </p>
+                </div>
+                <Badge tone="green">unlimited</Badge>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-700 dark:bg-slate-900">
+                <div>
+                  <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Free plan</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {subStatus ? `${subStatus.listings_this_week}/${subStatus.weekly_limit} listings this week` : "Weekly listing limit"}
+                  </p>
+                </div>
+                <Button size="sm" variant="gold" onClick={() => setUpgradeOpen(true)}>
+                  Upgrade
+                </Button>
+              </div>
+            )}
+          </Card>
+        </motion.div>
+      )}
 
       {/* About */}
       <motion.div variants={pageItem}>
@@ -390,6 +424,22 @@ export default function SettingsPage() {
           </p>
         </Card>
       </motion.div>
+
+      {showSubscription && (
+        <MomoCheckout
+          open={upgradeOpen}
+          onClose={() => setUpgradeOpen(false)}
+          purpose="user_subscription"
+          plan="quarterly"
+          amountNaira={2500}
+          title="Upgrade to Quarterly Pro"
+          description="Unlimited listings for three months. Pay in seconds with MTN MoMo."
+          onSuccess={() => {
+            setUpgradeOpen(false);
+            fetchSubscriptionStatus().then(setSubStatus).catch(() => {});
+          }}
+        />
+      )}
     </PageMotion>
   );
 }

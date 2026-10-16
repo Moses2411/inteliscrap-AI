@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   ArrowRight,
   CheckCircle2,
+  Lock,
   MapPin,
   Navigation,
   Phone,
@@ -20,7 +21,15 @@ import { Skeleton } from "../components/ui/Skeleton";
 import { useTranslation } from "../hooks/useTranslation";
 import { useApp } from "../store/appStore";
 import { getToken } from "../services/auth";
-import { fetchOffers, acceptOffer, type PickupJob, type PickupOffer } from "../services/pickups";
+import {
+  acceptOffer,
+  fetchHoldStatus,
+  fetchOffers,
+  storeHandoverPin,
+  type AcceptedPickup,
+  type HoldStatus,
+  type PickupOffer,
+} from "../services/pickups";
 import { shareMyLocation } from "../services/location";
 
 function distanceLabel(m?: number): string {
@@ -33,7 +42,8 @@ export default function PickupsPage() {
   const { t } = useTranslation();
   const { selected_language } = useApp();
   const [offers, setOffers] = useState<PickupOffer[]>([]);
-  const [accepted, setAccepted] = useState<PickupJob | null>(null);
+  const [accepted, setAccepted] = useState<AcceptedPickup | null>(null);
+  const [hold, setHold] = useState<HoldStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [locBusy, setLocBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +61,7 @@ export default function PickupsPage() {
     }
     try {
       setOffers(await fetchOffers());
+      setHold(await fetchHoldStatus());
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("loading"));
@@ -69,7 +80,9 @@ export default function PickupsPage() {
     setBusyId(id);
     setError(null);
     try {
-      setAccepted(await acceptOffer(id));
+      const result = await acceptOffer(id);
+      storeHandoverPin(id, result.handover_pin);
+      setAccepted(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("loading"));
     } finally {
@@ -104,6 +117,18 @@ export default function PickupsPage() {
         </div>
 
         <Card className="space-y-3">
+          <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-teal-700 p-4 text-center text-white shadow-card">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80">
+              Handover code
+            </p>
+            <p className="mt-1 text-4xl font-black tracking-[0.35em] tabular-nums">
+              {accepted.handover_pin}
+            </p>
+            <p className="mt-2 text-xs text-white/85">
+              Read this to the seller. They enter it to confirm the handover — new
+              leads stay paused until then.
+            </p>
+          </div>
           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <MapPin className="h-4 w-4 text-brand-500" aria-hidden="true" />
             {accepted.address_text ?? "Address on request"}
@@ -167,6 +192,20 @@ export default function PickupsPage() {
           {distanceLabel(offers[0]?.distance_m)}
         </span>
       </motion.button>
+
+      {hold?.on_hold && (
+        <div className="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3 ring-1 ring-amber-200 dark:bg-amber-950/60 dark:ring-amber-900">
+          <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" aria-hidden="true" />
+          <div className="text-amber-800 dark:text-amber-200">
+            <p className="text-sm font-bold">New leads paused</p>
+            <p className="text-xs">
+              Confirm your {hold.open_handovers} open handover
+              {hold.open_handovers === 1 ? "" : "s"} with the seller before you
+              receive new offers.
+            </p>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs font-semibold text-red-700 ring-1 ring-red-200 dark:bg-red-950/60 dark:text-red-300 dark:ring-red-900">

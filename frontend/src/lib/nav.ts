@@ -7,6 +7,7 @@ import {
   LayoutPanelTop,
   PieChart,
   Receipt,
+  Scale,
   Settings,
   Store,
   Truck,
@@ -56,6 +57,7 @@ export function getNavForRole(role: UserRole | null): NavItem[] {
   }
   if (role === "admin") {
     items.push({ path: "/report", labelKey: "nav_report", icon: BarChart3 });
+    items.push({ path: "/disputes", labelKey: "nav_disputes", icon: Scale });
   }
   if (role === "partner" || role === "admin") {
     items.push({ path: "/compliance", labelKey: "nav_compliance", icon: Receipt });

@@ -12,7 +12,9 @@ import {
   Truck,
 } from "lucide-react";
 import { requestOtp, verifyOtp, type UserRole } from "../../services/auth";
+import { fetchMyHubOrNull } from "../../services/hubs";
 import { Button } from "../../components/ui/Button";
+import HubRegistrationForm from "../../components/Hub/HubRegistrationForm";
 import { cn } from "../../lib/cn";
 
 const ROLES: Array<{ role: UserRole; label: string; blurb: string; icon: ReactNode; requiresAddress: boolean }> = [
@@ -32,12 +34,13 @@ export default function LoginPage() {
   const [role, setRole] = useState<UserRole>("seller");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [step, setStep] = useState<"role" | "otp">("role");
+  const [step, setStep] = useState<"role" | "otp" | "hub">("role");
   const [otp, setOtp] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  const [roleNote, setRoleNote] = useState<string | null>(null);
 
   // Users type spaces/dashes (the placeholder itself has spaces) — strip them
   // for validation and before sending to the API so lookups match consistently.
@@ -51,13 +54,22 @@ export default function LoginPage() {
     setBusy(true);
     setError(null);
     setDebugOtp(null);
+    setRoleNote(null);
     try {
-      const { otp: code, debug, retryAfter } = await requestOtp(
+      const { otp: code, debug, retryAfter, role: serverRole, accountExists } = await requestOtp(
         normalizedPhone,
         role,
         addressRequired ? address : undefined,
       );
       if (debug && code) setDebugOtp(code);
+      // One phone number = one account type. If this number already has an
+      // account, that account's role wins — tell the user before they verify.
+      if (accountExists && serverRole && serverRole !== role) {
+        setRole(serverRole);
+        setRoleNote(
+          `This number is already registered as a ${serverRole.replace("_", " ")} account — you'll sign in as that.`,
+        );
+      }
       setStep("otp");
       setCooldown(retryAfter > 0 ? retryAfter : 30);
     } catch (e) {
@@ -80,13 +92,31 @@ export default function LoginPage() {
     setError(null);
     try {
       await verifyOtp(normalizedPhone, otp.trim());
-      navigate(from, { replace: true });
     } catch (e) {
       setError(e instanceof Error ? e.message : "That code didn't match or has expired. Try again.");
-    } finally {
       setBusy(false);
+      return;
     }
-  }, [normalizedPhone, otp, navigate, from]);
+
+    // A hub account can't do anything until it registers its hub, so collect
+    // that here — right after sign-in — instead of failing later with a 403.
+    if (role === "recycling_hub") {
+      try {
+        const existing = await fetchMyHubOrNull();
+        if (!existing) {
+          setStep("hub");
+          setBusy(false);
+          return;
+        }
+      } catch {
+        // Can't tell whether a hub exists — continue to the dashboard, which
+        // shows the registration form when one is still needed.
+      }
+    }
+
+    navigate(from, { replace: true });
+    setBusy(false);
+  }, [normalizedPhone, otp, navigate, from, role]);
 
   const ErrorNote = ({ message }: { message: string }) => (
     <div className="rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/60 dark:text-red-300" role="alert">
@@ -163,14 +193,16 @@ export default function LoginPage() {
               </span>
             </a>
 
-            <h1 className="max-w-md text-4xl font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white">
-              {step === "role" ? "Every kilogram of scrap, fairly valued." : "Enter the code"}
-            </h1>
-            <p className="mt-3 max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-              {step === "role"
-                ? "Snap scrap with on-device AI that works offline, enjoy address-based pickup, and get EPR-auditable manifests for every settled collection."
-                : `A 6-digit code was sent to ${phone}.`}
-            </p>
+              <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                {step === "role" ? "Welcome back" : step === "otp" ? "Enter the code" : "Register your hub"}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {step === "role"
+                  ? "Choose how you use InteliScrap, then verify your phone — we'll text you a 6-digit code."
+                  : step === "otp"
+                    ? `A 6-digit code was sent to ${phone}.`
+                    : "Almost there — tell us about your recycling hub so you can start publishing buy requests."}
+              </p>
 
             {step === "role" ? (
               <form
@@ -276,6 +308,18 @@ export default function LoginPage() {
                     </p>
                   )}
                 </div>
+              ) : step === "otp" ? (
+                <div className="mt-6 space-y-5">
+                  {roleNote && (
+                    <div className="rounded-xl bg-sky-50 px-3.5 py-2.5 text-xs font-semibold text-sky-700 ring-1 ring-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:ring-sky-900">
+                      {roleNote}
+                    </div>
+                  )}
+                  {debugOtp && (
+                    <div className="rounded-2xl bg-brand-50 px-4 py-3 text-xs font-semibold text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
+                      Demo OTP: <code className="font-mono">{debugOtp}</code>
+                    </div>
+                  )}
 
                   <div>
                     <label className="label" htmlFor="otp">Verification code</label>
@@ -344,18 +388,18 @@ export default function LoginPage() {
                     </button>
                   </p>
                 </div>
-                <Button fullWidth size="lg" type="submit" className="rounded-full" loading={busy} disabled={otp.length !== 6}>
-                  Verify &amp; continue
-                </Button>
-                <button
-                  type="button"
-                  onClick={() => { setStep("role"); setOtp(""); setError(null); }}
-                  className="block w-full text-center text-xs font-bold text-brand-600 hover:underline dark:text-brand-400"
-                >
-                  Change phone / role
-                </button>
-              </form>
-            )}
+              ) : (
+                <div className="mt-6 space-y-5">
+                  <HubRegistrationForm
+                    submitLabel="Register hub & continue"
+                    onRegistered={() => navigate(from, { replace: true })}
+                  />
+                  <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                    You can update these details later from your hub desk.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

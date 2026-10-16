@@ -4,6 +4,10 @@ build/
 *.tsbuildinfo
 .env
 .env.local
+# Render env files for pasting into the dashboard — may hold real secrets.
+.env.*
+!.env.example
+render.*.env
 *.pyc
 __pycache__/
 *.egg-info/

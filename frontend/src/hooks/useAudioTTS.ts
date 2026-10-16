@@ -25,6 +25,16 @@ function determineSafetyKey(hazards: string[]): SafetyKey {
   return "default";
 }
 
+/**
+ * Nigerian-pidgin spelling is phonetic shorthand, and Google TTS reads the
+ * particle "na" as a clipped grunt. Pidgin speakers say it "Nah", so spell it
+ * that way for the speech engine only — on-screen text keeps the real spelling.
+ */
+function normalizeForSpeech(text: string, language: Language): string {
+  if (language !== "pcm") return text;
+  return text.replace(/\bna\b/gi, "Nah");
+}
+
 async function playAudio(
   src: string,
   audioRef: React.MutableRefObject<HTMLAudioElement | null>,
@@ -152,8 +162,11 @@ export function useAudioTTS() {
 
       const ttsLang = language === "ha" ? "ha" : language === "pcm" ? "en-NG" : language === "yo" ? "yo" : language === "ig" ? "ig" : "en";
 
+      // Spell pidgin "na" as "Nah" for the speech engine (display text unchanged).
+      const spokenText = normalizeForSpeech(speechString, language);
+
       // Split into sentences so each chunk stays under Google TTS length limit
-      const sentences = speechString.match(/[^.!?]+[.!?]+/g) || [speechString];
+      const sentences = spokenText.match(/[^.!?]+[.!?]+/g) || [spokenText];
 
       // Try server TTS
       usingFallbackRef.current = false;

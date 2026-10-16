@@ -42,7 +42,17 @@ async def _request_response(
 @router.post("/register", response_model=RecyclingHubResponse)
 async def register_hub(
     body: RecyclingHubCreate,
-    user: User = Depends(require_role(UserRole.admin, UserRole.seller, UserRole.collector)),
+    # A hub account picks "Recycling Hub" at sign-up, so by the time it registers
+    # its own hub its role is already `recycling_hub`. Sellers/collectors may
+    # still register one and be promoted, and admins may register on behalf.
+    user: User = Depends(
+        require_role(
+            UserRole.admin,
+            UserRole.seller,
+            UserRole.collector,
+            UserRole.recycling_hub,
+        )
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     existing = await hub_service.get_hub_by_owner(db, user)
@@ -94,6 +104,15 @@ async def create_hub_request(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Register a recycling hub first",
         )
+
+    # Publishing buy requests is a paid capability: the hub must have an active
+    # subscription. Registration itself stays free so hubs can set up first.
+    if await hub_service.get_active_subscription(db, hub.id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_402_PAYMENT_REQUIRED,
+            detail="An active subscription is required to publish buy requests. Subscribe to a plan to continue.",
+        )
+
     material = await db.get(MaterialCategory, body.material_category_id)
     if material is None:
         raise HTTPException(status_code=404, detail="Material category not found")

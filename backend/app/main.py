@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api import (
+    admin,
     analyze,
     auth,
     compliance,
@@ -14,6 +15,7 @@ from app.api import (
     materials,
     notifications,
     outbox,
+    payments,
     pickups,
     prices,
     subscription,
@@ -81,6 +83,8 @@ app.include_router(hubs.router)
 app.include_router(compliance.router)
 app.include_router(notifications.router)
 app.include_router(subscription.router)
+app.include_router(payments.router)
+app.include_router(admin.router)
 
 
 @app.get("/")
