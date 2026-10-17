@@ -7,6 +7,7 @@ import {
   DEMO_HUB_SUBSCRIPTIONS,
   DEMO_IMPACT_BY_MATERIAL,
   DEMO_IMPACT_DAILY,
+  DEMO_IMPACT_OPS,
   DEMO_IMPACT_SUMMARY,
   DEMO_LISTINGS,
   DEMO_MATERIALS,
@@ -17,9 +18,11 @@ import {
 import {
   fetchImpactByMaterial,
   fetchImpactDaily,
+  fetchImpactOps,
   fetchImpactSummary,
   type ImpactByMaterial,
   type ImpactDailyPoint,
+  type ImpactOps,
   type ImpactSummary,
 } from "../services/impact";
 import {
@@ -113,22 +116,25 @@ export interface ImpactBundle {
   summary: ImpactSummary | null;
   daily: ImpactDailyPoint[];
   byMaterial: ImpactByMaterial[];
+  ops: ImpactOps | null;
 }
 
 export function useImpactData(): HookResult<ImpactBundle> {
   return useLoad(
     async () => {
-      const [summary, daily, byMaterial] = await Promise.all([
+      const [summary, daily, byMaterial, ops] = await Promise.all([
         fetchImpactSummary(),
         fetchImpactDaily(),
         fetchImpactByMaterial(),
+        fetchImpactOps(),
       ]);
-      return { summary, daily, byMaterial };
+      return { summary, daily, byMaterial, ops };
     },
     () => ({
       summary: DEMO_IMPACT_SUMMARY,
       daily: DEMO_IMPACT_DAILY,
       byMaterial: DEMO_IMPACT_BY_MATERIAL,
+      ops: DEMO_IMPACT_OPS,
     }),
   );
 }

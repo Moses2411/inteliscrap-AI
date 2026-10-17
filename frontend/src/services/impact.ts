@@ -44,3 +44,17 @@ export async function fetchImpactByMaterial(): Promise<ImpactByMaterial[]> {
   if (!res.ok) throw new Error("Failed to load material breakdown");
   return res.json();
 }
+
+/** Network-wide operational snapshot (active jobs / offers / value). */
+export interface ImpactOps {
+  active_jobs: number;
+  available_offers: number;
+  jobs_value_naira: number;
+  offers_value_naira: number;
+}
+
+export async function fetchImpactOps(): Promise<ImpactOps> {
+  const res = await fetch(`${API_BASE}/api/v1/impact/ops`, { headers: authHeaders() });
+  if (!res.ok) throw new Error("Failed to load operations overview");
+  return res.json();
+}

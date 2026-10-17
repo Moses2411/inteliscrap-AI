@@ -38,6 +38,9 @@ export function DonutChart({
           {segments.map((seg) => {
             const frac = seg.value / total;
             const dash = frac * c;
+            // Butt caps keep each arc's painted length faithful to its share;
+            // rounded caps overshoot and make small slices look bigger.
+            const cap = segments.length > 1 ? "butt" : "round";
             const el = (
               <circle
                 key={seg.label}
@@ -47,7 +50,7 @@ export function DonutChart({
                 fill="none"
                 stroke={seg.color}
                 strokeWidth={thickness}
-                strokeLinecap="round"
+                strokeLinecap={cap}
                 strokeDasharray={`${dash} ${c - dash}`}
                 strokeDashoffset={-offset}
                 className="transition-all duration-700 ease-out"

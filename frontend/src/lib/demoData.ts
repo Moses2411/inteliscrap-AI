@@ -2,7 +2,7 @@ import type { MaterialCategoryInfo } from "../types";
 import type { PickupJob, PickupOffer } from "../services/pickups";
 import type { MarketplaceListing } from "../services/market";
 import type { HubDelivery, HubInfo, HubRequest, HubSubscription } from "../services/hubs";
-import type { ImpactByMaterial, ImpactDailyPoint, ImpactSummary } from "../services/impact";
+import type { ImpactByMaterial, ImpactDailyPoint, ImpactOps, ImpactSummary } from "../services/impact";
 import type { ComplianceManifesto, ManifestoItem } from "../services/compliance";
 
 /** Toggleable preview data so the UI can be demoed fully offline. */
@@ -371,6 +371,13 @@ export const DEMO_IMPACT_BY_MATERIAL: ImpactByMaterial[] = [
   { material: "Steel", tonnage_kg: 30200, carbon_offset_kg_co2e: 4360 },
   { material: "PET Plastic", tonnage_kg: 12800, carbon_offset_kg_co2e: 3580 },
 ];
+
+export const DEMO_IMPACT_OPS: ImpactOps = {
+  active_jobs: 38,
+  available_offers: 21,
+  jobs_value_naira: 4_613_400,
+  offers_value_naira: 1_284_500,
+};
 
 // ── Compliance (partner / PRO) ──────────────────────────────────────
 const DEMO_MANIFESTO_ITEMS: ManifestoItem[] = [

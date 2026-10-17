@@ -182,6 +182,19 @@ class ImpactByMaterial(BaseModel):
     collector_income_naira: float = 0.0
 
 
+class ImpactOpsOverview(BaseModel):
+    """Network-wide operational snapshot for oversight roles (NGO/admin).
+
+    Mirrors the collector dashboard's "Active jobs / Available offers / Jobs
+    value" cards, aggregated across every collector rather than one.
+    """
+
+    active_jobs: int = 0
+    available_offers: int = 0
+    jobs_value_naira: float = 0.0
+    offers_value_naira: float = 0.0
+
+
 class ListingCreate(BaseModel):
     material_category_id: int
     title: Optional[str] = None

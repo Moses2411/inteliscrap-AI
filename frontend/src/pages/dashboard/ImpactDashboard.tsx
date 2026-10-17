@@ -5,9 +5,11 @@ import {
   Banknote,
   Coins,
   Leaf,
+  PackageCheck,
   RefreshCw,
   Scale,
   ShieldCheck,
+  Truck,
   UsersRound,
 } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
@@ -38,6 +40,12 @@ export default function ImpactDashboard() {
   const s = impact.data?.summary;
   const daily = impact.data?.daily ?? [];
   const byMaterial = impact.data?.byMaterial ?? [];
+  const ops = impact.data?.ops;
+  // Standouts in the settled-material breakdown, surfaced in the footnote.
+  const topByTonnage = byMaterial[0];
+  const topByCarbon = byMaterial.length
+    ? byMaterial.reduce((best, m) => (m.carbon_offset_kg_co2e > best.carbon_offset_kg_co2e ? m : best))
+    : null;
 
   const metrics: Record<Metric, { label: string; values: number[]; color: string; format: (v: number) => string }> = {
     tonnage: {
@@ -64,7 +72,17 @@ export default function ImpactDashboard() {
   const donutSegments = byMaterial.map((m, i) => ({
     label: m.material,
     value: m.tonnage_kg,
-    color: ["#10b981", "#f59e0b", "#0ea5e9", "#8b5cf6", "#f43f5e", "#14b8a6"][i % 6],
+    // Enough distinct hues to cover every seeded material without repeats.
+    color: [
+      "#10b981",
+      "#f59e0b",
+      "#0ea5e9",
+      "#8b5cf6",
+      "#f43f5e",
+      "#14b8a6",
+      "#6366f1",
+      "#84cc16",
+    ][i % 8],
   }));
 
   return (
@@ -134,6 +152,40 @@ export default function ImpactDashboard() {
           iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300"
           hint="Verified pickups"
         />
+      </div>
+
+      {/* Network operations — the collector's Active jobs / Available offers /
+          Jobs value cards, aggregated across every collector for oversight. */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Network operations</h2>
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+            <Truck className="h-3.5 w-3.5" /> all collectors
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <StatCard
+            label="Active jobs"
+            value={impact.loading || !ops ? "—" : ops.active_jobs.toLocaleString()}
+            icon={<Truck className="h-5 w-5" />}
+            iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
+            hint="Pickups in progress"
+          />
+          <StatCard
+            label="Available offers"
+            value={impact.loading || !ops ? "—" : ops.available_offers.toLocaleString()}
+            icon={<PackageCheck className="h-5 w-5" />}
+            iconClass="bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300"
+            hint="Open offers awaiting a collector"
+          />
+          <StatCard
+            label="Jobs value"
+            value={impact.loading || !ops ? "—" : formatCompactNaira(ops.jobs_value_naira)}
+            icon={<Banknote className="h-5 w-5" />}
+            iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
+            hint="Estimated value of active jobs"
+          />
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
@@ -220,14 +272,18 @@ export default function ImpactDashboard() {
               }))}
             />
             <div className="hidden flex-col justify-center gap-2 rounded-xl bg-slate-50 p-4 text-xs text-slate-500 dark:bg-slate-800/60 dark:text-slate-400 md:flex">
-              <p>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">Copper</span> recycling avoids the
-                highest CO₂e per kg.
-              </p>
-              <p>
-                <span className="font-bold text-slate-700 dark:text-slate-200">E-waste</span> diversion keeps toxic
-                boards out of landfills and water sources.
-              </p>
+              {topByTonnage && (
+                <p>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{topByTonnage.material}</span> leads
+                  recovered tonnage at {formatKg(topByTonnage.tonnage_kg)}.
+                </p>
+              )}
+              {topByCarbon && (
+                <p>
+                  <span className="font-bold text-slate-700 dark:text-slate-200">{topByCarbon.material}</span> offsets
+                  the most CO₂e at {Math.round(topByCarbon.carbon_offset_kg_co2e).toLocaleString()} kg.
+                </p>
+              )}
               <Button variant="ghost" size="sm" className="!justify-start !px-0" onClick={() => navigate("/market")}>
                 Explore the market <ArrowRight className="h-3.5 w-3.5" />
               </Button>

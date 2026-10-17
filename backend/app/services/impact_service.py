@@ -10,7 +10,17 @@ carries ``computed_from`` so consumers can tell which path produced it.
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import MaterialCategory, NGOImpactLog, Transaction, TransactionStatus
+from app.models import (
+    Listing,
+    ListingStatus,
+    MaterialCategory,
+    NGOImpactLog,
+    Pickup,
+    PickupStatus,
+    Transaction,
+    TransactionStatus,
+)
+from app.services.pickup_service import HOLD_STATUSES
 
 
 async def _settled_count(db: AsyncSession) -> int:
@@ -171,3 +181,67 @@ async def get_by_material(db: AsyncSession) -> list[dict]:
         }
         for name, tonnage, carbon, income in result.all()
     ]
+
+
+async def get_ops_overview(db: AsyncSession) -> dict:
+    """Network-wide "Active jobs / Available offers / Jobs value" snapshot.
+
+    Active jobs reuse the collector hold states (the same set that locks a
+    collector out of new leads), so the oversight number matches what
+    collectors see on their own dashboards. Available offers are pending offers
+    on still-live listings. Values are listing estimates — a job only has a
+    settled value once a transaction exists.
+    """
+    active_jobs = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(Pickup)
+                .where(Pickup.status.in_(HOLD_STATUSES))
+            )
+        ).scalar()
+        or 0
+    )
+
+    available_offers = int(
+        (
+            await db.execute(
+                select(func.count())
+                .select_from(Pickup)
+                .join(Listing, Pickup.listing_id == Listing.id)
+                .where(
+                    Pickup.status == PickupStatus.offered,
+                    Listing.status.in_([ListingStatus.active, ListingStatus.matched]),
+                )
+            )
+        ).scalar()
+        or 0
+    )
+
+    jobs_value = (
+        await db.execute(
+            select(func.coalesce(func.sum(Listing.estimated_value_naira), 0))
+            .select_from(Pickup)
+            .join(Listing, Pickup.listing_id == Listing.id)
+            .where(Pickup.status.in_(HOLD_STATUSES))
+        )
+    ).scalar() or 0
+
+    offers_value = (
+        await db.execute(
+            select(func.coalesce(func.sum(Listing.estimated_value_naira), 0))
+            .select_from(Pickup)
+            .join(Listing, Pickup.listing_id == Listing.id)
+            .where(
+                Pickup.status == PickupStatus.offered,
+                Listing.status.in_([ListingStatus.active, ListingStatus.matched]),
+            )
+        )
+    ).scalar() or 0
+
+    return {
+        "active_jobs": active_jobs,
+        "available_offers": available_offers,
+        "jobs_value_naira": float(jobs_value),
+        "offers_value_naira": float(offers_value),
+    }

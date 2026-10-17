@@ -4,7 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.deps import require_role
 from app.database import get_db
 from app.models import User, UserRole
-from app.schemas import ImpactByMaterial, ImpactDailyPoint, ImpactSummary
+from app.schemas import (
+    ImpactByMaterial,
+    ImpactDailyPoint,
+    ImpactOpsOverview,
+    ImpactSummary,
+)
 from app.services import impact_service
 
 router = APIRouter(prefix="/api/v1/impact", tags=["impact"])
@@ -32,3 +37,12 @@ async def impact_by_material(
     _: User = Depends(require_role(UserRole.admin, UserRole.ngo)),
 ):
     return await impact_service.get_by_material(db)
+
+
+@router.get("/ops", response_model=ImpactOpsOverview)
+async def impact_ops(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_role(UserRole.admin, UserRole.ngo)),
+):
+    """Network-wide active jobs / available offers / jobs value."""
+    return await impact_service.get_ops_overview(db)

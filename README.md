@@ -501,7 +501,7 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | POST | `/api/v1/ussd_callback` | Africa's Talking USSD callback (registration + preset-location menus, plain-text menu) |
 | GET/POST | `/api/v1/voice/*` | Voice callbacks (register/accepted pickups via IVR) |
 | POST | `/api/v1/pickups/{pickup_id}/settle` | **Admin-only** manual settlement (collectors can no longer settle unilaterally) |
-| GET | `/api/v1/impact/*` | Impact dashboard aggregates (summary, daily, by-material) |
+| GET | `/api/v1/impact/*` | Impact dashboard aggregates (summary, daily, by-material) plus network ops (`ops`: active jobs / available offers / jobs value) |
 | GET/POST | `/api/v1/outbox/*` | SMS outbox inspection/processing |
 | POST | `/api/v1/hubs/register` | Register a recycling hub (any seller, collector or hub account; owner becomes `recycling_hub` role) |
 | GET | `/api/v1/hubs/` | List active recycling hubs |

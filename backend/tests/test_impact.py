@@ -1,7 +1,7 @@
 import pytest
 
 from app.core import security
-from app.models import Listing, MaterialCategory, Pickup, PickupStatus, User, UserRole
+from app.models import Listing, ListingStatus, MaterialCategory, Pickup, PickupStatus, User, UserRole
 from app.services import settlement_service
 
 
@@ -183,3 +183,73 @@ async def test_impact_daily(client, test_session):
     data = resp.json()
     assert len(data) >= 1
     assert data[0]["tonnage_kg"] == 5.0
+
+
+@pytest.mark.asyncio
+async def test_impact_ops_requires_auth(client):
+    resp = await client.get("/api/v1/impact/ops")
+    assert resp.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_impact_ops_overview(client, test_session):
+    seller = User(
+        id="ops-seller",
+        phone_number="+2348070000001",
+        role=UserRole.seller,
+        location_hub="Zaria",
+    )
+    collector = User(
+        id="ops-collector",
+        phone_number="+2348070000002",
+        role=UserRole.collector,
+    )
+    material = MaterialCategory(
+        slug="ops-copper",
+        name="Ops Copper",
+        price_per_kg_naira=3200,
+        carbon_kg_co2e_per_kg=2.6,
+    )
+    test_session.add_all([seller, collector, material])
+    await test_session.flush()
+
+    # An active job (accepted) worth 15,000 at the listing estimate.
+    job_listing = Listing(
+        id="ops-job-listing",
+        seller_id=seller.id,
+        material_category_id=material.id,
+        estimated_weight_kg=5,
+        estimated_value_naira=15000,
+    )
+    job = Pickup(
+        id="ops-job-pickup",
+        listing_id=job_listing.id,
+        collector_id=collector.id,
+        status=PickupStatus.accepted,
+    )
+    # An open offer (offered) on a still-active listing worth 9,000.
+    offer_listing = Listing(
+        id="ops-offer-listing",
+        seller_id=seller.id,
+        material_category_id=material.id,
+        estimated_weight_kg=3,
+        estimated_value_naira=9000,
+        status=ListingStatus.active,
+    )
+    offer = Pickup(
+        id="ops-offer-pickup",
+        listing_id=offer_listing.id,
+        collector_id=collector.id,
+        status=PickupStatus.offered,
+    )
+    test_session.add_all([job_listing, job, offer_listing, offer])
+    await test_session.flush()
+
+    headers = await _admin_headers(test_session)
+    resp = await client.get("/api/v1/impact/ops", headers=headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["active_jobs"] == 1
+    assert data["available_offers"] == 1
+    assert data["jobs_value_naira"] == 15000.0
+    assert data["offers_value_naira"] == 9000.0
