@@ -112,13 +112,13 @@ export default function HouseholdDashboard() {
         <motion.div variants={pageItem} className="min-w-0">
           <StatCard
             label="Total income"
-            value={earnings ? formatCompactNaira(earnings.total_income_naira) : "—"}
+            value={earnings ? formatCompactNaira(earnings.estimated_income_naira) : "—"}
             icon={<PiggyBank className="h-5 w-5" />}
             iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300"
             hint={
               earnings
-                ? `${earnings.settled_transactions} settled handover${earnings.settled_transactions === 1 ? "" : "s"}`
-                : "Settled handovers"
+                ? `${formatCompactNaira(earnings.total_income_naira)} settled · ${formatCompactNaira(earnings.in_progress_value_naira)} in progress`
+                : "Settled + in progress"
             }
           />
         </motion.div>

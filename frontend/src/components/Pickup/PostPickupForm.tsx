@@ -276,7 +276,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
             </svg>
             <p className="mt-2 font-semibold text-amber-800 dark:text-amber-200">Subscription limit reached</p>
             <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">{subscriptionError}</p>
-            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Upgrade to Quarterly Pro (₦2,500/quarter) for unlimited listings.</p>
+            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">Upgrade to Seller Premium (₦4,900/year) for unlimited listings.</p>
             <Button fullWidth className="mt-4" variant="gold" onClick={() => setUpgradeOpen(true)}>
               Upgrade with MTN MoMo
             </Button>
@@ -289,10 +289,11 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
           open={upgradeOpen}
           onClose={() => setUpgradeOpen(false)}
           purpose="user_subscription"
-          plan="quarterly"
-          amountNaira={2500}
-          title="Upgrade to Quarterly Pro"
-          description="Unlimited listings for three months. Pay in seconds with MTN MoMo."
+          plan="seller_yearly"
+          planLabel="Seller Premium"
+          amountNaira={4900}
+          title="Upgrade to Seller Premium"
+          description="Unlimited listings for a full year. Pay in seconds with MTN MoMo."
           onSuccess={() => {
             setUpgradeOpen(false);
             // Re-check eligibility so the form unlocks without a reload.

@@ -1,9 +1,10 @@
+from datetime import datetime, timedelta
+
 import pytest
 from sqlalchemy import select
 
 from app.core import security
 from app.models import (
-    CompliancePartner,
     HubDelivery,
     HubRecyclingRequest,
     HubSubscription,
@@ -14,6 +15,8 @@ from app.models import (
     Pickup,
     PickupStatus,
     RecyclingHub,
+    SubscriptionPlan,
+    SubscriptionStatus,
     User,
     UserRole,
 )
@@ -497,10 +500,14 @@ async def test_hub_deliveries_endpoint(client, test_session):
 async def test_compliance_manifesto(client, test_session):
     seller, hub_owner, collector, material, hub = await _seed_hub(test_session)
 
-    partner = CompliancePartner(
-        name="EPRON Nigeria",
-        partner_type="pro",
-        api_key="epron-test-key-123",
+    partner = User(
+        id="comp-partner",
+        phone_number="+2348090000001",
+        full_name="EPRON Nigeria",
+        role=UserRole.partner,
+        subscription_plan=SubscriptionPlan.epr_yearly,
+        subscription_status=SubscriptionStatus.active,
+        subscription_expires_at=datetime.utcnow() + timedelta(days=30),
     )
     test_session.add(partner)
     await test_session.flush()
@@ -525,14 +532,16 @@ async def test_compliance_manifesto(client, test_session):
 
     await settlement_service.settle_pickup(test_session, pickup, weight_kg=20.0)
 
+    token = security.create_access_token(partner.id, UserRole.partner.value)
     resp = await client.get(
         "/api/v1/compliance/manifesto",
-        headers={"X-API-Key": "epron-test-key-123"},
+        headers={"Authorization": f"Bearer {token}"},
     )
     assert resp.status_code == 200
     data = resp.json()
     assert data["partner_name"] == "EPRON Nigeria"
-    assert data["partner_type"] == "pro"
+    assert data["partner_type"] == "partner"
+    assert data["scope"] == "all"
     assert data["total_transactions"] == 1
     assert data["total_tonnage_kg"] == 20.0
     assert data["items"][0]["material_slug"] == "copper"
@@ -540,9 +549,24 @@ async def test_compliance_manifesto(client, test_session):
 
 
 @pytest.mark.asyncio
-async def test_compliance_manifesto_rejects_bad_key(client):
+async def test_compliance_manifesto_requires_premium(client, test_session):
+    # No session at all → unauthenticated.
+    resp = await client.get("/api/v1/compliance/manifesto")
+    assert resp.status_code == 401
+
+    # A partner without an active premium plan is payment-required, not allowed.
+    partner = User(
+        id="comp-partner-free",
+        phone_number="+2348090000002",
+        full_name="Free Partner",
+        role=UserRole.partner,
+    )
+    test_session.add(partner)
+    await test_session.flush()
+
+    token = security.create_access_token(partner.id, UserRole.partner.value)
     resp = await client.get(
         "/api/v1/compliance/manifesto",
-        headers={"X-API-Key": "invalid-key"},
+        headers={"Authorization": f"Bearer {token}"},
     )
-    assert resp.status_code == 401
+    assert resp.status_code == 402

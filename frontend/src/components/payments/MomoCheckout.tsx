@@ -30,6 +30,8 @@ interface Props {
   onClose: () => void;
   purpose: PaymentPurpose;
   plan: string;
+  /** Human-readable plan name shown to the payer (falls back to ``plan``). */
+  planLabel?: string;
   /** Price shown to the user, in naira. */
   amountNaira: number;
   title?: string;
@@ -52,6 +54,7 @@ export function MomoCheckout({
   onClose,
   purpose,
   plan,
+  planLabel,
   amountNaira,
   title = "Pay with MTN MoMo",
   description,
@@ -185,7 +188,7 @@ export function MomoCheckout({
         <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3.5 py-3 dark:bg-slate-800/60">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-              {plan} plan
+              {planLabel ?? plan} plan
             </p>
             <p className="text-lg font-extrabold text-slate-900 dark:text-white">
               {formatNaira(amountNaira)}
@@ -267,7 +270,7 @@ export function MomoCheckout({
             <CheckCircle2 className="mx-auto h-11 w-11 text-emerald-500" />
             <p className="mt-3 font-bold text-slate-900 dark:text-white">Payment received</p>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Your {plan} plan is active
+              Your {planLabel ?? plan} plan is active
               {status?.provider_financial_tx_id ? ` · ref ${status.provider_financial_tx_id}` : ""}.
             </p>
             <Button className="mt-4" fullWidth onClick={onClose}>

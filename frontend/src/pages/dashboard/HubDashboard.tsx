@@ -29,8 +29,8 @@ import { formatKg, formatNaira, formatNairaEstimate, formatDateTime } from "../.
 import { cn } from "../../lib/cn";
 import HubRegistrationForm from "../../components/Hub/HubRegistrationForm";
 
-// Publishing buy requests requires an active hub plan.
-const HUB_PLAN = { plan_name: "Pro", amount_naira: 25000 };
+// Publishing buy requests requires an active hub subscription (yearly premium).
+const HUB_PLAN = { plan: "Pro", name: "Hub Premium", amount_naira: 25000 };
 
 export default function HubDashboard() {
   const hub = useHubData();
@@ -500,9 +500,10 @@ export default function HubDashboard() {
         open={checkoutOpen}
         onClose={() => setCheckoutOpen(false)}
         purpose="hub_subscription"
-        plan={HUB_PLAN.plan_name}
+        plan={HUB_PLAN.plan}
+        planLabel={HUB_PLAN.name}
         amountNaira={HUB_PLAN.amount_naira}
-        title="Subscribe with MTN MoMo"
+        title="Subscribe to Hub Premium"
         description="Pay for your hub plan. Once approved, you can publish unlimited buy requests."
         onSuccess={() => hub.refresh()}
       />

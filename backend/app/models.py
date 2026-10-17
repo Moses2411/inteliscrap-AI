@@ -47,6 +47,9 @@ class UserRole(str, enum.Enum):
 class SubscriptionPlan(str, enum.Enum):
     freemium = "freemium"
     quarterly = "quarterly"
+    seller_yearly = "seller_yearly"
+    ngo_yearly = "ngo_yearly"
+    epr_yearly = "epr_yearly"
 
 
 class SubscriptionStatus(str, enum.Enum):

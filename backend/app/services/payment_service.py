@@ -25,7 +25,9 @@ from app.models import (
     PaymentStatus,
     PaymentTransaction,
     RecyclingHub,
+    SubscriptionPlan,
     User,
+    UserRole,
 )
 from app.schemas import (
     PaymentStatusResponse,
@@ -37,7 +39,6 @@ from app.services import hub_service, momo_service, subscription_service
 # Server-side prices — never trust an amount from the client.
 HUB_PRO_PRICE_NAIRA = Decimal("25000")
 
-_USER_PLANS = {"quarterly"}
 _HUB_PLANS = {"pro"}
 
 
@@ -53,11 +54,21 @@ async def _resolve_plan(
 ) -> tuple[str, Decimal, RecyclingHub | None]:
     """Return ``(canonical_plan, amount, hub)`` for a checkout request."""
     if purpose == PaymentPurpose.user_subscription:
-        if plan.lower() not in _USER_PLANS:
+        requested = plan.lower()
+        if requested == SubscriptionPlan.quarterly.value:
+            return "quarterly", subscription_service.QUARTERLY_PRICE_NAIRA, None
+        try:
+            sub_plan = SubscriptionPlan(requested)
+        except ValueError:
+            raise momo_service.MomoError("Unknown subscription plan.", status_code=400)
+        if sub_plan not in subscription_service.PREMIUM_PLANS:
+            raise momo_service.MomoError("Unknown subscription plan.", status_code=400)
+        expected = subscription_service.PREMIUM_PLAN_BY_ROLE.get(user.role)
+        if user.role != UserRole.admin and expected is not None and sub_plan != expected:
             raise momo_service.MomoError(
-                "Only the quarterly plan is available.", status_code=400
+                "This plan is not available for your account type.", status_code=400
             )
-        return "quarterly", subscription_service.QUARTERLY_PRICE_NAIRA, None
+        return sub_plan.value, subscription_service.PREMIUM_PRICE_BY_PLAN[sub_plan], None
 
     if purpose == PaymentPurpose.hub_subscription:
         if plan.lower() not in _HUB_PLANS:
@@ -168,7 +179,7 @@ async def apply_payment(db: AsyncSession, payment: PaymentTransaction) -> None:
             db,
             user,
             SubscriptionPurchaseRequest(
-                plan="quarterly",
+                plan=payment.plan,
                 payment_method=PaymentMethod.mobile_money,
                 payment_reference=payment.reference_id,
             ),

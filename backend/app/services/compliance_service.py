@@ -24,10 +24,16 @@ async def get_partner_by_api_key(
 
 async def generate_manifesto(
     db: AsyncSession,
-    partner: CompliancePartner,
+    user: User,
     date_from: date | None = None,
     date_to: date | None = None,
 ) -> dict:
+    """Network-wide settled-collection manifest for a premium EPR/NGO subscriber.
+
+    Access is decided by the caller's premium subscription (see
+    ``require_data_access``); the manifest is not brand-scoped, so every settled
+    transaction on the network is included.
+    """
     if date_from is None:
         date_from = date.today().replace(day=1)
     if date_to is None:
@@ -43,12 +49,6 @@ async def generate_manifesto(
         )
         .order_by(Transaction.settled_at.desc())
     )
-    if partner.brand_id is not None:
-        # Producer scope: attribution rule — only transactions carrying this
-        # producer's own brand (server-side brand_id, never client-supplied)
-        # appear in the manifesto. Other producers' flows never leave the
-        # server.
-        stmt = stmt.where(Transaction.brand_id == partner.brand_id)
     rows = (await db.execute(stmt)).all()
 
     items = []
@@ -93,10 +93,12 @@ async def generate_manifesto(
         )
 
     return {
-        "partner_id": partner.id,
-        "partner_name": partner.name,
-        "partner_type": partner.partner_type,
+        "partner_id": user.id,
+        "partner_name": user.full_name or f"{user.role.value} account",
+        "partner_type": user.role.value,
         "generated_at": datetime.utcnow().isoformat(),
+        "scope": "all",
+        "allow_category_aggregate": False,
         "total_transactions": len(items),
         "total_tonnage_kg": total_weight,
         "total_carbon_offset_kg_co2e": total_carbon,

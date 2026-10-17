@@ -129,13 +129,57 @@ async def settle_pickup(
     return transaction
 
 
+# Pickups still in flight — jobs a collector has in hand but not yet settled.
+IN_PROGRESS_PICKUP_STATUSES = (
+    PickupStatus.accepted,
+    PickupStatus.en_route,
+    PickupStatus.arrived,
+    PickupStatus.pending_confirmation,
+)
+
+
+async def _in_progress_value(db: AsyncSession, user: User) -> float:
+    """Estimated naira value of work not yet settled (active jobs / listings).
+
+    Mirrors the collector's "Jobs value" card: the listing's estimated value, or
+    weight × current material price when no estimate was stored.
+    """
+    expr = func.coalesce(
+        Listing.estimated_value_naira,
+        Listing.estimated_weight_kg * MaterialCategory.price_per_kg_naira,
+    )
+    if user.role == UserRole.collector:
+        stmt = (
+            select(func.coalesce(func.sum(expr), 0))
+            .select_from(Pickup)
+            .join(Listing, Pickup.listing_id == Listing.id)
+            .join(MaterialCategory, Listing.material_category_id == MaterialCategory.id)
+            .where(
+                Pickup.collector_id == user.id,
+                Pickup.status.in_(IN_PROGRESS_PICKUP_STATUSES),
+            )
+        )
+    elif user.role == UserRole.seller:
+        stmt = (
+            select(func.coalesce(func.sum(expr), 0))
+            .select_from(Listing)
+            .join(MaterialCategory, Listing.material_category_id == MaterialCategory.id)
+            .where(
+                Listing.seller_id == user.id,
+                Listing.status.in_([ListingStatus.active, ListingStatus.matched]),
+            )
+        )
+    else:
+        return 0.0
+    return float((await db.execute(stmt)).scalar() or 0)
+
+
 async def get_user_earnings(db: AsyncSession, user: User) -> dict:
-    """The caller's own settled income, mirroring impact/compliance reporting.
+    """The caller's own income: settled (real) plus in-progress (estimated).
 
     Collectors earn ``collector_earnings_naira`` (gross less the platform fee);
-    sellers receive ``seller_payout_naira``. The figures update the moment a
-    handover is confirmed (``confirm_handover`` → ``settle_pickup``), because
-    that writes a settled transaction in the same request.
+    sellers receive ``seller_payout_naira``. Both update the moment a handover is
+    confirmed (``confirm_handover`` → ``settle_pickup``).
     """
     if user.role == UserRole.collector:
         income_col = Transaction.collector_earnings_naira
@@ -150,6 +194,8 @@ async def get_user_earnings(db: AsyncSession, user: User) -> dict:
             "last_30_days_naira": 0.0,
             "settled_transactions": 0,
             "total_weight_kg": 0.0,
+            "in_progress_value_naira": 0.0,
+            "estimated_income_naira": 0.0,
         }
 
     settled = Transaction.status == TransactionStatus.settled
@@ -173,10 +219,14 @@ async def get_user_earnings(db: AsyncSession, user: User) -> dict:
         )
     ).scalar() or 0
 
+    in_progress = await _in_progress_value(db, user)
+
     return {
         "role": user.role.value,
         "total_income_naira": float(total),
         "last_30_days_naira": float(recent),
         "settled_transactions": int(count),
         "total_weight_kg": float(weight),
+        "in_progress_value_naira": in_progress,
+        "estimated_income_naira": float(total) + in_progress,
     }

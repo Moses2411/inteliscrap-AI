@@ -36,7 +36,7 @@ import {
   type HubSubscription,
 } from "../services/hubs";
 import { fetchMarketData, type MarketplaceListing, type MarketData } from "../services/market";
-import { fetchManifesto, getPartnerApiKey, type ComplianceManifesto } from "../services/compliance";
+import { fetchManifesto, type ComplianceManifesto } from "../services/compliance";
 import { fetchMaterials } from "../services/materials";
 import type { MaterialCategoryInfo } from "../types";
 
@@ -168,13 +168,10 @@ export function useHubData(): HookResult<HubBundle> {
   );
 }
 
-// ── Compliance manifesto (partner / PRO / admin) ────────────────────
+// ── Compliance manifesto (partner / PRO / admin, premium) ───────────
 export function useComplianceData(): HookResult<ComplianceManifesto> {
   return useLoad(
-    async () => {
-      if (!getPartnerApiKey()) throw new Error("Set your compliance API key");
-      return fetchManifesto();
-    },
+    async () => fetchManifesto(),
     () => DEMO_COMPLIANCE,
   );
 }

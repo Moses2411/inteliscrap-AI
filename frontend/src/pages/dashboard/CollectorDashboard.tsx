@@ -10,6 +10,7 @@ import {
   Navigation,
   PackageCheck,
   Store,
+  TrendingUp,
   Truck,
   Wallet,
 } from "lucide-react";
@@ -152,14 +153,14 @@ export default function CollectorDashboard() {
       </motion.div>
 
       {/* KPI row */}
-      <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <motion.div variants={pageItem} className="min-w-0">
           <StatCard
             label="Earnings (30d)"
             value={earnings ? formatCompactNaira(earnings.last_30_days_naira) : "—"}
             icon={<Wallet className="h-5 w-5" />}
             iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300"
-            hint={earnings ? `${formatCompactNaira(earnings.total_income_naira)} all-time` : "Settled handovers"}
+            hint={earnings ? `${formatCompactNaira(earnings.total_income_naira)} settled all-time` : "Settled handovers"}
           />
         </motion.div>
 
@@ -187,6 +188,16 @@ export default function CollectorDashboard() {
             value={formatCompactNairaEstimate(jobsValue)}
             icon={<Banknote className="h-5 w-5" />}
             iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
+          />
+        </motion.div>
+
+        <motion.div variants={pageItem}>
+          <StatCard
+            label="Estimated income"
+            value={earnings ? formatCompactNaira(earnings.estimated_income_naira) : "—"}
+            icon={<TrendingUp className="h-5 w-5" />}
+            iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300"
+            hint={earnings ? `${formatCompactNaira(earnings.in_progress_value_naira)} in progress` : "Settled + in progress"}
           />
         </motion.div>
       </motion.div>

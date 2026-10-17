@@ -1,5 +1,6 @@
+import { authHeaders } from "./auth";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
-const KEY_STORAGE = "inteliscrap_partner_key";
 
 export interface ManifestoItem {
   transaction_id: string;
@@ -19,6 +20,7 @@ export interface ComplianceManifesto {
   partner_name: string;
   partner_type: string;
   generated_at: string;
+  scope?: string;
   total_transactions: number;
   total_tonnage_kg: number;
   total_carbon_offset_kg_co2e: number;
@@ -26,28 +28,28 @@ export interface ComplianceManifesto {
   items: ManifestoItem[];
 }
 
-export function getPartnerApiKey(): string | null {
-  return localStorage.getItem(KEY_STORAGE);
-}
-
-export function setPartnerApiKey(key: string): void {
-  localStorage.setItem(KEY_STORAGE, key);
+/** Thrown when the caller's premium subscription is missing/expired. */
+export class PremiumRequiredError extends Error {
+  constructor() {
+    super("An active premium subscription is required to access this data.");
+    this.name = "PremiumRequiredError";
+  }
 }
 
 export async function fetchManifesto(
   dateFrom?: string,
   dateTo?: string,
 ): Promise<ComplianceManifesto> {
-  const key = getPartnerApiKey();
-  if (!key) throw new Error("Compliance API key required");
   const params = new URLSearchParams();
   if (dateFrom) params.set("date_from", dateFrom);
   if (dateTo) params.set("date_to", dateTo);
   const qs = params.toString() ? `?${params.toString()}` : "";
 
+  // Subscription-gated: the session token carries access, there is no API key.
   const res = await fetch(`${API_BASE}/api/v1/compliance/manifesto${qs}`, {
-    headers: { "X-API-Key": key },
+    headers: authHeaders(),
   });
+  if (res.status === 402) throw new PremiumRequiredError();
   if (!res.ok) throw new Error("Failed to load compliance manifesto");
   return res.json();
 }

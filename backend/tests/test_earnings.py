@@ -3,6 +3,7 @@ import pytest
 from app.core import security
 from app.models import (
     Listing,
+    ListingStatus,
     MaterialCategory,
     Pickup,
     PickupStatus,
@@ -117,3 +118,74 @@ async def test_my_earnings_scopes_to_the_caller(client, test_session):
     data = resp.json()
     assert data["total_income_naira"] == 0.0
     assert data["settled_transactions"] == 0
+
+
+@pytest.mark.asyncio
+async def test_my_earnings_includes_in_progress_estimate(client, test_session):
+    seller = User(
+        id="earn-est-seller",
+        phone_number="+2348073000001",
+        role=UserRole.seller,
+        location_hub="Zaria",
+    )
+    collector = User(
+        id="earn-est-collector",
+        phone_number="+2348073000002",
+        role=UserRole.collector,
+    )
+    material = MaterialCategory(
+        slug="earn-est-copper",
+        name="Copper",
+        price_per_kg_naira=1000,
+        carbon_kg_co2e_per_kg=2.6,
+    )
+    test_session.add_all([seller, collector, material])
+    await test_session.flush()
+
+    # An accepted job worth 15,000 (live, not yet settled).
+    job_listing = Listing(
+        id="earn-est-job",
+        seller_id=seller.id,
+        material_category_id=material.id,
+        estimated_weight_kg=15,
+        estimated_value_naira=15000,
+    )
+    job = Pickup(
+        id="earn-est-pickup",
+        listing_id=job_listing.id,
+        collector_id=collector.id,
+        status=PickupStatus.accepted,
+    )
+    # A second live listing the seller still holds, worth 8,000.
+    open_listing = Listing(
+        id="earn-est-open",
+        seller_id=seller.id,
+        material_category_id=material.id,
+        estimated_weight_kg=8,
+        estimated_value_naira=8000,
+        status=ListingStatus.active,
+    )
+    test_session.add_all([job_listing, job, open_listing])
+    await test_session.flush()
+
+    collector_resp = await client.get(
+        "/api/v1/transactions/me/earnings",
+        headers={
+            "Authorization": f"Bearer {security.create_access_token(collector.id, 'collector')}"
+        },
+    )
+    assert collector_resp.status_code == 200
+    data = collector_resp.json()
+    assert data["total_income_naira"] == 0.0
+    assert data["in_progress_value_naira"] == 15000.0
+    assert data["estimated_income_naira"] == 15000.0
+
+    seller_resp = await client.get(
+        "/api/v1/transactions/me/earnings",
+        headers={"Authorization": f"Bearer {security.create_access_token(seller.id, 'seller')}"},
+    )
+    assert seller_resp.status_code == 200
+    data = seller_resp.json()
+    # Both live listings belong to the seller.
+    assert data["in_progress_value_naira"] == 23000.0
+    assert data["estimated_income_naira"] == 23000.0

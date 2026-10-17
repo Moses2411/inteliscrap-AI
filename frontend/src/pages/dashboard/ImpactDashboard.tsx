@@ -4,6 +4,7 @@ import {
   ArrowRight,
   Banknote,
   Coins,
+  Crown,
   Leaf,
   PackageCheck,
   RefreshCw,
@@ -25,6 +26,8 @@ import { BarList } from "../../components/charts/BarList";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useImpactData } from "../../hooks/useDashboardData";
+import { MomoCheckout } from "../../components/payments/MomoCheckout";
+import { premiumPlanForRole } from "../../services/subscription";
 import { formatCompactNaira, formatKg } from "../../utils/formatters";
 import { getRole } from "../../services/auth";
 
@@ -33,6 +36,7 @@ type Metric = "tonnage" | "carbon" | "income";
 export default function ImpactDashboard() {
   const impact = useImpactData();
   const navigate = useNavigate();
+  const [checkoutOpen, setCheckoutOpen] = useState(false);
   const [metric, setMetric] = useState<Metric>("tonnage");
   const role = getRole();
   const isAdmin = role === "admin";
@@ -84,6 +88,56 @@ export default function ImpactDashboard() {
       "#84cc16",
     ][i % 8],
   }));
+
+  const planInfo = premiumPlanForRole(role);
+  const premiumBlocked = !impact.loading && !impact.data && !!impact.error;
+
+  if (premiumBlocked) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <PageHeader
+          title="Circular economy impact"
+          subtitle="Network-wide tonnage, carbon and income analytics."
+        />
+        <Card pad>
+          <div className="mx-auto max-w-md py-6 text-center">
+            <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-300">
+              <ShieldCheck className="h-6 w-6" />
+            </span>
+            <h2 className="mt-3 text-base font-bold text-slate-900 dark:text-white">
+              {planInfo ? `${planInfo.name} unlocks this data` : "Premium access required"}
+            </h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              {planInfo
+                ? `Subscribe to ${planInfo.name} to view the full network impact data.`
+                : "An active premium subscription is required to access this data."}
+            </p>
+            {planInfo && (
+              <Button className="mt-4" variant="gold" onClick={() => setCheckoutOpen(true)}>
+                <Crown className="h-4 w-4" /> Subscribe to {planInfo.name}
+              </Button>
+            )}
+          </div>
+        </Card>
+        {planInfo && (
+          <MomoCheckout
+            open={checkoutOpen}
+            onClose={() => setCheckoutOpen(false)}
+            purpose="user_subscription"
+            plan={planInfo.plan}
+            planLabel={planInfo.name}
+            amountNaira={planInfo.priceNaira}
+            title={`Subscribe to ${planInfo.name}`}
+            description={`${planInfo.blurb} Pay in seconds with MTN MoMo.`}
+            onSuccess={() => {
+              setCheckoutOpen(false);
+              impact.refresh();
+            }}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

@@ -224,9 +224,9 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 - **SMS Outbox** — Africa's Talking SMS notifications (`sms.new_offer`, `sms.location`) with retry worker
 - **H3 Matcher** — Uber H3 hex-grid dispatch of offers to nearby collectors
 - **TTS Proxy** — fetches audio from Google Translate TTS, returns MP3
-- **Recycling Hubs** — hub registration, monthly subscriptions, daily buy requests with live progress tracking
-- **Impact Dashboards** — summary / daily / by-material aggregates powering the role dashboards
-- **Compliance Manifests** — API-key-protected traceability export for PROs / recyclers / FG (EPR audits)
+- **Recycling Hubs** — hub registration, hub subscriptions (yearly premium), daily buy requests with live progress tracking
+- **Impact Dashboards** — summary / daily / by-material aggregates powering the role dashboards (NGO/partner data is premium-gated)
+- **Compliance Manifests** — subscription-gated, network-wide traceability export for PROs / recyclers / FG (EPR audits)
 - **Hub Delivery Traceability** — settled collections linked to the hub request they fulfil
 - **Health Check** — database connectivity monitoring
 
@@ -501,8 +501,8 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | POST | `/api/v1/ussd_callback` | Africa's Talking USSD callback (registration + preset-location menus, plain-text menu) |
 | GET/POST | `/api/v1/voice/*` | Voice callbacks (register/accepted pickups via IVR) |
 | POST | `/api/v1/pickups/{pickup_id}/settle` | **Admin-only** manual settlement (collectors can no longer settle unilaterally) |
-| GET | `/api/v1/transactions/me/earnings` | The caller's own settled income (collector earnings / seller payout; total + last 30 days) |
-| GET | `/api/v1/impact/*` | Impact dashboard aggregates (summary, daily, by-material) plus network ops (`ops`: active jobs / available offers / jobs value) |
+| GET | `/api/v1/transactions/me/earnings` | The caller's own income: settled total + last 30 days, plus an **estimated (in-progress)** value for active jobs/live listings (`in_progress_value_naira`, `estimated_income_naira`) |
+| GET | `/api/v1/impact/*` | Impact dashboard aggregates (summary, daily, by-material) plus network ops (`ops`: active jobs / available offers / jobs value) — **NGO/partner require an active premium subscription** |
 | GET/POST | `/api/v1/outbox/*` | SMS outbox inspection/processing |
 | POST | `/api/v1/hubs/register` | Register a recycling hub (any seller, collector or hub account; owner becomes `recycling_hub` role) |
 | GET | `/api/v1/hubs/` | List active recycling hubs |
@@ -519,7 +519,7 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | POST | `/api/v1/payments/momo/callback/{reference_id}` | MoMo webhook: final status, activates the subscription exactly once |
 | POST | `/api/v1/payments/momo/provision` | **Admin, debug only** — create a sandbox API user + key from the product key |
 | GET | `/api/v1/payments` | The caller's payment history |
-| GET | `/api/v1/compliance/manifesto` | EPR compliance export (API-key auth, `X-API-Key` header) |
+| GET | `/api/v1/compliance/manifesto` | EPR compliance export — **subscription-gated** (bearer token; an active EPR premium plan is required, no API key) |
 | GET | `/docs` | Swagger API documentation |
 
 ### Recycling Hub + End-of-Life Traceability
@@ -534,7 +534,16 @@ Registered recycling hubs (recyclers/aggregators) publish **daily buy requests**
 
 ### Subscription payments — MTN MoMo (Collections / Request-to-Pay)
 
-Both seller "Quarterly Pro" (₦2,500) and hub "Pro" (₦25,000/month) plans are collected with MTN MoMo's **Collections API** (`requesttopay`). The client never sets the price — the server prices the plan, records a `payment_transactions` row, pushes a prompt to the payer's phone, and activates the subscription **exactly once** when MoMo reports `SUCCESSFUL`.
+Plans are priced **server-side** and collected with MTN MoMo's **Collections API** (`requesttopay`). The client never sets the price — it sends only a plan key, the server prices it, records a `payment_transactions` row, pushes a prompt to the payer's phone, and activates the subscription **exactly once** when MoMo reports `SUCCESSFUL`.
+
+| Plan key | Who | Price | Entitlement |
+|---|---|---|---|
+| `seller_yearly` | sellers & collectors | ₦4,900 / year | Unlimited listings |
+| `ngo_yearly` | NGO accounts | ₦49,000 / year | Network-wide impact **data access** |
+| `epr_yearly` | PRO / EPR partners | ₦99,000 / year | Network-wide **EPR compliance data** |
+| `pro` (hub) | recycling hubs | ₦25,000 / month | Publish hub buy requests |
+
+A premium plan must match the buyer's role (e.g. a seller cannot buy `ngo_yearly`). Admins always have data access. The legacy `quarterly` plan value is still recognised for existing subscribers.
 
 **Flow**
 
@@ -560,11 +569,11 @@ Both seller "Quarterly Pro" (₦2,500) and hub "Pro" (₦25,000/month) plans are
 
 > **Which product to subscribe to?** Server-initiated subscription charges use the **Collections** product (Request-to-Pay): the backend pushes a prompt to the payer's phone and the payer approves it. The **Collection Widget** product is a separate web checkout button (USSD/QR) and uses its own key — subscribe to **Collections** for this integration. In the sandbox, MTN's test MSISDNs (e.g. `46733123450` for success, `46733123451` for failure) can be used to exercise the full flow without a real wallet.
 
-The UI (`MomoCheckout`) is surfaced on the Settings page (seller upgrade), the listing-limit upsell after a scan, and the hub dashboard's subscribe button. When `MOMO_ENABLED=false` the hub desk falls back to the direct `POST /api/v1/hubs/subscribe` activation so local demos keep working.
+The UI (`MomoCheckout`) is surfaced on the Settings page (a role-aware premium card: Seller/Collector, NGO or EPR), the listing-limit upsell after a scan, the impact dashboard when an NGO hits a `402`, and the partner EPR dashboard when a PRO has no active plan. Premium-only screens show an **in-context subscribe CTA** instead of an error. When `MOMO_ENABLED=false` every one of these shows the config-driven **coming-soon popup** rather than failing.
 
 ### Compliance Manifesto (EPR) Export
 
-PROs, recycling companies and FG/EPR auditors authenticate with an API key (`X-API-Key` header) against `GET /api/v1/compliance/manifesto`. The response is a read-only, auditable export of every settled collection in a date range: transaction, registered collector, material, weight, value, carbon offset and originating hub — the source-verifiable record EPR contracts require.
+PROs, recycling companies and FG/EPR auditors authenticate with their **session bearer token** against `GET /api/v1/compliance/manifesto` — access is **subscription-based** (an active EPR premium plan), not an API key. The response is a **network-wide**, read-only, auditable export of every settled collection in a date range: transaction, registered collector, material, weight, value, carbon offset and originating hub — the source-verifiable record EPR contracts require. (Machine-to-machine partner notifications still use the separate partner API key; only the EPR dashboard/compliance data moved to subscription auth.)
 
 ### USSD Registration & Location (feature phones)
 
@@ -625,7 +634,7 @@ cd backend
 pytest -v
 ```
 
-**140 tests** across 17 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
+**145 tests** across 17 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **role-specific yearly premium plans + subscription-gated impact/compliance data (402 without premium)**, **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user settled + estimated (in-progress) earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend
@@ -687,11 +696,11 @@ inteliscrap-AI/
 │   │   ├── core/
 │   │   │   ├── deps.py               # Shared dependencies (DB session, current user)
 │   │   │   ├── security.py           # JWT issuing + verification
-│   │   │   └── partner_auth.py       # API-key auth for compliance exports
+│   │   │   └── partner_auth.py       # API-key auth for machine-to-machine partner notifications
 │   │   ├── api/
 │   │   │   ├── analyze.py            # POST /api/v1/analyze (Ollama vision proxy)
 │   │   │   ├── auth.py               # OTP login + JWT
-│   │   │   ├── compliance.py         # EPR compliance export (X-API-Key)
+│   │   │   ├── compliance.py         # EPR compliance export (subscription-gated, network-wide)
 │   │   │   ├── health.py             # GET /health
 │   │   │   ├── hubs.py               # Hub register / daily requests / subscriptions
 │   │   │   ├── impact.py             # Impact dashboard aggregates

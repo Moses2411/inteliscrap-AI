@@ -49,3 +49,29 @@ def require_role(*roles: UserRole):
         return user
 
     return _dep
+
+
+def require_data_access(*roles: UserRole):
+    """Admins always; EPR/NGO roles only with an active premium plan.
+
+    Subscription gates the network data (impact dashboard + EPR compliance
+    manifest) — there is no API key to paste.
+    """
+    from app.services import subscription_service
+
+    allowed = set(roles) | {UserRole.admin}
+
+    async def _dep(user: User = Depends(get_current_user)) -> User:
+        if user.role not in allowed:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Insufficient permissions",
+            )
+        if user.role != UserRole.admin and not subscription_service.has_data_access(user):
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="An active premium subscription is required to access this data.",
+            )
+        return user
+
+    return _dep

@@ -169,6 +169,8 @@ class MyEarningsResponse(BaseModel):
     last_30_days_naira: float = 0.0
     settled_transactions: int = 0
     total_weight_kg: float = 0.0
+    in_progress_value_naira: float = 0.0
+    estimated_income_naira: float = 0.0
 
 
 class ImpactSummary(BaseModel):
@@ -263,11 +265,13 @@ class SubscriptionPlanResponse(BaseModel):
 
 class SubscriptionStatusResponse(BaseModel):
     plan: str
+    plan_name: str = "Free"
     status: str
     expires_at: Optional[datetime] = None
     listings_this_week: int
     weekly_limit: int
     max_weight_kg: Optional[float] = None
+    data_access: bool = False  # premium EPR/NGO data entitlement
 
     model_config = ConfigDict(from_attributes=True)
 

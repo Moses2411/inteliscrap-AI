@@ -16,11 +16,14 @@ export interface SubscriptionPlan {
 
 export interface SubscriptionStatus {
   plan: string;
+  plan_name?: string;
   status: string;
   expires_at?: string;
   listings_this_week: number;
   weekly_limit: number;
   max_weight_kg: number | null;
+  /** Premium EPR/NGO entitlement — network data access. */
+  data_access?: boolean;
 }
 
 export interface SubscriptionPurchaseRequest {
@@ -69,4 +72,83 @@ export async function checkListingEligibility(): Promise<CheckListingEligibility
   });
   if (!res.ok) throw new Error("Failed to check eligibility");
   return res.json();
+}
+
+// ── Premium plans (role-specific, yearly) ───────────────────────────
+// Server-owned prices mirrored here purely for display. The amount that is
+// actually charged is fixed by the backend when checkout starts.
+export type PremiumPlanKey = "seller_yearly" | "ngo_yearly" | "epr_yearly";
+
+export interface PremiumPlanInfo {
+  plan: PremiumPlanKey;
+  name: string;
+  priceNaira: number;
+  blurb: string;
+  features: string[];
+  entitlement: string;
+}
+
+export const PREMIUM_BY_ROLE: Record<string, PremiumPlanInfo> = {
+  seller: {
+    plan: "seller_yearly",
+    name: "Seller Premium",
+    priceNaira: 4900,
+    blurb: "Unlimited listings for a full year.",
+    features: [
+      "Unlimited listings all year",
+      "Unlimited quantity per listing",
+      "Priority in collector matching",
+      "Priority support",
+    ],
+    entitlement: "unlimited",
+  },
+  collector: {
+    plan: "seller_yearly",
+    name: "Seller Premium",
+    priceNaira: 4900,
+    blurb: "Unlimited listings for a full year.",
+    features: [
+      "Unlimited listings all year",
+      "Unlimited quantity per listing",
+      "Priority in collector matching",
+      "Priority support",
+    ],
+    entitlement: "unlimited",
+  },
+  ngo: {
+    plan: "ngo_yearly",
+    name: "NGO Premium",
+    priceNaira: 49000,
+    blurb: "Full network impact data for a full year.",
+    features: [
+      "Full network impact data",
+      "Tonnage, carbon & income analytics",
+      "Daily and by-material breakdowns",
+      "Priority support",
+    ],
+    entitlement: "data access",
+  },
+  partner: {
+    plan: "epr_yearly",
+    name: "EPR Premium",
+    priceNaira: 99000,
+    blurb: "Network-wide EPR compliance data for a full year.",
+    features: [
+      "Network-wide EPR compliance manifest",
+      "Auditable settled-collection export",
+      "JSON export for regulators",
+      "Priority support",
+    ],
+    entitlement: "data access",
+  },
+};
+
+export function premiumPlanForRole(role: string | null | undefined): PremiumPlanInfo | null {
+  if (!role) return null;
+  return PREMIUM_BY_ROLE[role] ?? null;
+}
+
+/** Roles that can buy a premium plan (data or listings entitlement). */
+export function canSubscribe(role: string | null | undefined): boolean {
+  return premiumPlanForRole(role) !== null;
 }

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import require_role
+from app.core.deps import require_data_access
 from app.database import get_db
 from app.models import User, UserRole
 from app.schemas import (
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1/impact", tags=["impact"])
 @router.get("/summary", response_model=ImpactSummary)
 async def impact_summary(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(UserRole.admin, UserRole.ngo)),
+    _: User = Depends(require_data_access(UserRole.ngo, UserRole.partner)),
 ):
     return await impact_service.get_summary(db)
 
@@ -26,7 +26,7 @@ async def impact_summary(
 @router.get("/daily", response_model=list[ImpactDailyPoint])
 async def impact_daily(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(UserRole.admin, UserRole.ngo)),
+    _: User = Depends(require_data_access(UserRole.ngo, UserRole.partner)),
 ):
     return await impact_service.get_daily(db)
 
@@ -34,7 +34,7 @@ async def impact_daily(
 @router.get("/by-material", response_model=list[ImpactByMaterial])
 async def impact_by_material(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(UserRole.admin, UserRole.ngo)),
+    _: User = Depends(require_data_access(UserRole.ngo, UserRole.partner)),
 ):
     return await impact_service.get_by_material(db)
 
@@ -42,7 +42,7 @@ async def impact_by_material(
 @router.get("/ops", response_model=ImpactOpsOverview)
 async def impact_ops(
     db: AsyncSession = Depends(get_db),
-    _: User = Depends(require_role(UserRole.admin, UserRole.ngo)),
+    _: User = Depends(require_data_access(UserRole.ngo, UserRole.partner)),
 ):
     """Network-wide active jobs / available offers / jobs value."""
     return await impact_service.get_ops_overview(db)

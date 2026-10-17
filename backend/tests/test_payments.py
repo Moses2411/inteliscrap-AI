@@ -186,6 +186,55 @@ async def test_callback_success_activates_subscription(client, test_session, mon
 
 
 @pytest.mark.asyncio
+async def test_seller_premium_checkout_and_activation(client, test_session, monkeypatch):
+    await _enable_momo(monkeypatch)
+
+    async def fake_rtp(**kwargs):
+        return None
+
+    monkeypatch.setattr(momo_service, "request_to_pay", fake_rtp)
+    await _seed_user(test_session, user_id="pay-premium", phone="+2348070000050")
+
+    resp = await client.post(
+        "/api/v1/payments/momo/checkout",
+        json={"plan": "seller_yearly", "phone_number": "08030000050"},
+        headers=_auth("pay-premium", UserRole.seller),
+    )
+    assert resp.status_code == 201, resp.text
+    assert resp.json()["amount"] == 4900.0
+    ref = resp.json()["reference_id"]
+
+    cb = await client.post(
+        f"/api/v1/payments/momo/callback/{ref}",
+        json={"status": "SUCCESSFUL", "financialTransactionId": "FINPREMIUM"},
+    )
+    assert cb.status_code == 200
+
+    user = await test_session.get(User, "pay-premium")
+    assert user.subscription_plan.value == "seller_yearly"
+    assert user.subscription_expires_at is not None
+
+
+@pytest.mark.asyncio
+async def test_premium_plan_must_match_role(client, test_session, monkeypatch):
+    await _enable_momo(monkeypatch)
+
+    async def fake_rtp(**kwargs):
+        return None
+
+    monkeypatch.setattr(momo_service, "request_to_pay", fake_rtp)
+    await _seed_user(test_session, user_id="pay-wrongrole", phone="+2348070000051")
+
+    # A seller cannot buy the NGO plan.
+    resp = await client.post(
+        "/api/v1/payments/momo/checkout",
+        json={"plan": "ngo_yearly", "phone_number": "08030000051"},
+        headers=_auth("pay-wrongrole", UserRole.seller),
+    )
+    assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
 async def test_callback_is_idempotent(client, test_session, monkeypatch):
     ref = await _checkout(
         client, test_session, monkeypatch, user_id="pay-idem", phone="+2348070000021"

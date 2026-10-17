@@ -35,14 +35,14 @@ async def purchase_subscription(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Purchase a subscription plan."""
-    if request.plan != "quarterly":
+    """Activate a paid plan. Plan and price are server-owned."""
+    try:
+        await subscription_service.purchase_subscription(db, current_user, request)
+    except ValueError as exc:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Only quarterly plan is available",
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         )
 
-    await subscription_service.purchase_subscription(db, current_user, request)
     await db.commit()
 
     return await subscription_service.get_user_subscription_status(db, current_user)

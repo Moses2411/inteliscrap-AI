@@ -1,7 +1,17 @@
 import pytest
 
 from app.core import security
-from app.models import Listing, ListingStatus, MaterialCategory, Pickup, PickupStatus, User, UserRole
+from app.models import (
+    Listing,
+    ListingStatus,
+    MaterialCategory,
+    Pickup,
+    PickupStatus,
+    SubscriptionPlan,
+    SubscriptionStatus,
+    User,
+    UserRole,
+)
 from app.services import settlement_service
 
 
@@ -253,3 +263,38 @@ async def test_impact_ops_overview(client, test_session):
     assert data["available_offers"] == 1
     assert data["jobs_value_naira"] == 15000.0
     assert data["offers_value_naira"] == 9000.0
+
+
+async def _ngo_headers(test_session, *, premium: bool, idx: int) -> dict:
+    from datetime import datetime, timedelta
+
+    ngo = User(
+        id=f"impact-ngo-{idx}",
+        phone_number=f"+23480630000{idx:02d}",
+        role=UserRole.ngo,
+    )
+    if premium:
+        ngo.subscription_plan = SubscriptionPlan.ngo_yearly
+        ngo.subscription_status = SubscriptionStatus.active
+        ngo.subscription_expires_at = datetime.utcnow() + timedelta(days=30)
+    test_session.add(ngo)
+    await test_session.flush()
+    token = security.create_access_token(ngo.id, UserRole.ngo.value)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.mark.asyncio
+async def test_impact_ngo_requires_premium(client, test_session):
+    await _settle_one(test_session, 5)
+    headers = await _ngo_headers(test_session, premium=False, idx=5)
+    resp = await client.get("/api/v1/impact/summary", headers=headers)
+    assert resp.status_code == 402
+
+
+@pytest.mark.asyncio
+async def test_impact_ngo_premium_grants_data(client, test_session):
+    await _settle_one(test_session, 6)
+    headers = await _ngo_headers(test_session, premium=True, idx=6)
+    resp = await client.get("/api/v1/impact/summary", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["computed_from"] == "settlements"

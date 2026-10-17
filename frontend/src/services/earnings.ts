@@ -13,6 +13,10 @@ export interface MyEarnings {
   last_30_days_naira: number;
   settled_transactions: number;
   total_weight_kg: number;
+  /** Estimated value of work not yet settled (active jobs / live listings). */
+  in_progress_value_naira: number;
+  /** Settled income plus the in-progress estimate. */
+  estimated_income_naira: number;
 }
 
 export async function fetchMyEarnings(): Promise<MyEarnings> {
