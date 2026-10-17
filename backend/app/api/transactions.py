@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import require_role
+from app.core.deps import get_current_user, require_role
 from app.database import get_db
 from app.models import PaymentMethod, Pickup, PickupStatus, User, UserRole
-from app.schemas import SettlementRequest, TransactionResponse
+from app.schemas import MyEarningsResponse, SettlementRequest, TransactionResponse
 from app.services import settlement_service
 
 router = APIRouter(prefix="/api/v1", tags=["transactions"])
@@ -55,3 +55,12 @@ async def settle_pickup(
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+
+@router.get("/transactions/me/earnings", response_model=MyEarningsResponse)
+async def my_earnings(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """The caller's own settled income (collector earnings or seller payout)."""
+    return await settlement_service.get_user_earnings(db, user)

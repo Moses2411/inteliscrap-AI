@@ -501,6 +501,7 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | POST | `/api/v1/ussd_callback` | Africa's Talking USSD callback (registration + preset-location menus, plain-text menu) |
 | GET/POST | `/api/v1/voice/*` | Voice callbacks (register/accepted pickups via IVR) |
 | POST | `/api/v1/pickups/{pickup_id}/settle` | **Admin-only** manual settlement (collectors can no longer settle unilaterally) |
+| GET | `/api/v1/transactions/me/earnings` | The caller's own settled income (collector earnings / seller payout; total + last 30 days) |
 | GET | `/api/v1/impact/*` | Impact dashboard aggregates (summary, daily, by-material) plus network ops (`ops`: active jobs / available offers / jobs value) |
 | GET/POST | `/api/v1/outbox/*` | SMS outbox inspection/processing |
 | POST | `/api/v1/hubs/register` | Register a recycling hub (any seller, collector or hub account; owner becomes `recycling_hub` role) |
@@ -624,7 +625,7 @@ cd backend
 pytest -v
 ```
 
-**135 tests** across 16 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
+**140 tests** across 17 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend
@@ -720,10 +721,11 @@ inteliscrap-AI/
 │   │   │       messaging · ivr · voice services
 │   │   └── middleware/
 │   │       └── cors.py               # CORS configuration
-│   ├── tests/                        # 135 async tests across 16 suites (pytest + pytest-asyncio)
+│   ├── tests/                        # 140 async tests across 17 suites (pytest + pytest-asyncio)
 │   │   ├── conftest.py               # Async test fixtures (SQLite)
 │   │   └── test_{health,sync,matching,auth,ussd,listings,pickups,handover,
-│   │             settlement,outbox,hubs,payments,impact,users}.py
+│   │             settlement,outbox,hubs,payments,prices,impact,users,
+│   │             analyze,earnings}.py
 │   ├── alembic/                      # Database migrations
 │   ├── requirements.txt
 │   ├── pyproject.toml                # deps + Ruff + pytest config

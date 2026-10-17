@@ -157,6 +157,20 @@ class TransactionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class MyEarningsResponse(BaseModel):
+    """The caller's own settled income (collector earnings or seller payout).
+
+    Populated the moment a handover PIN is confirmed — the same settled
+    transactions the admin impact and partner EPR dashboards read.
+    """
+
+    role: str
+    total_income_naira: float = 0.0
+    last_30_days_naira: float = 0.0
+    settled_transactions: int = 0
+    total_weight_kg: float = 0.0
+
+
 class ImpactSummary(BaseModel):
     total_tonnage_kg: float
     total_carbon_offset_kg_co2e: float

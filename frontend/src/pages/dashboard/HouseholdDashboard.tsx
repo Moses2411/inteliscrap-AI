@@ -16,7 +16,8 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { useMarketData } from "../../hooks/useDashboardData";
 import { useTranslation } from "../../hooks/useTranslation";
 import { getLocalScans } from "../../services/db";
-import { formatNairaEstimate, formatPhoneDisplay } from "../../utils/formatters";
+import { fetchMyEarnings, type MyEarnings } from "../../services/earnings";
+import { formatCompactNaira, formatNairaEstimate, formatPhoneDisplay } from "../../utils/formatters";
 import { getRole, getSavedPhone } from "../../services/auth";
 import type { ScrapScan } from "../../types";
 
@@ -25,6 +26,7 @@ export default function HouseholdDashboard() {
   const { locale } = useTranslation();
   const market = useMarketData();
   const [scans, setScans] = useState<ScrapScan[]>([]);
+  const [earnings, setEarnings] = useState<MyEarnings | null>(null);
   const phone = getSavedPhone();
   const greeting =
     locale === "ha" ? "Sannu" : locale === "pcm" ? "How far" : "Welcome back";
@@ -32,6 +34,7 @@ export default function HouseholdDashboard() {
 
   useEffect(() => {
     getLocalScans().then(setScans).catch(() => {});
+    fetchMyEarnings().then(setEarnings).catch(() => {});
   }, []);
 
   const scannedValue = scans.reduce((acc, s) => acc + (s.estimated_naira_value || 0), 0);
@@ -70,7 +73,7 @@ export default function HouseholdDashboard() {
       </motion.div>
 
       {/* KPI row */}
-      <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <motion.div variants={pageItem} className="min-w-0">
           <StatCard
             label="Scans this device"
@@ -104,6 +107,19 @@ export default function HouseholdDashboard() {
             icon={<TrendingUp className="h-5 w-5" />}
             iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300"
             hint="Material prices tracked"
+          />
+        </motion.div>
+        <motion.div variants={pageItem} className="min-w-0">
+          <StatCard
+            label="Total income"
+            value={earnings ? formatCompactNaira(earnings.total_income_naira) : "—"}
+            icon={<PiggyBank className="h-5 w-5" />}
+            iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300"
+            hint={
+              earnings
+                ? `${earnings.settled_transactions} settled handover${earnings.settled_transactions === 1 ? "" : "s"}`
+                : "Settled handovers"
+            }
           />
         </motion.div>
       </motion.div>

@@ -23,8 +23,9 @@ import { Skeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
 import { fetchActivePickups, fetchOffers, type PickupJob, type PickupOffer } from "../../services/pickups";
+import { fetchMyEarnings, type MyEarnings } from "../../services/earnings";
 import { shareMyLocation, getCurrentPosition } from "../../services/location";
-import { DEMO_JOBS, DEMO_OFFERS, DEMO_COLLECTOR_INCOME, previewEnabled } from "../../lib/demoData";
+import { DEMO_JOBS, DEMO_OFFERS, previewEnabled } from "../../lib/demoData";
 import { formatCompactNaira, formatCompactNairaEstimate, formatPhoneDisplay } from "../../utils/formatters";
 import { getSavedPhone } from "../../services/auth";
 import { cn } from "../../lib/cn";
@@ -39,6 +40,7 @@ export default function CollectorDashboard() {
   const navigate = useNavigate();
   const [offers, setOffers] = useState<PickupOffer[]>([]);
   const [jobs, setJobs] = useState<PickupJob[]>([]);
+  const [earnings, setEarnings] = useState<MyEarnings | null>(null);
   const [loading, setLoading] = useState(true);
   const [locBusy, setLocBusy] = useState(false);
   const [isPreview, setPreview] = useState(false);
@@ -47,9 +49,10 @@ export default function CollectorDashboard() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [o, j] = await Promise.all([fetchOffers(), fetchActivePickups()]);
+      const [o, j, e] = await Promise.all([fetchOffers(), fetchActivePickups(), fetchMyEarnings()]);
       setOffers(o);
       setJobs(j);
+      setEarnings(e);
       setPreview(false);
     } catch {
       if (previewEnabled()) {
@@ -125,9 +128,6 @@ export default function CollectorDashboard() {
   }, [offers]);
 
   const jobsValue = jobs.reduce((acc, j) => acc + (j.estimated_value_naira ?? 0), 0);
-  const income = DEMO_COLLECTOR_INCOME;
-  const incomeDelta =
-    income.length >= 2 ? ((income[income.length - 1] - income[income.length - 2]) / income[income.length - 2]) * 100 : 0;
 
   return (
     <PageMotion className="space-y-6">
@@ -156,13 +156,11 @@ export default function CollectorDashboard() {
         <motion.div variants={pageItem} className="min-w-0">
           <StatCard
             label="Earnings (30d)"
-            value={isPreview ? formatCompactNaira(153000) : "—"}
+            value={earnings ? formatCompactNaira(earnings.last_30_days_naira) : "—"}
             icon={<Wallet className="h-5 w-5" />}
-            trend={incomeDelta}
-            trendLabel="vs last month"
-          >
-
-          </StatCard>
+            iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300"
+            hint={earnings ? `${formatCompactNaira(earnings.total_income_naira)} all-time` : "Settled handovers"}
+          />
         </motion.div>
 
         <motion.div variants={pageItem}>

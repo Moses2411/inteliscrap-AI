@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -15,6 +16,7 @@ from app.models import (
     Transaction,
     TransactionStatus,
     User,
+    UserRole,
 )
 from app.services import hub_service
 
@@ -125,3 +127,56 @@ async def settle_pickup(
 
     await db.flush()
     return transaction
+
+
+async def get_user_earnings(db: AsyncSession, user: User) -> dict:
+    """The caller's own settled income, mirroring impact/compliance reporting.
+
+    Collectors earn ``collector_earnings_naira`` (gross less the platform fee);
+    sellers receive ``seller_payout_naira``. The figures update the moment a
+    handover is confirmed (``confirm_handover`` → ``settle_pickup``), because
+    that writes a settled transaction in the same request.
+    """
+    if user.role == UserRole.collector:
+        income_col = Transaction.collector_earnings_naira
+        scope = Transaction.collector_id == user.id
+    elif user.role == UserRole.seller:
+        income_col = Transaction.seller_payout_naira
+        scope = Transaction.seller_id == user.id
+    else:
+        return {
+            "role": user.role.value,
+            "total_income_naira": 0.0,
+            "last_30_days_naira": 0.0,
+            "settled_transactions": 0,
+            "total_weight_kg": 0.0,
+        }
+
+    settled = Transaction.status == TransactionStatus.settled
+
+    total, count, weight = (
+        await db.execute(
+            select(
+                func.coalesce(func.sum(income_col), 0),
+                func.count(Transaction.id),
+                func.coalesce(func.sum(Transaction.weight_kg), 0),
+            ).where(scope, settled)
+        )
+    ).one()
+
+    since = datetime.utcnow() - timedelta(days=30)
+    recent = (
+        await db.execute(
+            select(func.coalesce(func.sum(income_col), 0)).where(
+                scope, settled, Transaction.settled_at >= since
+            )
+        )
+    ).scalar() or 0
+
+    return {
+        "role": user.role.value,
+        "total_income_naira": float(total),
+        "last_30_days_naira": float(recent),
+        "settled_transactions": int(count),
+        "total_weight_kg": float(weight),
+    }
