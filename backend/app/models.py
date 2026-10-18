@@ -128,6 +128,9 @@ class User(Base):
     address_text = Column(String(320), nullable=True)  # Full address for pickup/delivery
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
+    # How the coordinates above were obtained: "gps" (device fix), "hub" or
+    # "address" (approximate area fallback). NULL means unset/legacy.
+    location_precision = Column(String(12), nullable=True)
     h3_cell = Column(String(16), nullable=True, index=True)
     otp_code = Column(String(6), nullable=True)
     otp_expires_at = Column(DateTime, nullable=True)
@@ -233,6 +236,9 @@ class Listing(Base):
     longitude = Column(Float, nullable=True)
     address_text = Column(String(320), nullable=True)
     contact_phone = Column(String(20), nullable=True)
+    # How latitude/longitude were obtained: "gps", "hub" or "address"
+    # (approximate area fallback). NULL for legacy/unset listings.
+    location_precision = Column(String(12), nullable=True)
     status = Column(_db_enum(ListingStatus), nullable=False, default=ListingStatus.active, index=True)
     expires_at = Column(DateTime, nullable=True)
     # Subscription enforcement fields

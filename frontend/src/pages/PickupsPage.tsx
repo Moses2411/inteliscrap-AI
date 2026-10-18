@@ -25,6 +25,7 @@ import {
   acceptOffer,
   fetchHoldStatus,
   fetchOffers,
+  isApproxLocation,
   mapLink,
   storeHandoverPin,
   type AcceptedPickup,
@@ -133,6 +134,11 @@ export default function PickupsPage() {
           <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
             <MapPin className="h-4 w-4 text-brand-500" aria-hidden="true" />
             {accepted.address_text ?? "Address on request"}
+            {isApproxLocation(accepted.location_precision) && (
+              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                Approximate location
+              </span>
+            )}
           </div>
           {accepted.contact_phone && (
             <a className="btn-primary w-full" href={`tel:${accepted.contact_phone}`}>
@@ -246,6 +252,11 @@ export default function PickupsPage() {
                       <p className="flex items-center gap-1 text-xs text-slate-400">
                         <MapPin className="h-3 w-3" aria-hidden="true" />
                         {offer.address_text ?? "Location on request"}
+                        {isApproxLocation(offer.location_precision) && (
+                          <span className="ml-1 rounded-full bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                            approx.
+                          </span>
+                        )}
                       </p>
                     </div>
                   </div>

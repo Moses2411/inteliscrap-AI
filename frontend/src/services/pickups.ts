@@ -14,6 +14,12 @@ export interface PickupOffer {
   /** Pickup coordinates — present when the seller listed with a location. */
   latitude?: number;
   longitude?: number;
+  /**
+   * How the pickup coordinates were obtained. "gps" is a real device fix;
+  "hub"/"address" mean the point was derived from an area fallback and is only
+   * approximate. Missing/undefined is treated as exact for backwards compat.
+   */
+  location_precision?: string;
   /** Seller's phone, only present when they opted in to sharing it. */
   contact_phone?: string;
   contact_shared?: boolean;
@@ -42,6 +48,16 @@ export interface AcceptedPickup extends PickupJob {
 export function mapLink(latitude?: number, longitude?: number): string | null {
   if (latitude == null || longitude == null) return null;
   return `https://www.openstreetmap.org/search?query=${latitude},${longitude}`;
+}
+
+/**
+ * True when a pickup's coordinates came from an area fallback (hub/address)
+ * rather than a real GPS fix, so the UI can label it "approximate".
+ * A null/undefined precision is treated as an exact fix for backward
+ * compatibility with older offers.
+ */
+export function isApproxLocation(precision?: string | null): boolean {
+  return precision != null && precision !== "gps";
 }
 
 export interface HoldStatus {

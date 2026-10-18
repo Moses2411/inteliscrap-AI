@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models import Listing, ListingStatus, Pickup, PickupStatus, SyncOutbox, User, UserRole
+from app.services import location_service
 
 EARTH_RADIUS_M = 6371000.0
 
@@ -99,76 +100,132 @@ def _approx_cell_km(cell: str) -> float:
         return 1.0
 
 
-async def _find_nearby_h3(
-    db: AsyncSession, latitude: float, longitude: float, radius_m: int, limit: int
-) -> list[tuple[User, float]]:
-    """Find the closest collectors to a listing using Uber H3 hexagon bucketing.
+def _collector_location(user: User) -> tuple[float, float, str] | None:
+    """A collector's effective coordinates and how they were obtained.
 
-    Collectors whose stored hex cell falls inside the listing's hexagonal disk are
-    candidates; they are then ranked by true haversine distance so the dispatch is
-    ordered by proximity across ring boundaries.
+    A real stored fix always wins. When a collector has no coordinates — a
+    denied GPS permission, a feature phone — we fall back to their hub/address
+    centroid so they are still matchable instead of silently dropped.
     """
-    disk = await _h3_disk_cells(latitude, longitude, radius_m)
-    if not disk:
-        return []
-
-    result = await db.execute(
-        select(User).where(
-            User.role == UserRole.collector,
-            User.is_active.is_(True),
-            User.latitude.isnot(None),
-            User.longitude.isnot(None),
+    if user.latitude is not None and user.longitude is not None:
+        return (
+            user.latitude,
+            user.longitude,
+            user.location_precision or location_service.PRECISION_GPS,
         )
-    )
-    collectors = list(result.scalars().all())
+    return location_service.resolve_fallback(user.location_hub, user.address_text)
 
-    ranked: list[tuple[User, float]] = []
-    for collector in collectors:
-        # Recompute the cell from the collector's current coordinates rather
-        # than trusting the stored column: a stale h3_cell (e.g. a location
-        # update that bypassed set_user_location) would silently hide a
-        # collector who has since moved into range.
-        cell = latlng_to_h3_cell(collector.latitude, collector.longitude)
-        if cell not in disk:
-            continue
-        dist = haversine_m(latitude, longitude, collector.latitude, collector.longitude)
-        if dist <= radius_m:
-            ranked.append((collector, dist))
 
-    ranked.sort(key=lambda item: item[1])
-    return ranked[:limit]
+def _fallback_radius(radius_m: int) -> int:
+    """Widen the dispatch radius for approximate (area-level) locations."""
+    return int(round(radius_m * settings.location_fallback_radius_multiplier))
+
+
+def _rank_key(item: tuple[User, float, str]) -> tuple[int, float]:
+    # Exact GPS matches first, then approximate ones, nearest first within each.
+    return location_service.PRECISION_RANK.get(item[2], 1), item[1]
 
 
 async def _collector_candidates(db: AsyncSession) -> list[User]:
+    """Every active collector, located or not.
+
+    Collectors without coordinates can still be matched through the area
+    fallback in ``_collector_location``, so the SQL query must not filter them
+    out here.
+    """
     result = await db.execute(
         select(User).where(
             User.role == UserRole.collector,
             User.is_active.is_(True),
-            User.latitude.isnot(None),
-            User.longitude.isnot(None),
         )
     )
     return list(result.scalars().all())
 
 
-async def _find_nearby_haversine(
-    db: AsyncSession, latitude: float, longitude: float, radius_m: int, limit: int
+async def _find_nearby_h3(
+    db: AsyncSession,
+    latitude: float,
+    longitude: float,
+    radius_m: int,
+    limit: int,
+    approx_location: bool = False,
 ) -> list[tuple[User, float]]:
-    ranked = []
+    """Find the closest collectors to a listing using Uber H3 hexagon bucketing.
+
+    Collectors whose live cell falls inside the listing's hexagonal disk are
+    candidates; they are then ranked by true haversine distance so the dispatch
+    is ordered by proximity across ring boundaries. Over-covering the disk is
+    safe (exact distances are checked below), so it is always widened to catch
+    approximate fallback matches sitting near the edge.
+    """
+    disk = await _h3_disk_cells(latitude, longitude, _fallback_radius(radius_m))
+    if not disk:
+        return []
+
+    ranked: list[tuple[User, float, str]] = []
     for collector in await _collector_candidates(db):
-        dist = haversine_m(latitude, longitude, collector.latitude, collector.longitude)
-        if dist <= radius_m:
-            ranked.append((collector, dist))
-    ranked.sort(key=lambda item: item[1])
-    return ranked[:limit]
+        located = _collector_location(collector)
+        if located is None:
+            continue
+        c_lat, c_lon, precision = located
+        # Recompute the cell from the collector's current coordinates rather
+        # than trusting the stored column: a stale h3_cell (e.g. a location
+        # update that bypassed set_user_location) would silently hide a
+        # collector who has since moved into range.
+        cell = latlng_to_h3_cell(c_lat, c_lon)
+        if cell not in disk:
+            continue
+        dist = haversine_m(latitude, longitude, c_lat, c_lon)
+        allowed = (
+            _fallback_radius(radius_m)
+            if (approx_location or location_service.is_approximate(precision))
+            else radius_m
+        )
+        if dist <= allowed:
+            ranked.append((collector, dist, precision))
+
+    ranked.sort(key=_rank_key)
+    return [(collector, dist) for collector, dist, _precision in ranked[:limit]]
+
+
+async def _find_nearby_haversine(
+    db: AsyncSession,
+    latitude: float,
+    longitude: float,
+    radius_m: int,
+    limit: int,
+    approx_location: bool = False,
+) -> list[tuple[User, float]]:
+    ranked: list[tuple[User, float, str]] = []
+    for collector in await _collector_candidates(db):
+        located = _collector_location(collector)
+        if located is None:
+            continue
+        c_lat, c_lon, precision = located
+        dist = haversine_m(latitude, longitude, c_lat, c_lon)
+        allowed = (
+            _fallback_radius(radius_m)
+            if (approx_location or location_service.is_approximate(precision))
+            else radius_m
+        )
+        if dist <= allowed:
+            ranked.append((collector, dist, precision))
+    ranked.sort(key=_rank_key)
+    return [(collector, dist) for collector, dist, _precision in ranked[:limit]]
 
 
 async def _find_nearby_postgis(
-    db: AsyncSession, latitude: float, longitude: float, radius_m: int, limit: int
+    db: AsyncSession,
+    latitude: float,
+    longitude: float,
+    radius_m: int,
+    limit: int,
+    approx_location: bool = False,
 ) -> list[tuple[User, float]]:
+    effective_radius = _fallback_radius(radius_m) if approx_location else radius_m
     result = await db.execute(
         _POSTGIS_QUERY,
-        {"lat": latitude, "lon": longitude, "radius": radius_m, "limit": limit},
+        {"lat": latitude, "lon": longitude, "radius": effective_radius, "limit": limit},
     )
     rows = result.fetchall()
     if not rows:
@@ -188,12 +245,13 @@ async def find_nearby_collectors(
     longitude: float,
     radius_m: int = 5000,
     limit: int = 5,
+    approx_location: bool = False,
 ) -> list[tuple[User, float]]:
     if h3 is not None:
-        return await _find_nearby_h3(db, latitude, longitude, radius_m, limit)
+        return await _find_nearby_h3(db, latitude, longitude, radius_m, limit, approx_location)
     if db.bind.dialect.name == "postgresql":
-        return await _find_nearby_postgis(db, latitude, longitude, radius_m, limit)
-    return await _find_nearby_haversine(db, latitude, longitude, radius_m, limit)
+        return await _find_nearby_postgis(db, latitude, longitude, radius_m, limit, approx_location)
+    return await _find_nearby_haversine(db, latitude, longitude, radius_m, limit, approx_location)
 
 
 async def dispatch_listing(
@@ -207,7 +265,12 @@ async def dispatch_listing(
         return []
 
     nearby = await find_nearby_collectors(
-        db, listing.latitude, listing.longitude, radius_m, limit
+        db,
+        listing.latitude,
+        listing.longitude,
+        radius_m,
+        limit,
+        approx_location=location_service.is_approximate(listing.location_precision),
     )
 
     offers: list[Pickup] = []

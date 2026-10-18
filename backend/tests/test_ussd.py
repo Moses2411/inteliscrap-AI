@@ -109,6 +109,9 @@ async def test_ussd_register_collector_with_hub(client, test_session):
     assert user.latitude is not None
     assert user.longitude is not None
     assert user.h3_cell is not None
+    # Hub coordinates are an area fallback, not a GPS fix.
+    assert user.location_hub == "Samaru"
+    assert user.location_precision == "hub"
 
 
 @pytest.mark.asyncio

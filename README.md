@@ -131,6 +131,7 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 - 🤖 **Honest AI fallback** — bundled ONNX → server `/api/v1/analyze` → manual picker (never a mock)
 - 📱 **PWA + feature phones** — installable app for smartphones, USSD shortcode + SMS outbox for feature phones
 - 📍 **H3 dispatch** — Uber H3 hex-grid, ring-by-ring collector matching with haversine ranking
+- 📵 **No-GPS fallback** — hub/area presets + an offline Zaria gazetteer keep collectors and sellers matchable when GPS is denied or unavailable; such offers are labelled *approximate*
 - 🏦 **Hub traceability** — recycling-hub daily buy requests, live `fulfilled_kg` progress, subscriptions and EPR compliance exports
 - 📊 **Role dashboards** — collector, household, hub, partner, impact and sales-report views drawn with dependency-free SVG charts
 
@@ -152,7 +153,7 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 | **Server AI** | Ollama vision model (`llava:13b` default, configurable via `OLLAMA_VISION_MODEL`) |
 | **Voice & comms** | Google TTS proxy · Web Speech API · Africa's Talking SMS + USSD + IVR |
 | **Infrastructure** | Docker / docker-compose · GitHub Actions CI · nginx (production) · Vercel/Netlify + Render/Railway |
-| **Quality** | pytest + pytest-asyncio (62 tests) · Ruff · `tsc --noEmit` · production PWA build |
+| **Quality** | pytest + pytest-asyncio (172 tests) · Ruff · `tsc --noEmit` · production PWA build |
 
 ---
 
@@ -488,7 +489,7 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | GET | `/api/v1/listings/mine` | The caller's own listings (households/sellers) |
 | POST | `/api/v1/listings/{listing_id}/accept` | Collector claims a listing from the board ("Accept offer"); other pending offers expire |
 | GET | `/api/v1/listings/{listing_id}` | Get a single listing (collector/admin) |
-| POST/GET | `/api/v1/pickups/offers` | Offers dispatched to the current collector (H3 disk ring). Each offer carries the pickup address + coordinates, and the seller's phone **only when they opted in** (`contact_shared`); returns `[]` while a handover is unconfirmed |
+| POST/GET | `/api/v1/pickups/offers` | Offers dispatched to the current collector (H3 disk ring). Each offer carries the pickup address + coordinates and their `location_precision` (`gps`/`hub`/`address`), and the seller's phone **only when they opted in** (`contact_shared`); returns `[]` while a handover is unconfirmed |
 | POST | `/api/v1/pickups/{pickup_id}/accept` | Accept an offer (other pending offers expire); issues the 6-digit handover PIN |
 | GET | `/api/v1/pickups/active` | List the collector's active jobs (accepted → pending confirmation) |
 | GET | `/api/v1/pickups/hold` | Whether the collector is barred from new leads by an open handover |
@@ -598,6 +599,26 @@ When a listing is created with coordinates, the platform dispatches it using the
 
 Collectors keep their hex bucket fresh via `PATCH /api/v1/users/me/location`, which recomputes `h3_cell`. The `h3` index is stored on `users` (`idx_users_h3_cell`) for Postgres and the on-the-fly fallback keeps SQLite/dev working identically.
 
+#### No-GPS fallback (`location_service`)
+
+GPS is the primary location source, but a collector on a feature phone, or a device
+with GPS denied, must not be silently dropped from dispatch. When live coordinates
+are missing, the backend resolves an **approximate area centroid** instead:
+
+1. **Hub preset** — one of the operational areas (Samaru, Sabon Gari, Kongo, Bomo,
+   Hanwa, Dutsen Abba), the same set USSD onboarding uses.
+2. **Address gazetteer** — a small offline map of Zaria neighbourhoods/landmarks
+   (`location_service.GAZETTEER`) scanned from the free-text address, longest match
+   first. No network or third-party geocoder required.
+
+Every coordinate records *how* it was obtained (`location_precision`): `gps`,
+`hub`, or `address`. Sellers and collectors who sign up with an address (or choose a
+hub) are placed immediately; a real GPS fix always wins and is never overwritten by
+a guess. Because area centroids are coarse, dispatch **widens the radius** for
+approximate locations (`LOCATION_FALLBACK_RADIUS_MULTIPLIER`, default `1.5×`) and
+ranks exact GPS matches ahead of approximate ones. Offers expose
+`location_precision` so the UI labels area-level pickups **Approximate location**.
+
 **Guarantees:** a listing is only `offered` to collectors; as soon as one accepts (via **USSD** or **IVR**), the pickup becomes `accepted`, the listing moves to `scheduled`, and all other pending `offered` pickups are no longer surfaced — the listing is unavailable to every other picker.
 
 ### `POST /api/v1/analyze`
@@ -634,7 +655,7 @@ cd backend
 pytest -v
 ```
 
-**158 tests** across 18 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching (resolution, disk growth, proximity ordering, radius boundary, stale-cell immunity) and nearest-buyer offer visibility (pickup location + opt-in phone)**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **role-specific yearly premium plans + subscription-gated impact/compliance data (402 without premium)**, **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user settled + estimated (in-progress) earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
+**172 tests** across 19 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching (resolution, disk growth, proximity ordering, radius boundary, stale-cell immunity), nearest-buyer offer visibility (pickup location + opt-in phone) and the no-GPS hub/address fallback (gazetteer resolution, radius widening, GPS-first ordering)**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **role-specific yearly premium plans + subscription-gated impact/compliance data (402 without premium)**, **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user settled + estimated (in-progress) earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend
@@ -718,7 +739,8 @@ inteliscrap-AI/
 │   │   │   └── voice.py              # IVR callbacks + audio
 │   │   ├── services/
 │   │   │   ├── analyze_service.py    # Ollama API call + prompt template (configurable model)
-│   │   │   ├── matching_service.py   # Uber H3 hex-grid, disk-ring, top-N dispatch
+│   │   │   ├── location_service.py   # Hub presets + offline Zaria gazetteer (no-GPS fallback)
+│   │   │   ├── matching_service.py   # Uber H3 hex-grid, disk-ring, top-N dispatch (+ area fallback)
 │   │   │   ├── momo_service.py       # MTN MoMo Collections client (token, RTP, status)
 │   │   │   ├── outbox_service.py     # SMS outbox worker (Africa's Talking)
 │   │   │   ├── payment_service.py    # Checkout orchestration + one-time activation
@@ -730,7 +752,7 @@ inteliscrap-AI/
 │   │   │       messaging · ivr · voice services
 │   │   └── middleware/
 │   │       └── cors.py               # CORS configuration
-│   ├── tests/                        # 158 async tests across 18 suites (pytest + pytest-asyncio)
+│   ├── tests/                        # 172 async tests across 19 suites (pytest + pytest-asyncio)
 │   │   ├── conftest.py               # Async test fixtures (SQLite)
 │   │   └── test_{health,sync,matching,geo_offers,auth,ussd,listings,pickups,
 │   │             handover,settlement,outbox,hubs,payments,prices,impact,

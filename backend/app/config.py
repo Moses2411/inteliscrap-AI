@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     dispatch_max_collectors: int = 5
     h3_resolution: int = 8
     h3_search_k: int = 8
+    # When a match relies on an approximate area fallback (hub/address) instead
+    # of a real GPS fix, widen the search radius by this factor so an
+    # area-level centroid doesn't silently drop a nearby collector.
+    location_fallback_radius_multiplier: float = 1.5
     platform_fee_rate: float = 0.05
     jwt_secret_key: str = "inteliscrap-dev-secret-key-change-in-production-32b"
     jwt_algorithm: str = "HS256"

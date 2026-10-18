@@ -24,7 +24,7 @@ import { Button } from "../../components/ui/Button";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
-import { fetchActivePickups, fetchOffers, mapLink, type PickupJob, type PickupOffer } from "../../services/pickups";
+import { fetchActivePickups, fetchOffers, isApproxLocation, mapLink, type PickupJob, type PickupOffer } from "../../services/pickups";
 import { fetchMyEarnings, type MyEarnings } from "../../services/earnings";
 import { shareMyLocation, getCurrentPosition } from "../../services/location";
 import { DEMO_JOBS, DEMO_OFFERS, previewEnabled } from "../../lib/demoData";
@@ -279,6 +279,12 @@ export default function CollectorDashboard() {
                           <Navigation className="h-3.5 w-3.5" aria-hidden="true" />
                           Directions
                         </a>
+                      )}
+                      {isApproxLocation(offer.location_precision) && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                          <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                          Approximate location
+                        </span>
                       )}
                     </div>
                   )}

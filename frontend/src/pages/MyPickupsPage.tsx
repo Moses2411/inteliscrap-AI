@@ -22,6 +22,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { getToken } from "../services/auth";
 import {
   fetchActivePickups,
+  isApproxLocation,
   readStoredHandoverPin,
   recordHandover,
   regeneratePin,
@@ -147,6 +148,11 @@ export default function MyPickupsPage() {
                   <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
                     <MapPin className="h-3 w-3 shrink-0" aria-hidden="true" />
                     {job.address_text ?? "Location on request"}
+                    {isApproxLocation(job.location_precision) && (
+                      <span className="rounded-full bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                        approx.
+                      </span>
+                    )}
                   </p>
                 </div>
                 <StatusBadge status={job.status} />

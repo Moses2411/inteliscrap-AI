@@ -19,7 +19,7 @@ import { cn } from "../../lib/cn";
 
 const ROLES: Array<{ role: UserRole; label: string; blurb: string; icon: ReactNode; requiresAddress: boolean }> = [
   { role: "seller", label: "Seller", blurb: "Sell scrap at fair prices", icon: <Home className="h-4 w-4" />, requiresAddress: true },
-  { role: "collector", label: "Collector", blurb: "Get offers & pick up scrap", icon: <Truck className="h-4 w-4" />, requiresAddress: false },
+  { role: "collector", label: "Collector", blurb: "Get offers & pick up scrap", icon: <Truck className="h-4 w-4" />, requiresAddress: true },
   { role: "recycling_hub", label: "Recycling Hub", blurb: "Buy material at scale", icon: <Factory className="h-4 w-4" />, requiresAddress: false },
   { role: "ngo", label: "NGO", blurb: "Track community impact", icon: <HeartHandshake className="h-4 w-4" />, requiresAddress: false },
   { role: "partner", label: "PRO / EPR Partner", blurb: "Compliance manifests", icon: <Landmark className="h-4 w-4" />, requiresAddress: false },
@@ -264,18 +264,22 @@ export default function LoginPage() {
                   {/* Address field for seller and collector */}
                   {addressRequired && (
                     <div>
-                      <label className="label" htmlFor="address">Pickup address</label>
+                      <label className="label" htmlFor="address">
+                        {role === "collector" ? "Your area / address" : "Pickup address"}
+                      </label>
                       <input
                         id="address"
                         type="text"
-                        placeholder="e.g. 123 Main Street, City"
+                        placeholder="e.g. Samaru, Zaria"
                         className="input rounded-full border-transparent bg-slate-100 px-5 py-3 dark:border-transparent dark:bg-slate-800"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         required
                       />
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        Required for pickup scheduling. Used to match you with nearby collectors.
+                        {role === "collector"
+                          ? "Used to match you with nearby pickups when GPS is off — your exact location stays private."
+                          : "Required for pickup scheduling. Used to match you with nearby collectors."}
                       </p>
                     </div>
                   )}

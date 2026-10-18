@@ -35,7 +35,7 @@ function getCurrentPosition(): Promise<GeolocationCoordinates> {
 
 const ROLE_OPTIONS: { value: UserRole; label: string; hint: string; requiresAddress: boolean }[] = [
   { value: "seller", label: "Seller", hint: "I have scrap to sell", requiresAddress: true },
-  { value: "collector", label: "Collector", hint: "I pick up scrap", requiresAddress: false },
+  { value: "collector", label: "Collector", hint: "I pick up scrap", requiresAddress: true },
 ];
 
 export default function PostPickupForm({ analysis, onReset }: Props) {
@@ -103,7 +103,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
       try {
         coords = await getCurrentPosition();
       } catch (err) {
-        geoError = "Could not get your location. Listing will be visible on the market but won't auto-dispatch to nearby collectors.";
+        geoError = "Couldn't get your GPS — we'll place the pickup using the address you entered so nearby collectors can still find it.";
         console.warn("Geolocation failed:", err);
       }
 
@@ -116,7 +116,9 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
         longitude: coords?.longitude,
         address_text: addressRequired ? address : undefined,
         contact_phone: sharePhone ? phone : undefined,
-        auto_dispatch: coords != null,
+        // The server resolves the address to an area and dispatches from it when
+        // GPS is unavailable, so don't suppress dispatch just because coords failed.
+        auto_dispatch: true,
       });
       if (geoError) setError(geoError);
       setPosted(true);
@@ -197,18 +199,22 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
         {/* Address field for seller and collector */}
         {addressRequired && (
           <div>
-            <label className="label" htmlFor="address">Pickup address</label>
+            <label className="label" htmlFor="address">
+              {role === "collector" ? "Your area / address" : "Pickup address"}
+            </label>
             <input
               id="address"
               type="text"
-              placeholder="e.g. 123 Main Street, City"
+              placeholder="e.g. Samaru, Zaria"
               className="input"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               required
             />
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              Required for pickup scheduling. Used to match you with nearby collectors.
+              {role === "collector"
+                ? "Used to match you with nearby pickups when GPS is off."
+                : "Required for pickup scheduling. Used to match you with nearby collectors."}
             </p>
           </div>
         )}

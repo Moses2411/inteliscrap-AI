@@ -11,16 +11,8 @@ from app.models import (
     User,
     UserRole,
 )
-from app.services import pickup_service, user_service
-
-HUB_PRESETS: dict[str, tuple[str, float, float]] = {
-    "1": ("Samaru", 11.1547, 7.6478),
-    "2": ("Sabon Gari", 11.1313, 7.6299),
-    "3": ("Kongo", 11.1113, 7.7227),
-    "4": ("Bomo", 11.1426, 7.6983),
-    "5": ("Hanwa", 11.0962, 7.7415),
-    "6": ("Dutsen Abba", 11.0952, 7.6875),
-}
+from app.services import location_service, pickup_service, user_service
+from app.services.location_service import HUB_PRESETS
 
 HUB_MENU = (
     "CON Zabi wurin da kake aiki:\n"
@@ -166,7 +158,10 @@ async def _register_flow(db: AsyncSession, phone_number: str, text: str) -> str:
         existing.role = UserRole.collector
         collector = existing
 
-    await user_service.set_user_location(db, collector, lat, lng)
+    await user_service.set_user_location(
+        db, collector, lat, lng, precision=location_service.PRECISION_HUB
+    )
+    collector.location_hub = hub_name
     return f"END An yi rijista! Wurin aiki: {hub_name}. Kai wayarku ta kara kira don ganin kaya."
 
 
@@ -176,7 +171,9 @@ async def _location_flow(db: AsyncSession, collector: User, rest: list[str]) -> 
 
     hub_name, lat, lng = HUB_PRESETS[rest[0]]
     collector.location_hub = hub_name
-    await user_service.set_user_location(db, collector, lat, lng)
+    await user_service.set_user_location(
+        db, collector, lat, lng, precision=location_service.PRECISION_HUB
+    )
     return f"END An sabunta wurin aiki: {hub_name}."
 
 

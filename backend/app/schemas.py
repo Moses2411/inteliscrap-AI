@@ -341,6 +341,8 @@ class ListingResponse(BaseModel):
     toxicity_hazards: Optional[Any] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    # "gps" for a real fix, "hub"/"address" when placed from an area fallback.
+    location_precision: Optional[str] = None
     address_text: Optional[str] = None
     contact_phone: Optional[str] = None
     status: str
@@ -355,6 +357,7 @@ class OTPRequest(BaseModel):
     role: Optional[UserRole] = None
     full_name: Optional[str] = None
     address_text: Optional[str] = None
+    location_hub: Optional[str] = None
 
 
 class OTPVerify(BaseModel):
@@ -404,6 +407,8 @@ class PickupOfferResponse(BaseModel):
     address_text: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    # "gps" for a real fix, "hub"/"address" when placed from an area fallback.
+    location_precision: Optional[str] = None
     distance_m: Optional[float] = None
     contact_phone: Optional[str] = None
     contact_shared: bool = False

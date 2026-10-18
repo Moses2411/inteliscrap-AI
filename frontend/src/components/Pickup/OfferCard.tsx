@@ -1,5 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
-import { mapLink, type PickupOffer } from "../../services/pickups";
+import { isApproxLocation, mapLink, type PickupOffer } from "../../services/pickups";
 
 interface Props {
   offer: PickupOffer;
@@ -79,6 +79,11 @@ export default function OfferCard({ offer, busy, busyId, distanceLabel, nairaSym
             >
               Directions
             </a>
+          )}
+          {isApproxLocation(offer.location_precision) && (
+            <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+              Approximate location
+            </span>
           )}
         </div>
       )}

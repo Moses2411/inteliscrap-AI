@@ -4,7 +4,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.models import Listing, ListingStatus, MaterialCategory, User
 from app.schemas import ListingCreate
-from app.services import matching_service, pickup_service, subscription_service
+from app.services import location_service, matching_service, pickup_service, subscription_service
+
+
+def _resolve_listing_coords(
+    seller: User, payload: ListingCreate
+) -> tuple[float | None, float | None, str | None]:
+    """Coordinates for a new listing, with an area fallback.
+
+    A listing posted with a real GPS fix keeps it. When the seller has no fix
+    (denied permission, feature-phone upload) we try to place the listing from
+    the address they typed or their hub/area so nearby collectors can still be
+    dispatched to it. The precision tells the offer UI to label it approximate.
+    """
+    if payload.latitude is not None and payload.longitude is not None:
+        return payload.latitude, payload.longitude, location_service.PRECISION_GPS
+
+    address = payload.address_text or seller.address_text
+    resolved = location_service.resolve_fallback(seller.location_hub, address)
+    if resolved is None:
+        return payload.latitude, payload.longitude, None
+    latitude, longitude, precision = resolved
+    return latitude, longitude, precision
 
 
 async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate) -> Listing:
@@ -20,6 +41,8 @@ async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate)
     if not allowed:
         raise ValueError(error)
 
+    latitude, longitude, location_precision = _resolve_listing_coords(seller, payload)
+
     listing = Listing(
         seller_id=seller.id,
         material_category_id=payload.material_category_id,
@@ -29,8 +52,9 @@ async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate)
         estimated_value_naira=payload.estimated_value_naira,
         confidence_score=payload.confidence_score,
         toxicity_hazards=payload.toxicity_hazards,
-        latitude=payload.latitude,
-        longitude=payload.longitude,
+        latitude=latitude,
+        longitude=longitude,
+        location_precision=location_precision,
         address_text=payload.address_text,
         contact_phone=payload.contact_phone,
         status=ListingStatus.active,

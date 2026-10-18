@@ -8,7 +8,7 @@ from app.config import settings
 from app.core import security
 from app.models import User, UserRole
 from app.schemas import OTPRequest
-from app.services import user_service
+from app.services import location_service, user_service
 
 # A code stays valid for `settings.otp_expire_seconds` (10 min by default). A
 # resend within this window re-sends the *same* code rather than minting a new one,
@@ -50,6 +50,7 @@ async def request_otp(db: AsyncSession, payload: OTPRequest) -> tuple[User, str,
             role=payload.role or UserRole.seller,
             full_name=payload.full_name,
             address_text=payload.address_text,
+            location_hub=payload.location_hub or "Zaria",
         )
         db.add(user)
         await db.flush()
@@ -58,8 +59,21 @@ async def request_otp(db: AsyncSession, payload: OTPRequest) -> tuple[User, str,
         # missing profile details, never mutate the account type.
         if payload.address_text is not None and user.address_text != payload.address_text:
             user.address_text = payload.address_text
+        if payload.location_hub and user.location_hub != payload.location_hub:
+            user.location_hub = payload.location_hub
         if payload.full_name and not user.full_name:
             user.full_name = payload.full_name
+
+    # A user signing in from a device without a GPS fix still gets matched: we
+    # place them on their area/address centroid so dispatch can find them.
+    # Never overwrite a real fix the device has already sent us.
+    if user.latitude is None:
+        resolved = location_service.resolve_fallback(user.location_hub, user.address_text)
+        if resolved is not None:
+            latitude, longitude, precision = resolved
+            await user_service.set_user_location(
+                db, user, latitude, longitude, precision=precision
+            )
 
     now = datetime.utcnow()
 

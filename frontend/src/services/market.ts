@@ -24,6 +24,8 @@ export interface MarketplaceListing {
   longitude?: number | null;
   address_text?: string | null;
   contact_phone?: string | null;
+  /** "gps" for a real fix, "hub"/"address" when placed from an area fallback. */
+  location_precision?: string | null;
   status: string;
   expires_at?: string | null;
   created_at?: string | null;
