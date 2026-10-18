@@ -120,48 +120,82 @@ def upsert_env(path: Path, values: dict[str, str]) -> None:
     path.write_text(newline.join(lines) + newline, encoding="utf-8")
 
 
-async def main(write: bool, env_file: Path) -> int:
-    load_env()
-    key = subscription_key()
+async def provision(base: str, key: str) -> tuple[str | None, str | None, str | None]:
+    """Create the API user + key.
+
+    Returns ``(api_user, api_key, error)`` — ``error`` is set (and both values
+    are ``None``) when MTN rejects the request.
+    """
     api_user = str(uuid.uuid4())
-    b = base_url()
     headers_key = {"Ocp-Apim-Subscription-Key": key}
 
     async with httpx.AsyncClient(timeout=20.0) as client:
         # Create API user
         r = await client.post(
-            f"{b}/v1_0/apiuser",
+            f"{base}/v1_0/apiuser",
             headers={**headers_key, "X-Reference-Id": api_user, "Content-Type": "application/json"},
             json={"providerCallbackHost": callback_host()},
         )
         if r.status_code not in (201,):
-            print(f"POST /v1_0/apiuser failed ({r.status_code}): {_extract_error(r)}", file=sys.stderr)
-            return 1
+            return None, None, f"POST /v1_0/apiuser failed ({r.status_code}): {_extract_error(r)}"
 
         # Create API key
-        r2 = await client.post(f"{b}/v1_0/apiuser/{api_user}/apikey", headers=headers_key)
+        r2 = await client.post(f"{base}/v1_0/apiuser/{api_user}/apikey", headers=headers_key)
         if r2.status_code not in (200, 201):
-            print(
-                f"POST /v1_0/apiuser/{{id}}/apikey failed ({r2.status_code}): {_extract_error(r2)}",
-                file=sys.stderr,
+            return None, None, (
+                f"POST /v1_0/apiuser/{{id}}/apikey failed ({r2.status_code}): "
+                f"{_extract_error(r2)}"
             )
-            return 1
         data = _safe_json(r2) or {}
         api_key = data.get("apiKey")
         if not api_key:
-            print("MoMo did not return apiKey", file=sys.stderr)
-            return 1
+            return None, None, "MoMo did not return apiKey"
+        return api_user, api_key, None
+
+
+async def main(
+    write: bool,
+    env_file: Path,
+    retry: int = 1,
+    interval: float = 60.0,
+) -> int:
+    """Provision, retrying while the MTN sandbox is unavailable.
+
+    ``--retry N`` attempts the sandbox N times (waiting ``--interval`` seconds
+    between tries) so a scheduled run can catch the sandbox when it recovers.
+    """
+    load_env()
+    key = subscription_key()
+    b = base_url()
+
+    attempts = max(1, retry)
+    api_user = api_key = None
+    for attempt in range(1, attempts + 1):
+        api_user, api_key, error = await provision(b, key)
+        if error is None:
+            break
+        print(f"[{attempt}/{attempts}] {error}", file=sys.stderr)
+        if attempt < attempts:
+            print(f"Retrying in {interval:.0f}s...", file=sys.stderr)
+            await asyncio.sleep(interval)
+    else:
+        print(
+            "MTN sandbox is still unavailable - re-run later or schedule this "
+            "script (see scripts/README.md).",
+            file=sys.stderr,
+        )
+        return 1
 
     values = env_values(key, b, api_user, api_key)
-    print("=== MTN MoMo env vars ===")
+    print("MoMo provisioning succeeded.", file=sys.stderr)
     for name, value in values.items():
         print(f"{name}={value}")
     if write:
         upsert_env(env_file, values)
-        print(f"\nUpdated {env_file} — restart the backend to pick up the new values.")
+        print(f"\nUpdated {env_file} - redeploy so the new env vars take effect.")
     else:
         print("\n=== Copy the block above into backend/.env or your Render env vars ===")
-        print("Re-run with --write to update backend/.env automatically.")
+        print("Re-run with --write to update the target env file automatically.")
     return 0
 
 
@@ -169,12 +203,24 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Provision MTN MoMo sandbox credentials and generate the MOMO_* env vars."
     )
-    parser.add_argument("--write", action="store_true", help="upsert the values into backend/.env")
+    parser.add_argument("--write", action="store_true", help="upsert the values into the env file")
     parser.add_argument(
         "--env-file",
         type=Path,
         default=Path(__file__).resolve().parents[1] / ".env",
         help=".env file to read from and (with --write) to update",
     )
+    parser.add_argument(
+        "--retry",
+        type=int,
+        default=1,
+        help="number of attempts before giving up (default 1)",
+    )
+    parser.add_argument(
+        "--interval",
+        type=float,
+        default=60.0,
+        help="seconds to wait between attempts when --retry > 1 (default 60)",
+    )
     args = parser.parse_args()
-    raise SystemExit(asyncio.run(main(args.write, args.env_file)))
+    raise SystemExit(asyncio.run(main(args.write, args.env_file, args.retry, args.interval)))

@@ -124,7 +124,11 @@ async def _find_nearby_h3(
 
     ranked: list[tuple[User, float]] = []
     for collector in collectors:
-        cell = collector.h3_cell or latlng_to_h3_cell(collector.latitude, collector.longitude)
+        # Recompute the cell from the collector's current coordinates rather
+        # than trusting the stored column: a stale h3_cell (e.g. a location
+        # update that bypassed set_user_location) would silently hide a
+        # collector who has since moved into range.
+        cell = latlng_to_h3_cell(collector.latitude, collector.longitude)
         if cell not in disk:
             continue
         dist = haversine_m(latitude, longitude, collector.latitude, collector.longitude)

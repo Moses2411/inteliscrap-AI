@@ -9,6 +9,7 @@ import {
   MapPin,
   Navigation,
   PackageCheck,
+  Phone,
   Store,
   TrendingUp,
   Truck,
@@ -23,7 +24,7 @@ import { Button } from "../../components/ui/Button";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
-import { fetchActivePickups, fetchOffers, type PickupJob, type PickupOffer } from "../../services/pickups";
+import { fetchActivePickups, fetchOffers, mapLink, type PickupJob, type PickupOffer } from "../../services/pickups";
 import { fetchMyEarnings, type MyEarnings } from "../../services/earnings";
 import { shareMyLocation, getCurrentPosition } from "../../services/location";
 import { DEMO_JOBS, DEMO_OFFERS, previewEnabled } from "../../lib/demoData";
@@ -250,6 +251,37 @@ export default function CollectorDashboard() {
                       </Button>
                     </div>
                   </div>
+
+                  {(offer.address_text || offer.contact_phone || mapLink(offer.latitude, offer.longitude)) && (
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-brand-200/60 pt-3 text-xs dark:border-brand-900">
+                      {offer.address_text && (
+                        <span className="inline-flex min-w-0 items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                          <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span className="truncate">{offer.address_text}</span>
+                        </span>
+                      )}
+                      {offer.contact_phone && (
+                        <a
+                          href={`tel:${offer.contact_phone}`}
+                          className="inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline dark:text-brand-300"
+                        >
+                          <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                          Call seller
+                        </a>
+                      )}
+                      {mapLink(offer.latitude, offer.longitude) && (
+                        <a
+                          href={mapLink(offer.latitude, offer.longitude)!}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 font-semibold text-brand-700 hover:underline dark:text-brand-300"
+                        >
+                          <Navigation className="h-3.5 w-3.5" aria-hidden="true" />
+                          Directions
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </Card>
               ))}
             </div>

@@ -25,6 +25,7 @@ import {
   acceptOffer,
   fetchHoldStatus,
   fetchOffers,
+  mapLink,
   storeHandoverPin,
   type AcceptedPickup,
   type HoldStatus,
@@ -268,6 +269,31 @@ export default function PickupsPage() {
                     </Badge>
                   )}
                 </div>
+
+                {(offer.contact_phone || mapLink(offer.latitude, offer.longitude)) && (
+                  <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-100 pt-3 dark:border-slate-800">
+                    {offer.contact_phone && (
+                      <a
+                        href={`tel:${offer.contact_phone}`}
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline dark:text-brand-300"
+                      >
+                        <Phone className="h-3.5 w-3.5" aria-hidden="true" />
+                        {offer.contact_phone}
+                      </a>
+                    )}
+                    {mapLink(offer.latitude, offer.longitude) && (
+                      <a
+                        href={mapLink(offer.latitude, offer.longitude)!}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-700 hover:underline dark:text-brand-300"
+                      >
+                        <Navigation className="h-3.5 w-3.5" aria-hidden="true" />
+                        {t("directions")}
+                      </a>
+                    )}
+                  </div>
+                )}
 
                 <Button
                   className="!mt-4 w-full"

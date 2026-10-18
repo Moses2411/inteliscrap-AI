@@ -488,7 +488,7 @@ The exported model must satisfy the browser contract: float32 `[1, 3, 224, 224]`
 | GET | `/api/v1/listings/mine` | The caller's own listings (households/sellers) |
 | POST | `/api/v1/listings/{listing_id}/accept` | Collector claims a listing from the board ("Accept offer"); other pending offers expire |
 | GET | `/api/v1/listings/{listing_id}` | Get a single listing (collector/admin) |
-| POST/GET | `/api/v1/pickups/offers` | Offers dispatched to the current collector (H3 disk ring); returns `[]` while a handover is unconfirmed |
+| POST/GET | `/api/v1/pickups/offers` | Offers dispatched to the current collector (H3 disk ring). Each offer carries the pickup address + coordinates, and the seller's phone **only when they opted in** (`contact_shared`); returns `[]` while a handover is unconfirmed |
 | POST | `/api/v1/pickups/{pickup_id}/accept` | Accept an offer (other pending offers expire); issues the 6-digit handover PIN |
 | GET | `/api/v1/pickups/active` | List the collector's active jobs (accepted → pending confirmation) |
 | GET | `/api/v1/pickups/hold` | Whether the collector is barred from new leads by an open handover |
@@ -634,7 +634,7 @@ cd backend
 pytest -v
 ```
 
-**145 tests** across 17 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **role-specific yearly premium plans + subscription-gated impact/compliance data (402 without premium)**, **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user settled + estimated (in-progress) earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
+**158 tests** across 18 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching (resolution, disk growth, proximity ordering, radius boundary, stale-cell immunity) and nearest-buyer offer visibility (pickup location + opt-in phone)**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **role-specific yearly premium plans + subscription-gated impact/compliance data (402 without premium)**, **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user settled + estimated (in-progress) earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend
@@ -730,11 +730,11 @@ inteliscrap-AI/
 │   │   │       messaging · ivr · voice services
 │   │   └── middleware/
 │   │       └── cors.py               # CORS configuration
-│   ├── tests/                        # 140 async tests across 17 suites (pytest + pytest-asyncio)
+│   ├── tests/                        # 158 async tests across 18 suites (pytest + pytest-asyncio)
 │   │   ├── conftest.py               # Async test fixtures (SQLite)
-│   │   └── test_{health,sync,matching,auth,ussd,listings,pickups,handover,
-│   │             settlement,outbox,hubs,payments,prices,impact,users,
-│   │             analyze,earnings}.py
+│   │   └── test_{health,sync,matching,geo_offers,auth,ussd,listings,pickups,
+│   │             handover,settlement,outbox,hubs,payments,prices,impact,
+│   │             users,analyze,earnings}.py
 │   ├── alembic/                      # Database migrations
 │   ├── requirements.txt
 │   ├── pyproject.toml                # deps + Ruff + pytest config

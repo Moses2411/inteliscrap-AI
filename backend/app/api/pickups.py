@@ -38,6 +38,10 @@ def _offer_response(
         estimated_value_naira=_to_float(listing.estimated_value_naira),
         toxicity_hazards=listing.toxicity_hazards,
         address_text=listing.address_text,
+        latitude=listing.latitude,
+        longitude=listing.longitude,
+        contact_phone=listing.contact_phone,
+        contact_shared=listing.contact_phone is not None,
         distance_m=pickup.distance_m,
         created_at=listing.created_at,
     )
@@ -59,6 +63,7 @@ def _job_response(
         created_at=listing.created_at,
         status=pickup.status.value,
         contact_phone=listing.contact_phone,
+        contact_shared=listing.contact_phone is not None,
         latitude=listing.latitude,
         longitude=listing.longitude,
         scheduled_at=pickup.scheduled_at,

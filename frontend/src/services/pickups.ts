@@ -11,15 +11,18 @@ export interface PickupOffer {
   estimated_value_naira?: number;
   toxicity_hazards?: string[];
   address_text?: string;
+  /** Pickup coordinates — present when the seller listed with a location. */
+  latitude?: number;
+  longitude?: number;
+  /** Seller's phone, only present when they opted in to sharing it. */
+  contact_phone?: string;
+  contact_shared?: boolean;
   distance_m?: number;
   created_at?: string;
 }
 
 export interface PickupJob extends PickupOffer {
   status: string;
-  contact_phone?: string;
-  latitude?: number;
-  longitude?: number;
   accepted_at?: string;
   // Proof-of-handover state.
   confirm_deadline?: string;
@@ -33,6 +36,12 @@ export interface PickupJob extends PickupOffer {
 /** The collector's accept/regenerate response carries the one-time PIN. */
 export interface AcceptedPickup extends PickupJob {
   handover_pin: string;
+}
+
+/** OpenStreetMap link for a pickup's coordinates, or null when either is unknown. */
+export function mapLink(latitude?: number, longitude?: number): string | null {
+  if (latitude == null || longitude == null) return null;
+  return `https://www.openstreetmap.org/search?query=${latitude},${longitude}`;
 }
 
 export interface HoldStatus {

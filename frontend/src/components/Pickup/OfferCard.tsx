@@ -1,5 +1,5 @@
 import { useTranslation } from "../../hooks/useTranslation";
-import type { PickupOffer } from "../../services/pickups";
+import { mapLink, type PickupOffer } from "../../services/pickups";
 
 interface Props {
   offer: PickupOffer;
@@ -55,8 +55,32 @@ export default function OfferCard({ offer, busy, busyId, distanceLabel, nairaSym
         </div>
       )}
 
-      {offer.address_text && (
-        <p className="truncate text-xs text-slate-500 dark:text-slate-400">{offer.address_text}</p>
+      {(offer.address_text || offer.contact_phone || mapLink(offer.latitude, offer.longitude)) && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+          {offer.address_text && (
+            <span className="inline-flex min-w-0 items-center gap-1 text-slate-500 dark:text-slate-400">
+              <span className="truncate">{offer.address_text}</span>
+            </span>
+          )}
+          {offer.contact_phone && (
+            <a
+              href={`tel:${offer.contact_phone}`}
+              className="inline-flex items-center gap-1 font-semibold text-brand-700 hover:underline dark:text-brand-300"
+            >
+              {offer.contact_phone}
+            </a>
+          )}
+          {mapLink(offer.latitude, offer.longitude) && (
+            <a
+              href={mapLink(offer.latitude, offer.longitude)!}
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-brand-700 hover:underline dark:text-brand-300"
+            >
+              Directions
+            </a>
+          )}
+        </div>
       )}
 
       <button onClick={onAccept} disabled={busy} className="btn-primary w-full">

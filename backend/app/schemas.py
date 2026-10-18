@@ -387,6 +387,13 @@ class MaterialCategoryResponse(BaseModel):
 
 
 class PickupOfferResponse(BaseModel):
+    """An offer dispatched to a nearby collector, before they accept it.
+
+    The pickup location travels with the offer so the nearest collector can see
+    where they would be going, and the seller's phone number is included only
+    when the seller explicitly opted in to sharing it (``contact_shared``).
+    """
+
     pickup_id: str
     listing_id: str
     material_name: str
@@ -395,15 +402,16 @@ class PickupOfferResponse(BaseModel):
     estimated_value_naira: Optional[float] = None
     toxicity_hazards: Optional[Any] = None
     address_text: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     distance_m: Optional[float] = None
+    contact_phone: Optional[str] = None
+    contact_shared: bool = False
     created_at: Optional[datetime] = None
 
 
 class PickupJobResponse(PickupOfferResponse):
     status: str
-    contact_phone: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
     scheduled_at: Optional[datetime] = None
     accepted_at: Optional[datetime] = None
     # Proof-of-handover state surfaced to both parties.
