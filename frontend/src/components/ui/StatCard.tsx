@@ -67,7 +67,7 @@ export function StatCard({
             </span>
           )}
           {(trendLabel ?? hint) && (
-            <span className="truncate text-slate-500 dark:text-slate-400">
+            <span className="min-w-0 leading-snug text-slate-500 dark:text-slate-400">
               {trendLabel ?? hint}
             </span>
           )}

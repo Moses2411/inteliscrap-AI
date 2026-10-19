@@ -12,6 +12,7 @@ export interface ScrapScan {
   synced_at?: string;
   is_synced: boolean;
   is_deleted: boolean;
+  listing_id?: string;
 }
 
 export interface PriceMatrixEntry {

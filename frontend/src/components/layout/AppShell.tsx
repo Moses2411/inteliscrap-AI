@@ -1,11 +1,11 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { motion } from "framer-motion";
 import { CloudOff } from "lucide-react";
 import { useOnlineStatus } from "../../utils/offline";
 import { useApp } from "../../store/appStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import BottomNav from "./BottomNav";
-import Sidebar, { MobileMenuButton } from "./Sidebar";
+import Sidebar from "./Sidebar";
 
 interface Props {
   children: ReactNode;
@@ -15,7 +15,6 @@ export default function AppShell({ children }: Props) {
   const { setOnline } = useApp();
   const { t } = useTranslation();
   const online = useOnlineStatus();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setOnline(online);
@@ -29,14 +28,13 @@ export default function AppShell({ children }: Props) {
       >
         {t("skip_to_content")}
       </a>
-      <MobileMenuButton onClick={() => setMobileMenuOpen(true)} expanded={mobileMenuOpen} />
-      <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
+      <Sidebar />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-16 sm:px-6 md:pb-12 md:pt-4 lg:px-8"
+          className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-4 sm:px-6 md:pb-12 lg:px-8"
         >
           {!online && (
             <div

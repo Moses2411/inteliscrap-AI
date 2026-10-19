@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import {
   Check,
   Factory,
+  Globe,
   HeartHandshake,
   Home,
   Landmark,
@@ -129,68 +130,58 @@ export default function LoginPage() {
       {/* Blurred photo backdrop */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-cover bg-center"
-        style={{ backgroundImage: "linear-gradient(rgba(15,23,42,0.55), rgba(15,23,42,0.75)), url(/baban-bola.jpg)" }}
+        className="absolute inset-0 scale-110 bg-cover bg-center"
+        style={{ backgroundImage: "url(/baban-bola.jpg)", filter: "blur(28px)" }}
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-black/40 backdrop-blur-md" />
+      <div aria-hidden="true" className="absolute inset-0 bg-slate-950/55" />
 
-      <div className="relative flex min-h-screen items-center justify-center p-4 sm:p-6 lg:p-8">
-        <div className="grid w-full max-w-5xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-900/5 sm:max-w-6xl lg:min-h-[calc(100dvh-4rem)] lg:max-w-7xl lg:grid-cols-[2fr_3fr] dark:bg-slate-900 dark:ring-white/10">
-          {/* Brand panel */}
-          <div className="relative hidden w-[46%] overflow-hidden bg-cover bg-center bg-no-repeat p-10 text-white lg:flex lg:flex-col lg:justify-between" style={{ backgroundImage: "linear-gradient(rgba(15,23,42,0.6), rgba(15,23,42,0.8)), url(/baban-bola.jpg)" }}>
-            <div className="absolute -left-24 -top-24 h-80 w-80 rounded-full bg-white/10 blur-2xl" />
-            <div className="absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-gold-400/20 blur-3xl" />
+      <div className="relative flex min-h-screen items-center justify-center p-3 sm:p-6 lg:p-8">
+        <div className="grid w-full max-w-md overflow-hidden rounded-[28px] bg-white shadow-2xl ring-1 ring-slate-900/5 lg:max-w-6xl lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-4 2xl:max-w-7xl dark:bg-slate-900 dark:ring-white/10">
+          {/* Photo panel (desktop only) */}
+          <div
+            aria-hidden="true"
+            className="relative hidden overflow-hidden bg-cover bg-center bg-no-repeat lg:block"
+            style={{ backgroundImage: "url(/baban-bola.jpg)" }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950/10 via-transparent to-slate-950/30" />
 
-            <div className="relative flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15 backdrop-blur">
-                <Recycle className="h-6 w-6" />
-              </div>
-              <div>
-                <p className="text-lg font-extrabold tracking-tight">InteliScrap AI</p>
-                <p className="text-xs font-semibold text-brand-100">Circular economy marketplace</p>
-              </div>
+            <div className="absolute left-[10%] top-[16%] flex items-center gap-2 rounded-full bg-white/85 px-3.5 py-2 text-xs font-semibold text-slate-800 shadow-lg backdrop-blur-sm">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+                <MapPin className="h-3.5 w-3.5" />
+              </span>
+              Zaria Market
             </div>
 
-            <div className="relative space-y-6">
-              <h1 className="max-w-md text-4xl font-extrabold leading-tight tracking-tight">
-                Every kilogram of scrap, fairly valued.
-              </h1>
-              <ul className="space-y-3.5">
-                <li className="flex items-center gap-3 text-sm">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/15"><MapPin className="h-4 w-4" /></span>
-                  Address-based pickup for sellers & collectors
-                </li>
-                <li className="flex items-center gap-3 text-sm">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/15"><Recycle className="h-4 w-4" /></span>
-                  On-device AI identifies materials & hazards — even offline
-                </li>
-                <li className="flex items-center gap-3 text-sm">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/15"><ShieldCheck className="h-4 w-4" /></span>
-                  EPR-auditable manifests for every settled collection
-                </li>
-              </ul>
+            <div className="absolute right-[8%] top-[42%] rounded-2xl bg-white/85 px-4 py-3 text-xs font-semibold text-slate-800 shadow-lg backdrop-blur-sm">
+              <p className="text-base font-extrabold leading-none text-brand-700">94%</p>
+              <p className="mt-1 font-medium text-slate-600">material accuracy</p>
             </div>
 
-            <p className="relative text-xs text-brand-100">Built for informal recycling economies worldwide.</p>
+            <div className="absolute bottom-[12%] left-[16%] flex items-center gap-2 rounded-full bg-white/85 px-3.5 py-2 text-xs font-semibold text-slate-800 shadow-lg backdrop-blur-sm">
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-brand-700">
+                <Globe className="h-3.5 w-3.5" />
+              </span>
+              Nigeria&apos;s major languages
+            </div>
           </div>
 
           {/* Form */}
-          <div className="flex flex-1 items-center justify-center p-6">
-            <div className="w-full max-w-md">
-              <div className="mb-8 flex items-center gap-3 lg:hidden">
-                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white">
+          <div className="flex items-center justify-center px-6 py-8 sm:px-10 lg:px-10 lg:py-12">
+            <div className="w-full max-w-sm">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-md shadow-brand-600/30">
                   <Recycle className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="text-base font-extrabold text-slate-900 dark:text-white">InteliScrap AI</p>
-                  <p className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">Market & Pickup</p>
+                  <p className="text-[15px] font-extrabold tracking-tight text-slate-900 dark:text-white">InteliScrap AI</p>
+                  <p className="text-[11px] font-semibold text-brand-600 dark:text-brand-400">Market &amp; Pickup</p>
                 </div>
               </div>
 
-              <h2 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <h2 className="mt-7 text-[26px] font-extrabold leading-tight tracking-tight text-slate-900 dark:text-white">
                 {step === "role" ? "Welcome back" : step === "otp" ? "Enter the code" : "Register your hub"}
               </h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
                 {step === "role"
                   ? "Choose how you use InteliScrap, then verify your phone — we'll text you a 6-digit code."
                   : step === "otp"
@@ -199,7 +190,7 @@ export default function LoginPage() {
               </p>
 
               {step === "role" ? (
-                <div className="mt-6 space-y-5">
+                <div className="mt-6 space-y-4">
                   <div
                     role="radiogroup"
                     aria-label="Account role"
@@ -227,7 +218,7 @@ export default function LoginPage() {
                           aria-checked={active}
                           onClick={() => setRole(r.role)}
                           className={cn(
-                            "relative flex flex-col items-start gap-1 rounded-2xl border-2 p-3.5 text-left transition-all duration-150 active:scale-[0.98]",
+                            "relative flex flex-col items-start gap-2 rounded-2xl border p-3 text-left transition-all duration-150 active:scale-[0.98]",
                             active
                               ? "border-brand-500 bg-brand-50/70 shadow-glow dark:bg-brand-950/50"
                               : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600",
@@ -241,8 +232,8 @@ export default function LoginPage() {
                           <span className={cn("flex h-9 w-9 items-center justify-center rounded-xl", active ? "bg-brand-500/15 text-brand-600 dark:text-brand-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400")}>
                             {r.icon}
                           </span>
-                          <span className="mt-1 text-[13px] font-bold leading-tight text-slate-800 dark:text-slate-100">{r.label}</span>
-                          <span className="text-[11px] leading-tight text-slate-400">{r.blurb}</span>
+                          <span className="text-[13px] font-bold leading-tight text-slate-800 dark:text-slate-100">{r.label}</span>
+                          <span className="text-[11px] leading-tight text-slate-400 dark:text-slate-500">{r.blurb}</span>
                         </button>
                       );
                     })}
@@ -276,7 +267,7 @@ export default function LoginPage() {
                         onChange={(e) => setAddress(e.target.value)}
                         required
                       />
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                         {role === "collector"
                           ? "Used to match you with nearby pickups when GPS is off — your exact location stays private."
                           : "Required for pickup scheduling. Used to match you with nearby collectors."}
@@ -284,9 +275,7 @@ export default function LoginPage() {
                     </div>
                   )}
 
-                  <div className="ErrorNote" role="alert" style={error ? {} : { display: 'none' }}>
-                    {error && <span>{error}</span>}
-                  </div>
+                  {error && <ErrorNote message={error} />}
 
                   {phone && !validPhone && (
                     <p className="text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
@@ -294,11 +283,18 @@ export default function LoginPage() {
                     </p>
                   )}
 
-                  <Button fullWidth size="lg" className="rounded-full" onClick={sendCode} loading={busy} disabled={!validPhone || (addressRequired && !validAddress)}>
+                  <Button
+                    fullWidth
+                    size="lg"
+                    className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 font-bold text-white shadow-lg shadow-brand-500/25 hover:from-brand-500 hover:to-brand-700 dark:from-brand-500 dark:to-brand-700"
+                    onClick={sendCode}
+                    loading={busy}
+                    disabled={!validPhone || (addressRequired && !validAddress)}
+                  >
                     Send verification code
                   </Button>
 
-                  <p className="text-center text-xs text-slate-400 dark:text-slate-500">
+                  <p className="text-center text-xs leading-relaxed text-slate-400 dark:text-slate-500">
                     New here? Your account is created automatically when you verify — no
                     passwords to forget.
                   </p>
@@ -324,9 +320,9 @@ export default function LoginPage() {
                       inputMode="numeric"
                       maxLength={6}
                       placeholder="123456"
-                      className="input rounded-full border-transparent bg-slate-100 px-5 py-3 text-center text-2xl tracking-widest font-bold dark:border-transparent dark:bg-slate-800"
+                      className="input rounded-full border-transparent bg-slate-100 px-5 py-3 text-center text-2xl font-bold tracking-widest dark:border-transparent dark:bg-slate-800"
                       value={otp}
-                      onChange={(e) => setOtp(e.target.value.replace(/\\D/g, ""))}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
                       autoComplete="one-time-code"
                       autoFocus
                     />
@@ -334,8 +330,15 @@ export default function LoginPage() {
 
                   {error && <ErrorNote message={error} />}
 
-                  <Button fullWidth size="lg" className="rounded-full" onClick={confirmOtp} loading={busy} disabled={otp.length !== 6}>
-                    Verify & continue
+                  <Button
+                    fullWidth
+                    size="lg"
+                    className="rounded-full bg-gradient-to-r from-brand-400 to-brand-600 font-bold text-white shadow-lg shadow-brand-500/25 hover:from-brand-500 hover:to-brand-700 dark:from-brand-500 dark:to-brand-700"
+                    onClick={confirmOtp}
+                    loading={busy}
+                    disabled={otp.length !== 6}
+                  >
+                    Verify &amp; continue
                   </Button>
 
                   <p className="text-center text-xs text-slate-400 dark:text-slate-500">

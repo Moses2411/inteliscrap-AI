@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
-  Banknote,
   HardHat,
   Loader2,
   MapPin,
@@ -11,9 +10,7 @@ import {
   PackageCheck,
   Phone,
   Store,
-  TrendingUp,
   Truck,
-  Wallet,
 } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatCard } from "../../components/ui/StatCard";
@@ -159,8 +156,6 @@ export default function CollectorDashboard() {
           <StatCard
             label="Earnings (30d)"
             value={earnings ? formatCompactNaira(earnings.last_30_days_naira) : "—"}
-            icon={<Wallet className="h-5 w-5" />}
-            iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300"
             hint={earnings ? `${formatCompactNaira(earnings.total_income_naira)} settled all-time` : "Settled handovers"}
           />
         </motion.div>
@@ -169,8 +164,6 @@ export default function CollectorDashboard() {
           <StatCard
             label="Active jobs"
             value={jobs.length}
-            icon={<Truck className="h-5 w-5" />}
-            iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
           />
         </motion.div>
 
@@ -178,8 +171,6 @@ export default function CollectorDashboard() {
           <StatCard
             label="Available offers"
             value={offers.length}
-            icon={<PackageCheck className="h-5 w-5" />}
-            iconClass="bg-brand-50 text-brand-600 dark:bg-brand-950/80 dark:text-brand-300"
           />
         </motion.div>
 
@@ -187,8 +178,6 @@ export default function CollectorDashboard() {
           <StatCard
             label="Jobs value"
             value={formatCompactNairaEstimate(jobsValue)}
-            icon={<Banknote className="h-5 w-5" />}
-            iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
           />
         </motion.div>
 
@@ -196,8 +185,6 @@ export default function CollectorDashboard() {
           <StatCard
             label="Estimated income"
             value={earnings ? formatCompactNaira(earnings.estimated_income_naira) : "—"}
-            icon={<TrendingUp className="h-5 w-5" />}
-            iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300"
             hint={earnings ? `${formatCompactNaira(earnings.in_progress_value_naira)} in progress` : "Settled + in progress"}
           />
         </motion.div>
