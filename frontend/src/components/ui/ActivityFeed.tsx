@@ -21,33 +21,58 @@ const TONES = {
   slate: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300",
 } as const;
 
-export function ActivityFeed({ items, className }: { items: ActivityItem[]; className?: string }) {
+export function ActivityFeed({
+  items,
+  className,
+  onSelect,
+}: {
+  items: ActivityItem[];
+  className?: string;
+  onSelect?: (item: ActivityItem) => void;
+}) {
   return (
     <ul className={cn("space-y-1", className)}>
-      {items.map((item) => (
-        <li key={item.id} className="flex items-start gap-3 rounded-xl p-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50">
-          <span
-            className={cn(
-              "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-              TONES[item.tone],
-            )}
-            aria-hidden="true"
-          >
-            {item.icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold leading-snug text-slate-800 dark:text-slate-100">
-              {item.title}
-            </p>
-            {item.meta && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{item.meta}</p>}
-          </div>
-          {item.time && (
-            <span className="shrink-0 pt-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              {relativeTime(item.time)}
-            </span>
-          )}
-        </li>
-      ))}
+      {items.map((item) => {
+        const Row = onSelect ? "button" : "div";
+        return (
+          <li key={item.id}>
+            <Row
+              {...(onSelect
+                ? {
+                    type: "button" as const,
+                    onClick: () => onSelect(item),
+                    className: cn(
+                      "flex w-full items-start gap-3 rounded-xl p-2 text-left transition-colors hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40 dark:hover:bg-slate-800/50",
+                    ),
+                  }
+                : {
+                    className: "flex items-start gap-3 rounded-xl p-2 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50",
+                  })}
+            >
+              <span
+                className={cn(
+                  "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+                  TONES[item.tone],
+                )}
+                aria-hidden="true"
+              >
+                {item.icon}
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold leading-snug text-slate-800 dark:text-slate-100">
+                  {item.title}
+                </p>
+                {item.meta && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{item.meta}</p>}
+              </div>
+              {item.time && (
+                <span className="shrink-0 pt-0.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                  {relativeTime(item.time)}
+                </span>
+              )}
+            </Row>
+          </li>
+        );
+      })}
     </ul>
   );
 }

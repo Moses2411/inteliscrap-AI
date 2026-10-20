@@ -53,6 +53,7 @@ export function LiveScanner({
   const [error, setError] = useState<string | null>(null);
   const [torchOn, setTorchOn] = useState(false);
   const [torchAvailable, setTorchAvailable] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   // ── Start / stop the stream based on `active` + selected camera ─────────
   useEffect(() => {
@@ -73,9 +74,9 @@ export function LiveScanner({
         }
         streamRef.current = stream;
         setTorchAvailable(cameraTorchSupported(stream));
-      } catch {
+      } catch (err) {
         if (!cancelled) {
-          setError("Camera access was blocked or no camera is available.");
+          setError(err instanceof Error ? err.message : "Camera access was blocked or no camera is available.");
           setTorchAvailable(false);
         }
       }
@@ -93,7 +94,7 @@ export function LiveScanner({
       setTorchAvailable(false);
       setReady(false);
     };
-  }, [active, facing]);
+  }, [active, facing, retryCount]);
 
   // ── Apply torch state to the live track ────────────────────────────────
   useEffect(() => {
@@ -200,7 +201,7 @@ export function LiveScanner({
             <AlertTriangle className="h-8 w-8 text-eco-amber-glow" />
             <p className="text-sm font-semibold text-slate-100">Camera unavailable</p>
             <p className="max-w-xs text-xs text-slate-400">{error}</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               {allowUpload && (
                 <button
                   type="button"
@@ -210,6 +211,13 @@ export function LiveScanner({
                   <ImagePlus className="h-4 w-4" /> Use a photo
                 </button>
               )}
+              <button
+                type="button"
+                onClick={() => setRetryCount((c) => c + 1)}
+                className="tap-target inline-flex h-10 items-center gap-2 rounded-xl bg-eco-emerald px-4 text-xs font-bold text-obsidian-950 hover:bg-eco-emerald-glow"
+              >
+                <Camera className="h-4 w-4" /> Retry
+              </button>
               <button
                 type="button"
                 onClick={() => onActiveChange(false)}

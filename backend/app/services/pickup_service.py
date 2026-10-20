@@ -1,6 +1,7 @@
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -19,17 +20,97 @@ from app.models import (
 from app.services import messaging_service
 from app.services.matching_service import haversine_m
 
-# While a pickup is in any of these states the two parties are "locked": the
-# collector receives no new leads and the seller cannot publish new listings
-# until every open handover is confirmed complete (or resolved by an admin).
-HOLD_STATUSES = (
+# Field-work states occupy one of the collector's concurrent pickup slots.
+# A collector may work several of these at once (see
+# ``settings.collector_max_active_jobs``).
+ACTIVE_JOB_STATUSES = (
     PickupStatus.accepted,
     PickupStatus.en_route,
     PickupStatus.arrived,
     PickupStatus.verified,
+)
+
+# Any unresolved handover holds the seller's new listings. ``pending_confirmation``
+# and ``disputed`` are included here even though they free the collector's slot:
+# the seller cannot publish again until the handover is settled.
+HOLD_STATUSES = ACTIVE_JOB_STATUSES + (
     PickupStatus.pending_confirmation,
     PickupStatus.disputed,
 )
+
+
+class CollectorAtCapacity(ValueError):
+    """Raised when a collector already works the maximum number of jobs."""
+
+    def __init__(self, capacity: "CollectorCapacity"):
+        self.capacity = capacity
+        super().__init__(
+            f"You already have {capacity.active_jobs} active pickups "
+            f"(limit {capacity.max_jobs}). Finish one before accepting another."
+        )
+
+
+@dataclass(frozen=True)
+class CollectorCapacity:
+    active_jobs: int
+    max_jobs: int
+
+    @property
+    def remaining_slots(self) -> int:
+        return max(0, self.max_jobs - self.active_jobs)
+
+    @property
+    def at_capacity(self) -> bool:
+        return self.remaining_slots == 0
+
+
+def max_active_jobs() -> int:
+    return max(1, settings.collector_max_active_jobs)
+
+
+async def count_active_jobs(
+    db: AsyncSession, collector_id: str, *, exclude_pickup_id: str | None = None
+) -> int:
+    stmt = select(func.count(Pickup.id)).where(
+        Pickup.collector_id == collector_id,
+        Pickup.status.in_(ACTIVE_JOB_STATUSES),
+    )
+    if exclude_pickup_id is not None:
+        stmt = stmt.where(Pickup.id != exclude_pickup_id)
+    return int(await db.scalar(stmt) or 0)
+
+
+async def count_open_handovers(db: AsyncSession, collector_id: str) -> int:
+    count = await db.scalar(
+        select(func.count(Pickup.id)).where(
+            Pickup.collector_id == collector_id,
+            Pickup.status.in_(HOLD_STATUSES),
+        )
+    )
+    return int(count or 0)
+
+
+async def collector_capacity(
+    db: AsyncSession,
+    collector_id: str,
+    *,
+    lock: bool = False,
+    exclude_pickup_id: str | None = None,
+) -> CollectorCapacity:
+    """How many concurrent pickup slots the collector is using.
+
+    ``lock=True`` serialises concurrent accepts for the same collector on
+    databases that support row locks (Postgres), so two tabs cannot both take
+    the last slot. SQLite ignores the clause, but writes are serialised anyway.
+    """
+    if lock:
+        await db.execute(
+            select(User.id).where(User.id == collector_id).with_for_update()
+        )
+    active = await count_active_jobs(
+        db, collector_id, exclude_pickup_id=exclude_pickup_id
+    )
+    return CollectorCapacity(active_jobs=active, max_jobs=max_active_jobs())
 
 
 async def get_pending_offers(
@@ -120,9 +201,14 @@ async def escalate_overdue_handovers(db: AsyncSession) -> int:
 
 
 def issue_handover_pin(pickup: Pickup) -> str:
-    """Mint a fresh confirmation PIN and store only its hash."""
+    """Mint a fresh confirmation code for the seller.
+
+    The hash gates verification; the plaintext is cached so the seller can
+    re-read the code on their dashboard and read it out to the collector.
+    """
     pin = security.generate_pin()
     pickup.pin_hash = security.hash_pin(pin)
+    pickup.pin_cache = pin
     pickup.pin_attempts = 0
     pickup.pin_expires_at = datetime.utcnow() + timedelta(
         hours=settings.handover_pin_ttl_hours
@@ -132,6 +218,15 @@ def issue_handover_pin(pickup: Pickup) -> str:
 
 async def accept_pickup(db: AsyncSession, pickup: Pickup, listing: Listing) -> str:
     """Mark the pickup accepted and return the plaintext handover PIN."""
+    capacity = await collector_capacity(
+        db,
+        pickup.collector_id,
+        lock=True,
+        exclude_pickup_id=pickup.id,
+    )
+    if capacity.at_capacity:
+        raise CollectorAtCapacity(capacity)
+
     now = datetime.utcnow()
     pickup.status = PickupStatus.accepted
     pickup.accepted_at = now
@@ -163,6 +258,12 @@ async def claim_listing(
     """
     if listing.status not in (ListingStatus.active, ListingStatus.matched):
         return None
+
+    # Check before creating the pickup row, so an at-capacity collector leaves
+    # no partial claim behind in the session.
+    capacity = await collector_capacity(db, collector.id, lock=True)
+    if capacity.at_capacity:
+        raise CollectorAtCapacity(capacity)
 
     taken = await db.execute(
         select(Pickup.id)
@@ -218,7 +319,7 @@ async def record_handover(
     payment_method: PaymentMethod | None = None,
     hub_id: str | None = None,
 ) -> None:
-    """Collector records what was collected; seller now confirms with the PIN."""
+    """Collector records what was collected; the seller then shares the code."""
     pickup.handover_weight_kg = weight_kg
     pickup.handover_unit_price_naira = unit_price_naira
     pickup.handover_payment_method = (
@@ -230,7 +331,7 @@ async def record_handover(
 
 
 async def confirm_handover(db: AsyncSession, pickup: Pickup, pin: str) -> Transaction:
-    """Seller enters the PIN → settles the pickup (verified two-party record)."""
+    """The collector enters the seller's code → settles the pickup."""
     from app.services import settlement_service  # local import avoids a cycle
 
     now = datetime.utcnow()
@@ -323,6 +424,12 @@ async def enqueue_location_sms(
     listing: Listing,
     pin: str | None = None,
 ) -> None:
+    """On accept: text the collector the job details, text the seller the code.
+
+    The collector gets location + the seller's phone (no code — the seller
+    reads that out at handover). The seller gets the confirmation code to
+    share with the collector.
+    """
     message = (
         f"InteliScrap: {listing.title or 'Kaya'} - "
         f"{listing.address_text or 'A duba wuri da ko'}. "
@@ -330,9 +437,6 @@ async def enqueue_location_sms(
     )
     if listing.contact_phone:
         message += f" Lambar mai sayarwa: {listing.contact_phone}."
-    if pin:
-        # The seller enters this at handover to confirm the transaction.
-        message += f" Lambar tabbatarwa: {pin}."
     try:
         result = await messaging_service.send_sms(collector.phone_number, message)
         recipients = result.get("SMSMessageData", {}).get("Recipients") or []
@@ -347,4 +451,25 @@ async def enqueue_location_sms(
                 status="pending",
             )
         )
+
+    if pin:
+        seller = await db.get(User, listing.seller_id)
+        if seller is not None:
+            seller_message = (
+                f"InteliScrap: An collector ya karbi kayanka. "
+                f"Lambar tabbatarwa: {pin}."
+                f" Karanta wa mai tara lokacin da ya iso."
+            )
+            try:
+                await messaging_service.send_sms(seller.phone_number, seller_message)
+            except Exception:
+                db.add(
+                    SyncOutbox(
+                        aggregate_type="pickup",
+                        aggregate_id=pickup.id,
+                        event_type="sms.handover_pin",
+                        payload={"phone_number": seller.phone_number, "message": seller_message},
+                        status="pending",
+                    )
+                )
     await db.flush()

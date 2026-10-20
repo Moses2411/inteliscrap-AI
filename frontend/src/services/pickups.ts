@@ -37,10 +37,13 @@ export interface PickupJob extends PickupOffer {
   dispute_reason?: string;
   handover_weight_kg?: number;
   awaiting_confirmation?: boolean;
+  /** Seller-only: the code they read to the collector, and who to call. */
+  handover_pin?: string;
+  collector_phone?: string;
 }
 
-/** The collector's accept/regenerate response carries the one-time PIN. */
-export interface AcceptedPickup extends PickupJob {
+/** The seller's re-issue response carries the fresh code. */
+export interface RegeneratedPin extends PickupJob {
   handover_pin: string;
 }
 
@@ -61,8 +64,14 @@ export function isApproxLocation(precision?: string | null): boolean {
 }
 
 export interface HoldStatus {
+  /** True when every concurrent job slot is taken. */
   on_hold: boolean;
+  /** All unresolved handovers, including ones awaiting seller confirmation. */
   open_handovers: number;
+  /** Field jobs currently consuming a slot. */
+  active_jobs?: number;
+  max_concurrent_jobs?: number;
+  remaining_slots?: number;
 }
 
 export interface DisputeItem extends PickupJob {
@@ -81,23 +90,6 @@ export interface ConfirmedTransaction {
 
 async function requireCollector(): Promise<void> {
   if (getRole() !== "collector") throw new Error("Collector access required");
-}
-
-/** Persist the collector's handover PIN so it survives a page reload. */
-export function storeHandoverPin(pickupId: string, pin: string): void {
-  try {
-    localStorage.setItem(`handover_pin_${pickupId}`, pin);
-  } catch {
-    // storage unavailable — the PIN is still shown for the session.
-  }
-}
-
-export function readStoredHandoverPin(pickupId: string): string | null {
-  try {
-    return localStorage.getItem(`handover_pin_${pickupId}`);
-  } catch {
-    return null;
-  }
 }
 
 function messageFromBody(body: unknown): string | null {
@@ -135,7 +127,8 @@ export async function fetchHoldStatus(): Promise<HoldStatus> {
   return res.json();
 }
 
-export async function acceptOffer(pickupId: string): Promise<AcceptedPickup> {
+/** Collector accepts an offer. The code stays with the seller — not returned. */
+export async function acceptOffer(pickupId: string): Promise<PickupJob> {
   await requireCollector();
   const res = await fetch(`${API_BASE}/api/v1/pickups/${pickupId}/accept`, {
     method: "POST",
@@ -145,13 +138,13 @@ export async function acceptOffer(pickupId: string): Promise<AcceptedPickup> {
   return res.json();
 }
 
-export async function regeneratePin(pickupId: string): Promise<AcceptedPickup> {
-  await requireCollector();
+/** Seller re-issues the handover code (invalidates the previous one). */
+export async function regeneratePin(pickupId: string): Promise<RegeneratedPin> {
   const res = await fetch(`${API_BASE}/api/v1/pickups/${pickupId}/pin`, {
     method: "POST",
     headers: authHeaders(),
   });
-  if (!res.ok) await fail(res, "Could not issue a PIN");
+  if (!res.ok) await fail(res, "Could not issue a code");
   return res.json();
 }
 
@@ -176,7 +169,7 @@ export async function fetchActivePickups(): Promise<PickupJob[]> {
   return res.json();
 }
 
-/** Sellers (households): open handovers on their own listings. */
+/** Sellers: their accepted jobs, each carrying the code to read to the collector. */
 export async function fetchAwaitingConfirmation(): Promise<PickupJob[]> {
   const res = await fetch(`${API_BASE}/api/v1/pickups/awaiting-confirmation`, {
     headers: authHeaders(),

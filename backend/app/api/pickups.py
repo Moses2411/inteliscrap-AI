@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.deps import get_current_user, require_role
@@ -49,7 +49,12 @@ def _offer_response(
 
 
 def _job_response(
-    pickup: Pickup, listing: Listing, material: MaterialCategory
+    pickup: Pickup,
+    listing: Listing,
+    material: MaterialCategory,
+    *,
+    include_pin: bool = False,
+    collector_phone: str | None = None,
 ) -> PickupJobResponse:
     return PickupJobResponse(
         pickup_id=pickup.id,
@@ -77,6 +82,9 @@ def _job_response(
         handover_weight_kg=_to_float(pickup.handover_weight_kg),
         awaiting_confirmation=pickup.status
         in (PickupStatus.pending_confirmation, PickupStatus.disputed),
+        # Only the seller sees the code (and the collector's number to call).
+        handover_pin=pickup.pin_cache if include_pin else None,
+        collector_phone=collector_phone if include_pin else None,
     )
 
 
@@ -105,8 +113,9 @@ async def list_offers(
     db: AsyncSession = Depends(get_db),
 ):
     await pickup_service.escalate_overdue_handovers(db)
-    # No new leads while a handover is still unresolved.
-    if await pickup_service.has_open_handover(db, collector_id=collector.id):
+    # No new leads once every concurrent job slot is taken.
+    capacity = await pickup_service.collector_capacity(db, collector.id)
+    if capacity.at_capacity:
         return []
     rows = await pickup_service.get_pending_offers(db, collector)
     return [_offer_response(pickup, listing, material) for pickup, listing, material in rows]
@@ -117,16 +126,17 @@ async def hold_status(
     collector: User = Depends(require_role(UserRole.collector)),
     db: AsyncSession = Depends(get_db),
 ):
-    """Whether the collector is currently barred from new leads."""
+    """How many job slots the collector is using and whether new leads pause."""
     await pickup_service.escalate_overdue_handovers(db)
-    count = await db.scalar(
-        select(func.count(Pickup.id)).where(
-            Pickup.collector_id == collector.id,
-            Pickup.status.in_(pickup_service.HOLD_STATUSES),
-        )
+    capacity = await pickup_service.collector_capacity(db, collector.id)
+    open_handovers = await pickup_service.count_open_handovers(db, collector.id)
+    return HoldStatusResponse(
+        on_hold=capacity.at_capacity,
+        open_handovers=open_handovers,
+        active_jobs=capacity.active_jobs,
+        max_concurrent_jobs=capacity.max_jobs,
+        remaining_slots=capacity.remaining_slots,
     )
-    count = int(count or 0)
-    return HoldStatusResponse(on_hold=count > 0, open_handovers=count)
 
 
 @router.get("/active", response_model=list[PickupJobResponse])
@@ -144,24 +154,54 @@ async def list_awaiting_confirmation(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Open handovers on the caller's own listings — the ones holding them."""
+    """Open handovers on the caller's own listings — the seller's job board.
+
+    Each row carries the confirmation code (``handover_pin``) the seller reads
+    to the collector, plus the collector's phone so they can call them.
+    """
     await pickup_service.escalate_overdue_handovers(db)
     rows = await pickup_service.get_awaiting_confirmation(db, user)
-    return [_job_response(pickup, listing, material) for pickup, listing, material in rows]
+
+    # Jobs accepted before the code was cached (or after a restore from a
+    # pre-migration backup) would show no code — mint one on first read.
+    minted = False
+    for pickup, _, _ in rows:
+        if pickup.pin_cache is None and pickup.status in pickup_service.HOLD_STATUSES:
+            pickup_service.issue_handover_pin(pickup)
+            minted = True
+    if minted:
+        await db.flush()
+
+    collector_ids = {pickup.collector_id for pickup, _, _ in rows if pickup.collector_id}
+    collectors: dict[str, User] = {}
+    if collector_ids:
+        result = await db.execute(select(User).where(User.id.in_(collector_ids)))
+        collectors = {u.id: u for u in result.scalars()}
+
+    return [
+        _job_response(
+            pickup,
+            listing,
+            material,
+            include_pin=True,
+            collector_phone=collectors[pickup.collector_id].phone_number
+            if pickup.collector_id in collectors
+            else None,
+        )
+        for pickup, listing, material in rows
+    ]
 
 
-@router.post("/{pickup_id}/accept", response_model=PickupAcceptResponse)
+@router.post("/{pickup_id}/accept", response_model=PickupJobResponse)
 async def accept_offer(
     pickup_id: str,
     collector: User = Depends(require_role(UserRole.collector)),
     db: AsyncSession = Depends(get_db),
 ):
+    """Collector accepts an offer. The confirmation code goes to the seller,
+    who reads it out at handover — the collector never sees it here.
+    """
     await pickup_service.escalate_overdue_handovers(db)
-    if await pickup_service.has_open_handover(db, collector_id=collector.id):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Finish your open handovers before accepting new leads",
-        )
     pickup, listing, material = await _load(db, pickup_id)
     if pickup.collector_id != collector.id or pickup.status != PickupStatus.offered:
         raise HTTPException(
@@ -169,23 +209,31 @@ async def accept_offer(
             detail="Offer is no longer available",
         )
 
-    pin = await pickup_service.accept_pickup(db, pickup, listing)
+    try:
+        pin = await pickup_service.accept_pickup(db, pickup, listing)
+    except pickup_service.CollectorAtCapacity as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     await pickup_service.enqueue_location_sms(db, collector, pickup, listing, pin)
     await db.flush()
-    base = _job_response(pickup, listing, material)
-    return PickupAcceptResponse(**base.model_dump(), handover_pin=pin)
+    return _job_response(pickup, listing, material)
 
 
 @router.post("/{pickup_id}/pin", response_model=PickupAcceptResponse)
 async def regenerate_pin(
     pickup_id: str,
-    collector: User = Depends(require_role(UserRole.collector)),
+    user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Re-issue the handover PIN (e.g. the collector lost the original SMS)."""
+    """Re-issue the handover code (e.g. the seller lost the original).
+
+    Only the listing's seller (or an admin) may re-issue it; re-issuing
+    invalidates the previous code.
+    """
     pickup, listing, material = await _load(db, pickup_id)
-    if pickup.collector_id != collector.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your pickup")
+    if user.role != UserRole.admin and listing.seller_id != user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your listing")
     if pickup.status not in (
         PickupStatus.accepted,
         PickupStatus.en_route,
@@ -198,10 +246,13 @@ async def regenerate_pin(
             detail="This pickup can no longer be confirmed",
         )
     pin = pickup_service.issue_handover_pin(pickup)
-    await pickup_service.enqueue_location_sms(db, collector, pickup, listing, pin)
+    collector = await db.get(User, pickup.collector_id) if pickup.collector_id else None
+    if collector is not None:
+        await pickup_service.enqueue_location_sms(db, collector, pickup, listing, pin)
     await db.flush()
-    base = _job_response(pickup, listing, material)
-    return PickupAcceptResponse(**base.model_dump(), handover_pin=pin)
+    data = _job_response(pickup, listing, material).model_dump()
+    data["handover_pin"] = pin
+    return PickupAcceptResponse(**data)
 
 
 @router.post("/{pickup_id}/handover", response_model=PickupJobResponse)
@@ -211,7 +262,7 @@ async def record_handover(
     collector: User = Depends(require_role(UserRole.collector)),
     db: AsyncSession = Depends(get_db),
 ):
-    """Collector records the collected weight; the seller then confirms."""
+    """Collector records the collected weight; they then enter the code."""
     pickup, listing, material = await _load(db, pickup_id)
     if pickup.collector_id != collector.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not your pickup")
@@ -246,12 +297,21 @@ async def confirm_handover(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Seller enters the collector's PIN to confirm the handover."""
+    """The collector enters the seller's code to complete the handover.
+
+    The listing's own collector, the seller, or an admin may confirm — the
+    two-party code is what authenticates the handover, not the caller's role.
+    """
     pickup, listing, _material = await _load(db, pickup_id)
-    if user.role != UserRole.admin and listing.seller_id != user.id:
+    is_party = (
+        user.role == UserRole.admin
+        or listing.seller_id == user.id
+        or (pickup.collector_id is not None and pickup.collector_id == user.id)
+    )
+    if not is_party:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the seller can confirm this handover",
+            detail="Only the parties to this handover can confirm it",
         )
     try:
         return await pickup_service.confirm_handover(db, pickup, payload.pin)

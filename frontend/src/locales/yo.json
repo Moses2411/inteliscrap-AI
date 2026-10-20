@@ -84,6 +84,7 @@
   "deleted": "Don dá",
   "synced": "Don túnṣe",
   "pending": "Ń bójú",
+  "listed": "Lọ́jà",
   "pause": "Dúró",
   "continue": "Túnṣe",
   "material": "Ọjà",
@@ -185,5 +186,17 @@
   "skip_to_content": "Fò kọjá si abirọ akọle",
   "confirm_listing": "Confirm Listing",
   "list_scrap": "List Scrap",
-  "listing_confirm_desc": "Review and confirm your listing. The collector will weigh and confirm the final price at pickup."
+  "listing_confirm_desc": "Review and confirm your listing. The collector will weigh and confirm the final price at pickup.",
+  "history_subtitle": "Ìtàn àbẹ̀wò rẹ àti ipò ìsọdọ̀pin wọn",
+  "total_scans": "Lapapọ àbẹ̀wò",
+  "pending_sync": "A dúró Dédépin",
+  "filter": "Yan",
+  "group_by_date": "Aṣepọ pẹ̀lú ọjọ́",
+  "no_scans_yet_desc": "Kọ àwòrán níṣàjú láti bẹ̀rẹ̀",
+  "all": "Gbogbo",
+  "stop": "Dín",
+  "listening": "Ní ìgbọ́…",
+  "audio_report": "Ìjọ̀rọ̀ ohùn",
+  "listen_to_result": "Gbọ́ Èyí",
+  "listen_to_result_hint": "Gbọ́ ohùn nípa ohun àmì, owó àti ìmọ̀ ọ̀rọ̀ àbòyìn."
 }

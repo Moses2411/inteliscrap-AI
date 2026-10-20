@@ -59,6 +59,20 @@ export async function createListing(
   return res.json();
 }
 
+export interface MyListing {
+  id: string;
+  title?: string | null;
+  status: string;
+  created_at?: string;
+}
+
+/** The authenticated seller's own listings — used to detect if a scan is already on the market. */
+export async function fetchMyListings(): Promise<MyListing[]> {
+  const res = await fetch(`${API_BASE}/api/v1/listings/mine`, { headers: authHeaders() });
+  if (!res.ok) throw new Error(`Could not load listings: ${res.statusText}`);
+  return res.json();
+}
+
 /**
  * Collector claims a listing straight from the market board ("Accept offer").
  * The listing becomes `scheduled` and shows up under "My jobs".

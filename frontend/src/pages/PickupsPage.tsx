@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   CheckCircle2,
@@ -10,7 +11,9 @@ import {
   RefreshCw,
   ShieldAlert,
   Sparkles,
+  Truck,
   Weight,
+  X,
 } from "lucide-react";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Card } from "../components/ui/Card";
@@ -27,9 +30,8 @@ import {
   fetchOffers,
   isApproxLocation,
   mapLink,
-  storeHandoverPin,
-  type AcceptedPickup,
   type HoldStatus,
+  type PickupJob,
   type PickupOffer,
 } from "../services/pickups";
 import { shareMyLocation } from "../services/location";
@@ -43,13 +45,25 @@ function distanceLabel(m?: number): string {
 export default function PickupsPage() {
   const { t } = useTranslation();
   const { selected_language } = useApp();
+  const navigate = useNavigate();
   const [offers, setOffers] = useState<PickupOffer[]>([]);
-  const [accepted, setAccepted] = useState<AcceptedPickup | null>(null);
+  const [accepted, setAccepted] = useState<PickupJob | null>(null);
   const [hold, setHold] = useState<HoldStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [locBusy, setLocBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  const loadBoard = useCallback(async () => {
+    try {
+      const [nextOffers, nextHold] = await Promise.all([fetchOffers(), fetchHoldStatus()]);
+      setOffers(nextOffers);
+      setHold(nextHold);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load the pickup board");
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -62,109 +76,48 @@ export default function PickupsPage() {
       setLocBusy(false);
     }
     try {
-      setOffers(await fetchOffers());
-      setHold(await fetchHoldStatus());
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("loading"));
+      await loadBoard();
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [loadBoard]);
 
   useEffect(() => {
     if (!getToken()) return;
-    refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    void refresh();
+    // Keep the board fresh while it is open so freed slots surface offers.
+    const poll = window.setInterval(() => {
+      if (document.visibilityState === "visible") void loadBoard();
+    }, 30_000);
+    const onFocus = () => void loadBoard();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.clearInterval(poll);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [refresh, loadBoard]);
 
   async function onAccept(id: string) {
     setBusyId(id);
     setError(null);
     try {
       const result = await acceptOffer(id);
-      storeHandoverPin(id, result.handover_pin);
       setAccepted(result);
+      // Refresh capacity and the remaining offers without moving the user
+      // away from the board.
+      await loadBoard();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("loading"));
+      setError(err instanceof Error ? err.message : "Accept failed");
     } finally {
       setBusyId(null);
     }
   }
 
   const naira = selected_language === "en" ? "₦" : "N";
-
-  /* ── Accepted confirmation screen ───────────────────────────── */
-  if (accepted) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className="space-y-6"
-      >
-        <div className="flex flex-col items-center gap-4 pt-6 text-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-100 text-emerald-600 dark:bg-emerald-950 dark:text-emerald-300">
-            <CheckCircle2 className="h-8 w-8" />
-          </span>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-              {t("accepted_success")}
-            </h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {accepted.material_name}
-              {accepted.estimated_weight_kg != null && ` · ${accepted.estimated_weight_kg} kg`}
-            </p>
-          </div>
-        </div>
-
-        <Card className="space-y-3">
-          <div className="rounded-2xl bg-gradient-to-br from-brand-600 to-teal-700 p-4 text-center text-white shadow-card">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80">
-              Handover code
-            </p>
-            <p className="mt-1 text-4xl font-black tracking-[0.35em] tabular-nums">
-              {accepted.handover_pin}
-            </p>
-            <p className="mt-2 text-xs text-white/85">
-              Read this to the seller. They enter it to confirm the handover — new
-              leads stay paused until then.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <MapPin className="h-4 w-4 text-brand-500" aria-hidden="true" />
-            {accepted.address_text ?? "Address on request"}
-            {isApproxLocation(accepted.location_precision) && (
-              <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
-                Approximate location
-              </span>
-            )}
-          </div>
-          {accepted.contact_phone && (
-            <a className="btn-primary w-full" href={`tel:${accepted.contact_phone}`}>
-              <Phone className="h-4 w-4" />
-              {t("call")} {accepted.contact_phone}
-            </a>
-          )}
-          {accepted.latitude != null && accepted.longitude != null && (
-            <a
-              className="btn-secondary w-full"
-              href={`https://www.openstreetmap.org/search?query=${accepted.latitude},${accepted.longitude}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Navigation className="h-4 w-4" />
-              {t("directions")}
-            </a>
-          )}
-        </Card>
-
-        <Button variant="ghost" fullWidth onClick={() => setAccepted(null)}>
-          {t("new_pickups")} <ArrowRight className="h-4 w-4" />
-        </Button>
-      </motion.div>
-    );
-  }
+  const activeJobs = hold?.active_jobs ?? hold?.open_handovers ?? 0;
+  const maxJobs = hold?.max_concurrent_jobs ?? 3;
+  const remainingSlots = hold?.remaining_slots ?? Math.max(0, maxJobs - activeJobs);
+  const atCapacity = hold?.on_hold ?? false;
 
   /* ── Offers board ───────────────────────────────────────────── */
   return (
@@ -178,11 +131,81 @@ export default function PickupsPage() {
         title={t("new_pickups")}
         subtitle="Live offers dispatched to your hex ring"
         actions={
-          <Badge tone="brand">
-            <Sparkles className="h-3 w-3" /> {offers.length}
-          </Badge>
+          <div className="flex items-center gap-2">
+            {hold && (
+              <Badge tone={atCapacity ? "amber" : "green"}>
+                <Truck className="h-3 w-3" /> {activeJobs}/{maxJobs} jobs
+              </Badge>
+            )}
+            <Badge tone="brand">
+              <Sparkles className="h-3 w-3" /> {offers.length}
+            </Badge>
+          </div>
         }
       />
+
+      {accepted && (
+        <Card
+          role="status"
+          aria-live="polite"
+          className="border border-emerald-200 bg-emerald-50/70 dark:border-emerald-900 dark:bg-emerald-950/40"
+        >
+          <div className="flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-300">
+              <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-emerald-900 dark:text-emerald-100">
+                {t("accepted_success")}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-emerald-800/80 dark:text-emerald-200/80">
+                {accepted.material_name}
+                {accepted.estimated_weight_kg != null && ` · ${accepted.estimated_weight_kg} kg`}
+                {accepted.address_text ? ` · ${accepted.address_text}` : ""}
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                {accepted.contact_phone && (
+                  <Button variant="secondary" size="sm" href={`tel:${accepted.contact_phone}`}>
+                    <Phone className="h-3.5 w-3.5" /> {t("call")}
+                  </Button>
+                )}
+                {mapLink(accepted.latitude, accepted.longitude) && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    href={mapLink(accepted.latitude, accepted.longitude)!}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Navigation className="h-3.5 w-3.5" /> {t("directions")}
+                  </Button>
+                )}
+                <Button variant="primary" size="sm" onClick={() => navigate("/my-pickups")}>
+                  {t("my_jobs")} <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <p className="mt-2 text-[11px] text-emerald-800/80 dark:text-emerald-200/80">
+                Head to the seller, record the weight under Jobs, then enter the
+                code they give you.
+              </p>
+              {remainingSlots > 0 && (
+                <p className="mt-2 text-[11px] font-semibold text-emerald-700/80 dark:text-emerald-300/80">
+                  {remainingSlots} job slot{remainingSlots === 1 ? "" : "s"} left — you can
+                  accept another offer.
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setAccepted(null)}
+              className="rounded-full p-1.5 text-emerald-700/70 transition-colors hover:bg-emerald-100 hover:text-emerald-900 dark:text-emerald-300/70 dark:hover:bg-emerald-900"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </Card>
+      )}
 
       <motion.button
         onClick={refresh}
@@ -196,20 +219,27 @@ export default function PickupsPage() {
           {locBusy ? t("loc_sharing") : t("refresh_location")}
         </span>
         <span className="rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 shadow-sm group-hover:bg-brand-100 dark:bg-brand-950 dark:text-brand-300">
-          {distanceLabel(offers[0]?.distance_m)}
+          {atCapacity ? "Paused" : distanceLabel(offers[0]?.distance_m)}
         </span>
       </motion.button>
 
-      {hold?.on_hold && (
+      {atCapacity && (
         <div className="flex items-start gap-3 rounded-2xl bg-amber-50 px-4 py-3 ring-1 ring-amber-200 dark:bg-amber-950/60 dark:ring-amber-900">
           <Lock className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300" aria-hidden="true" />
-          <div className="text-amber-800 dark:text-amber-200">
-            <p className="text-sm font-bold">New leads paused</p>
+          <div className="min-w-0 flex-1 text-amber-800 dark:text-amber-200">
+            <p className="text-sm font-bold">All job slots are full</p>
             <p className="text-xs">
-              Confirm your {hold.open_handovers} open handover
-              {hold.open_handovers === 1 ? "" : "s"} with the seller before you
-              receive new offers.
+              You are working {activeJobs} of {maxJobs} pickups. Finish or confirm one
+              to free a slot — new offers pause until then.
             </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-2"
+              onClick={() => navigate("/my-pickups")}
+            >
+              {t("my_jobs")} <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
           </div>
         </div>
       )}
@@ -228,7 +258,7 @@ export default function PickupsPage() {
         </div>
       )}
 
-      {!loading && !error && offers.length === 0 && (
+      {!loading && !error && offers.length === 0 && !atCapacity && (
         <EmptyState
           icon={<Sparkles className="h-6 w-6" />}
           title="No offers right now"

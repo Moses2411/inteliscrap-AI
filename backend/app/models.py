@@ -270,10 +270,13 @@ class Pickup(Base):
     ivr_call_sid = Column(String(64), nullable=True)
     reject_reason = Column(String(255), nullable=True)
     # ── Proof-of-handover (verified data) ──────────────────────────
-    # The collector gets a PIN at accept time and reads it to the seller, who
-    # enters it to confirm the handover. Only the hash is stored. An unresolved
-    # handover holds new leads (collector) and new listings (seller).
+    # A confirmation code is minted at accept time and shown to the SELLER,
+    # who reads it out to the collector; the collector enters it to complete
+    # the handover. The hash gates verification; pin_cache holds the plaintext
+    # so the seller can re-read it on their dashboard. An unresolved handover
+    # holds new leads (collector) and new listings (seller).
     pin_hash = Column(String(128), nullable=True)
+    pin_cache = Column(String(6), nullable=True)
     pin_attempts = Column(Integer, nullable=False, default=0, server_default="0")
     pin_expires_at = Column(DateTime, nullable=True)
     confirm_deadline = Column(DateTime, nullable=True)

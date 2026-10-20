@@ -2,6 +2,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
+from app.core import security
 from app.models import (
     Listing,
     MaterialCategory,
@@ -162,9 +163,30 @@ async def test_ussd_accept_offer(client, test_session):
     assert listing.status.value == "scheduled"
 
     outbox = await test_session.execute(
-        select(SyncOutbox).where(SyncOutbox.aggregate_id == offer.id)
+        select(SyncOutbox).where(
+            SyncOutbox.aggregate_id == offer.id,
+            SyncOutbox.event_type == "sms.location",
+        )
     )
     assert outbox.scalar_one_or_none() is not None
+
+
+@pytest.mark.asyncio
+async def test_ussd_pauses_new_leads_at_capacity(client, test_session, monkeypatch):
+    from app.services import pickup_service
+
+    monkeypatch.setattr(pickup_service.settings, "collector_max_active_jobs", 1)
+    collector, _, offer = await _seed_offer(test_session)
+    token = security.create_access_token(collector.id, UserRole.collector.value)
+    accepted = await client.post(
+        f"/api/v1/pickups/{offer.id}/accept",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert accepted.status_code == 200
+
+    resp = await _ussd(client, "1")
+    assert resp.text.startswith("END")
+    assert "iyakar ayyuka" in resp.text
 
 
 @pytest.mark.asyncio

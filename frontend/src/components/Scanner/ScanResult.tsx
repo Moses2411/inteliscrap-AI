@@ -16,7 +16,7 @@ import { useTranslation, getLocale } from "../../hooks/useTranslation";
 import { useApp } from "../../store/appStore";
 import { Button } from "../ui/Button";
 import { cn } from "../../lib/cn";
-import type { TtsStatus } from "../../hooks/useAudioTTS";
+import type { TtsStatus, TtsProgress } from "../../hooks/useAudioTTS";
 import {
   detectFamily,
   resolveDisambiguation,
@@ -33,8 +33,10 @@ interface Props {
   onDisambiguate?: (slug: string) => void;
   onChooseManually?: () => void;
   ttsStatus?: TtsStatus;
+  ttsProgress?: TtsProgress | null;
   onPause?: () => void;
   onResume?: () => void;
+  onStop?: () => void;
 }
 
 type SafetyKey = keyof typeof import("../../locales/en.json")["safety_instructions"];

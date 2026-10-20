@@ -12,6 +12,9 @@ export interface ScrapScan {
   synced_at?: string;
   is_synced: boolean;
   is_deleted: boolean;
+  listing_id?: string;
+  /** Server listing lifecycle: active, matched, scheduled, completed, … */
+  listing_status?: string;
 }
 
 export interface PriceMatrixEntry {

@@ -1,3 +1,4 @@
+import re
 import uuid
 
 from sqlalchemy import select
@@ -9,9 +10,43 @@ from app.services import location_service
 from app.services.matching_service import latlng_to_h3_cell
 
 
+def phone_variants(phone_number: str) -> list[str]:
+    """Every stored format of the same phone number.
+
+    ``+2348012345678``, ``08012345678``, ``8012345678`` and ``2348012345678``
+    are one number — without this the same person ends up with two accounts
+    and their jobs land on the wrong one.
+    """
+    raw = re.sub(r"[\s\-()]", "", phone_number or "")
+    if not raw:
+        return []
+    variants = {raw}
+    local = None
+    if re.fullmatch(r"\+234\d{10}", raw):
+        local = "0" + raw[4:]
+    elif re.fullmatch(r"234\d{10}", raw):
+        local = "0" + raw[3:]
+    elif re.fullmatch(r"0\d{10}", raw):
+        local = raw
+    elif re.fullmatch(r"\d{10}", raw):
+        local = "0" + raw
+    if local:
+        variants.add(local)
+        variants.add("+234" + local[1:])
+        variants.add(local[1:])
+    return list(variants)
+
+
 async def get_by_phone(db: AsyncSession, phone_number: str) -> User | None:
-    result = await db.execute(select(User).where(User.phone_number == phone_number))
-    return result.scalar_one_or_none()
+    variants = phone_variants(phone_number)
+    if not variants:
+        return None
+    result = await db.execute(
+        select(User)
+        .where(User.phone_number.in_(variants))
+        .order_by(User.created_at.asc())
+    )
+    return result.scalars().first()
 
 
 async def get_by_id(db: AsyncSession, user_id: str) -> User | None:

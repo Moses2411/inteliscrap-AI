@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Camera, LineChart, PiggyBank, Recycle, ScanLine, TrendingUp } from "lucide-react";
+import { ArrowRight, Camera, Recycle, ScanLine } from "lucide-react";
 import { PageHeader, SectionHeader } from "../../components/ui/PageHeader";
 import { StatCard } from "../../components/ui/StatCard";
 import { Card } from "../../components/ui/Card";
@@ -10,8 +10,8 @@ import { PreviewPill } from "../../components/ui/PreviewPill";
 import { Button } from "../../components/ui/Button";
 import { ActivityFeed, type ActivityItem } from "../../components/ui/ActivityFeed";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { HandoverConfirmCard } from "../../components/Pickup/HandoverConfirmCard";
-import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
+import { JobsListCard } from "../../components/Pickup/JobsListCard";
+import { PageMotion, pageItem } from "../../components/ui/PageMotion";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useMarketData } from "../../hooks/useDashboardData";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -61,120 +61,113 @@ export default function HouseholdDashboard() {
           title={`${greeting}, ${displayName} 👋`}
           subtitle="Snap scrap, see the fair price, sell to verified collectors."
           actions={
-            <div className="flex items-center gap-2">
-              {market.isPreview && <PreviewPill />}
-              <Button size="sm" onClick={() => navigate("/scan")}>
-                <Camera className="h-3.5 w-3.5" />
-                Scan scrap
-              </Button>
-            </div>
+            market.isPreview ? (
+              <div className="flex items-center gap-2">
+                <PreviewPill />
+              </div>
+            ) : undefined
           }
         />
       </motion.div>
 
-      {/* KPI row */}
-      <motion.div variants={pageStagger} className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <motion.div variants={pageItem} className="min-w-0">
-          <StatCard
-            label="Scans this device"
-            value={scans.length}
-            icon={<ScanLine className="h-5 w-5" />}
-            hint="Offline-safe, saved locally"
+      {/* Primary CTA hero — first interactive block after the greeting so
+          first-time users spot "Scan & sell" immediately. */}
+      <motion.div variants={pageItem}>
+        <motion.button
+          type="button"
+          onClick={() => navigate("/scan")}
+          aria-label="Scan scrap — start here"
+          initial="rest"
+          animate="rest"
+          whileHover="hover"
+          whileTap="tap"
+          variants={{
+            rest: { y: 0 },
+            hover: { y: -3, transition: { type: "spring", stiffness: 380, damping: 24 } },
+            tap: { scale: 0.985, transition: { duration: 0.12 } },
+          }}
+          className="group relative w-full overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-600 to-teal-800 p-5 text-left shadow-card-lg dark:from-brand-800 dark:via-brand-700 dark:to-teal-950 sm:p-6"
+        >
+          <motion.div
+            aria-hidden="true"
+            variants={{
+              rest: { scale: 1 },
+              hover: { scale: 1.18, transition: { type: "spring", stiffness: 260, damping: 20 } },
+            }}
+            className="absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10 blur-xl"
           />
-        </motion.div>
-        <motion.div variants={pageItem} className="min-w-0">
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+            <div className="min-w-0">
+              <p className="flex items-center gap-2.5 text-base font-extrabold text-white sm:text-lg">
+                <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                  <Camera className="h-4 w-4" />
+                </span>
+                Scan &amp; sell your scrap
+              </p>
+              <p className="mt-1.5 max-w-md text-sm text-emerald-50">
+                Snap a photo — on-device AI names the material, checks the hazards and prices it in Naira, even offline.
+              </p>
+            </div>
+            <motion.span
+              variants={{
+                rest: { x: 0 },
+                hover: { x: 4, transition: { type: "spring", stiffness: 400, damping: 25 } },
+              }}
+              className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-brand-700 shadow-lg sm:w-auto"
+            >
+              <Camera className="h-4 w-4" />
+              Scan scrap
+              <ArrowRight className="h-4 w-4" />
+            </motion.span>
+          </div>
+        </motion.button>
+      </motion.div>
+
+      {/* KPI row — single-level pageItem (same pattern as the sections below);
+          the nested pageStagger wrapper could leave cards stuck at opacity 0,
+          reserving their height as blank space. */}
+      <motion.div variants={pageItem} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="min-w-0">
+          <StatCard label="Scans" value={scans.length} hint="Saved on this device" />
+        </div>
+        <div className="min-w-0">
+          <StatCard label="Scanned value" value={formatNairaEstimate(scannedValue)} hint="At current rates" />
+        </div>
+        <div className="min-w-0">
           <StatCard
-            label="Scanned value"
-            value={formatNairaEstimate(scannedValue)}
-            icon={<PiggyBank className="h-5 w-5" />}
-            iconClass="bg-gold-50 text-gold-600 dark:bg-gold-950/80 dark:text-gold-300"
-            hint="At current rates"
-          />
-        </motion.div>
-        <motion.div variants={pageItem} className="min-w-0">
-          <StatCard
-            label={isCollector ? "Listings on the board" : "My active listings"}
+            label={isCollector ? "Board listings" : "My listings"}
             value={market.loading ? "—" : activeListings}
-            icon={<LineChart className="h-5 w-5" />}
-            iconClass="bg-sky-50 text-sky-600 dark:bg-sky-950/80 dark:text-sky-300"
-            hint={isCollector ? "Open offers to accept" : "On the market board"}
+            hint={isCollector ? "Open to offer on" : "Live on the market"}
           />
-        </motion.div>
-        <motion.div variants={pageItem} className="min-w-0">
+        </div>
+        <div className="min-w-0">
           <StatCard
-            label="Live material rates"
+            label="Live rates"
             value={market.loading ? "—" : topMaterials.length}
-            icon={<TrendingUp className="h-5 w-5" />}
-            iconClass="bg-violet-50 text-violet-600 dark:bg-violet-950/80 dark:text-violet-300"
-            hint="Material prices tracked"
+            hint="Materials tracked"
           />
-        </motion.div>
-        <motion.div variants={pageItem} className="min-w-0">
+        </div>
+        <div className="min-w-0 sm:col-span-2 lg:col-span-1">
           <StatCard
             label="Total income"
             value={earnings ? formatCompactNaira(earnings.estimated_income_naira) : "—"}
-            icon={<PiggyBank className="h-5 w-5" />}
-            iconClass="bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-300"
             hint={
               earnings
                 ? `${formatCompactNaira(earnings.total_income_naira)} settled · ${formatCompactNaira(earnings.in_progress_value_naira)} in progress`
                 : "Settled + in progress"
             }
           />
-        </motion.div>
+        </div>
       </motion.div>
 
       {/* Proof-of-handover: confirmations hold new listings until resolved. */}
       <motion.div variants={pageItem}>
-        <HandoverConfirmCard />
+        <JobsListCard mode="seller" />
       </motion.div>
 
       <motion.div variants={pageItem} className="grid gap-6 lg:grid-cols-5">
-        {/* Left: scan history + focus */}
+        {/* Left: scan history */}
         <div className="flex h-full flex-col gap-4 lg:col-span-3">
-          <motion.button
-            type="button"
-            onClick={() => navigate("/scan")}
-            initial="rest"
-            animate="rest"
-            whileHover="hover"
-            whileTap="tap"
-            variants={{
-              rest: { y: 0 },
-              hover: { y: -3, transition: { type: "spring", stiffness: 380, damping: 24 } },
-              tap: { scale: 0.985, transition: { duration: 0.12 } },
-            }}
-            className="group relative w-full shrink-0 overflow-hidden rounded-2xl bg-gradient-to-br from-brand-700 via-brand-600 to-teal-800 p-5 text-left shadow-card-lg dark:from-brand-800 dark:via-brand-700 dark:to-teal-950"
-          >
-            <motion.div
-              variants={{
-                rest: { scale: 1 },
-                hover: { scale: 1.18, transition: { type: "spring", stiffness: 260, damping: 20 } },
-              }}
-              className="absolute -right-8 -top-8 h-36 w-36 rounded-full bg-white/10 blur-xl"
-            />
-            <div className="relative flex items-center justify-between gap-4">
-              <div>
-                <p className="flex items-center gap-2 text-sm font-bold text-white">
-                  <Camera className="h-4 w-4" />
-                  Know what your scrap is worth
-                </p>
-                <p className="mt-1.5 max-w-sm text-sm text-emerald-50">
-                  On-device AI tells you the material, the hazards and the fair Naira price — even offline.
-                </p>
-                <motion.span
-                  variants={{ rest: { x: 0 }, hover: { x: 5, transition: { type: "spring", stiffness: 400, damping: 25 } } }}
-                  className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3.5 py-1.5 text-xs font-bold text-white backdrop-blur"
-                >
-                  Scan now <ArrowRight className="h-3.5 w-3.5" />
-                </motion.span>
-              </div>
-              <div className="hidden h-16 w-16 items-center justify-center rounded-3xl bg-white/15 text-white backdrop-blur sm:flex">
-                <Recycle className="h-8 w-8" />
-              </div>
-            </div>
-          </motion.button>
-
           <Card pad className="flex flex-1 flex-col">
             <SectionHeader
               title="Recent scans"
@@ -189,7 +182,7 @@ export default function HouseholdDashboard() {
             />
             {activities.length ? (
               <div className="flex-1">
-                <ActivityFeed items={activities} />
+                <ActivityFeed items={activities} onSelect={(item) => navigate(`/history/${item.id}`)} />
               </div>
             ) : (
               <div className="flex flex-1 items-center justify-center">

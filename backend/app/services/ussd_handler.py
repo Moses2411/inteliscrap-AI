@@ -45,7 +45,18 @@ async def _find_collector(db: AsyncSession, phone_number: str) -> User | None:
     return result.scalar_one_or_none()
 
 
+def _capacity_message(capacity: "pickup_service.CollectorCapacity") -> str:
+    return (
+        f"END Ka riga ka cika iyakar ayyuka {capacity.active_jobs}/{capacity.max_jobs}. "
+        "Kammala ɗaya kafin ka karɓi wani."
+    )
+
+
 async def _new_pickups_flow(db: AsyncSession, collector: User, rest: list[str]) -> str:
+    capacity = await pickup_service.collector_capacity(db, collector.id)
+    if capacity.at_capacity:
+        return _capacity_message(capacity)
+
     offers = await pickup_service.get_pending_offers(db, collector)
 
     if not rest:
@@ -77,7 +88,10 @@ async def _new_pickups_flow(db: AsyncSession, collector: User, rest: list[str]) 
         )
 
     if rest[1] == "1":
-        pin = await pickup_service.accept_pickup(db, pickup, listing)
+        try:
+            pin = await pickup_service.accept_pickup(db, pickup, listing)
+        except pickup_service.CollectorAtCapacity as exc:
+            return _capacity_message(exc.capacity)
         await pickup_service.enqueue_location_sms(db, collector, pickup, listing, pin)
         return "END An karba. An aiko maka SMS da cikakken adireshin. Na gode!"
 
