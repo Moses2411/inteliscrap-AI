@@ -219,16 +219,6 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
           </div>
         )}
 
-        <input
-          className="input"
-          type="tel"
-          placeholder={t("your_phone")}
-          aria-label={t("your_phone")}
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          autoComplete="tel"
-          required
-        />
         {error && <div className="text-sm font-semibold text-red-600 dark:text-red-400" role="alert">{error}</div>}
 
         {otpSent && (
@@ -313,19 +303,26 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   }
 
   return (
-    <form onSubmit={submitListing} className="card space-y-3">
-      <div className="flex items-center justify-between">
+    <form onSubmit={submitListing} className="card space-y-3.5">
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{t("confirm_listing")}</h2>
-        <span className="text-xs text-brand-600 dark:text-brand-400">{analysis.material_class}</span>
+        <span className="max-w-[50%] truncate rounded-full bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
+          {analysis.material_class}
+        </span>
       </div>
 
-      <p className="text-sm text-slate-600 dark:text-slate-400">
+      <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
         {t("listing_confirm_desc")}
       </p>
 
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={sharePhone} onChange={(e) => setSharePhone(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand-600" />
-        <span className="text-slate-600 dark:text-slate-300">Share my phone with collector</span>
+      <label className="tap-target flex items-center gap-3 rounded-2xl bg-slate-50 px-3.5 py-3 text-sm dark:bg-slate-900/60">
+        <input
+          type="checkbox"
+          checked={sharePhone}
+          onChange={(e) => setSharePhone(e.target.checked)}
+          className="h-[18px] w-[18px] rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+        />
+        <span className="text-slate-700 dark:text-slate-300">Share my phone with collector</span>
       </label>
 
       {subscriptionError && (
@@ -336,7 +333,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
       {error && <div className="text-sm font-semibold text-red-600 dark:text-red-400" role="alert">{error}</div>}
 
-      <Button fullWidth type="submit" loading={busy}>
+      <Button fullWidth size="lg" type="submit" loading={busy}>
         {t("list_scrap")}
       </Button>
 

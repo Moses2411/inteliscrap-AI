@@ -197,5 +197,17 @@
   "skip_to_content": "Skip to main content",
   "confirm_listing": "Confirm Listing",
   "list_scrap": "List Scrap",
-  "listing_confirm_desc": "Review and confirm your listing. The collector will weigh and confirm the final price at pickup."
+  "listing_confirm_desc": "Review and confirm your listing. The collector will weigh and confirm the final price at pickup.",
+  "history_subtitle": "Your past scans and sync status",
+  "total_scans": "Total scans",
+  "pending_sync": "Pending sync",
+  "filter": "Filter",
+  "group_by_date": "Group by date",
+  "no_scans_yet_desc": "Snap a photo of scrap to get started",
+  "all": "All",
+  "stop": "Stop",
+  "listening": "Listening…",
+  "audio_report": "Audio report",
+  "listen_to_result": "Listen to this result",
+  "listen_to_result_hint": "Hear the material, price and safety tips read aloud."
 }

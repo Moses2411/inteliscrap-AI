@@ -1,12 +1,7 @@
 import { motion } from "framer-motion";
 import { Pause, Play, Square, Volume2 } from "lucide-react";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { TtsStatus } from "../../hooks/useAudioTTS";
-
-type TtsProgress = {
-  fraction?: number | null;
-  [key: string]: unknown;
-};
+import type { TtsStatus, TtsProgress } from "../../hooks/useAudioTTS";
 
 interface Props {
   status: TtsStatus;

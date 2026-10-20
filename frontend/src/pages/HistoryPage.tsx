@@ -256,6 +256,7 @@ export default function HistoryPage() {
           <EmptyState
             icon={<History className="h-6 w-6" />}
             title={t("no_scans_yet")}
+            subtitle={t("no_scans_yet_desc")}
           />
         ) : grouped ? (
           <motion.div variants={pageStagger} className="space-y-6">

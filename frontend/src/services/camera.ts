@@ -4,6 +4,44 @@ export interface CameraConfig {
   height: { ideal: number };
 }
 
+function cameraErrorMessage(err: unknown): string {
+  if (typeof window !== "undefined" && !window.isSecureContext) {
+    return "Camera requires HTTPS (or localhost). Open the app over https:// and try again.";
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return "This browser does not support camera access. Try an up-to-date Chrome, Safari, or Firefox.";
+  }
+  const name = (err as DOMException | undefined)?.name;
+  switch (name) {
+    case "NotAllowedError":
+    case "PermissionDeniedError":
+      return "Camera permission was denied. Allow camera access in your browser settings, then retry.";
+    case "NotFoundError":
+    case "DevicesNotFoundError":
+    return "No camera was found on this device. You can still upload a photo instead.";
+    case "NotReadableError":
+    case "TrackStartError":
+      return "The camera is already in use by another app. Close it and retry.";
+    case "OverconstrainedError":
+    case "ConstraintNotSatisfiedError":
+      return "The selected camera doesn't meet the requirements. Try flipping the camera.";
+    case "SecurityError":
+      return "The browser blocked camera access for security reasons. Use https:// or localhost.";
+    default:
+      return "Camera access was blocked or no camera is available.";
+  }
+}
+
+async function requestStream(constraints: MediaStreamConstraints): Promise<MediaStream> {
+  if (typeof window !== "undefined" && !window.isSecureContext) {
+    throw new DOMException("Insecure context", "SecurityError");
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new DOMException("getUserMedia unsupported", "NotSupportedError");
+  }
+  return navigator.mediaDevices.getUserMedia(constraints);
+}
+
 export async function startCamera(
   videoElement: HTMLVideoElement,
 ): Promise<MediaStream> {
@@ -13,18 +51,23 @@ export async function startCamera(
     { video: true, audio: false },
   ];
 
+  let lastError: unknown;
   for (const constraint of constraints) {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraint);
+      const stream = await requestStream(constraint);
       videoElement.srcObject = stream;
       await videoElement.play();
       return stream;
-    } catch {
+    } catch (err) {
+      lastError = err;
+      // Permission/security errors will fail every fallback — stop early.
+      const name = (err as DOMException | undefined)?.name;
+      if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError" || name === "NotSupportedError") break;
       // try next fallback
     }
   }
 
-  throw new Error("No camera available");
+  throw new Error(cameraErrorMessage(lastError));
 }
 
 export function stopCamera(stream: MediaStream): void {
@@ -47,18 +90,22 @@ export async function startCameraWithFacing(
     { video: true, audio: false },
   ];
 
+  let lastError: unknown;
   for (const constraint of constraints) {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia(constraint);
+      const stream = await requestStream(constraint);
       videoElement.srcObject = stream;
       await videoElement.play();
       return stream;
-    } catch {
+    } catch (err) {
+      lastError = err;
+      const name = (err as DOMException | undefined)?.name;
+      if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError" || name === "NotSupportedError") break;
       // try next fallback
     }
   }
 
-  throw new Error("No camera available");
+  throw new Error(cameraErrorMessage(lastError));
 }
 
 /** Whether the active video track exposes a controllable torch/flashlight. */

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, type ReactNode } from "react";
 import type { VisionAnalysis, Language, PriceMatrixEntry, ScrapScan, User, Theme } from "../types";
 import { AppContext, type AppState } from "./appStore";
-import { authHeaders } from "../services/auth";
+import { authHeaders, getRole, getSavedPhone } from "../services/auth";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -73,6 +73,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     root.classList.toggle("dark", state.theme === "dark");
     localStorage.setItem("theme", state.theme);
   }, [state.theme]);
+
+  // Seed user from localStorage so role-based UI works offline / before /auth/me resolves
+  useEffect(() => {
+    const role = getRole();
+    const phone = getSavedPhone();
+    if (role && phone) {
+      dispatch({
+        type: "SET_USER",
+        payload: {
+          id: "local",
+          phone_number: phone,
+          location_hub: "",
+          role,
+          subscription_plan: "free",
+          subscription_status: "active",
+        },
+      });
+    }
+  }, []);
 
   // Fetch user from server on initialization if token exists
   useEffect(() => {

@@ -37,7 +37,7 @@ export default function AppShell({ children }: Props) {
         <main
           id="main-content"
           tabIndex={-1}
-          className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-4 sm:px-6 md:pb-12 lg:px-8"
+          className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-6 sm:px-6 md:pb-12 md:pt-8 lg:px-8"
         >
           {!online && (
             <div

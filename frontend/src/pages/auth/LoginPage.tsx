@@ -252,9 +252,15 @@ export default function LoginPage() {
                     />
                   </div>
 
-                  {/* Address field for seller and collector */}
-                  {addressRequired && (
-                    <div>
+                  {/* Address for sellers and collectors — kept mounted but collapsed
+                      for other roles so the layout never jumps when switching. */}
+                  <div
+                    className={cn(
+                      "transition-all duration-300 ease-out",
+                      addressRequired ? "grid grid-rows-[1fr] opacity-100" : "grid grid-rows-[0fr] opacity-0",
+                    )}
+                  >
+                    <div className="overflow-hidden">
                       <label className="label" htmlFor="address">
                         {role === "collector" ? "Your area / address" : "Pickup address"}
                       </label>
@@ -265,7 +271,9 @@ export default function LoginPage() {
                         className="input rounded-full border-transparent bg-slate-100 px-5 py-3 dark:border-transparent dark:bg-slate-800"
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        required
+                        required={addressRequired}
+                        aria-hidden={!addressRequired}
+                        tabIndex={addressRequired ? 0 : -1}
                       />
                       <p className="mt-1.5 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                         {role === "collector"
@@ -273,15 +281,18 @@ export default function LoginPage() {
                           : "Required for pickup scheduling. Used to match you with nearby collectors."}
                       </p>
                     </div>
-                  )}
+                  </div>
 
-                  {error && <ErrorNote message={error} />}
+                  {/* Reserved slot for error + phone warning — keeps button position static (CLS) */}
+                  <div className="min-h-[3.5rem] pt-1" aria-live="polite">
+                    {error && <ErrorNote message={error} />}
 
-                  {phone && !validPhone && (
-                    <p className="text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
-                      Enter a valid phone number, e.g. +234 801 234 5678
-                    </p>
-                  )}
+                    {phone && !validPhone && (
+                      <p className="text-center text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                        Enter a valid phone number, e.g. +234 801 234 5678
+                      </p>
+                    )}
+                  </div>
 
                   <Button
                     fullWidth
@@ -328,7 +339,10 @@ export default function LoginPage() {
                     />
                   </div>
 
-                  {error && <ErrorNote message={error} />}
+                  {/* Reserved slot for error — keeps button position static (CLS) */}
+                  <div className="min-h-[3rem]" aria-live="polite">
+                    {error && <ErrorNote message={error} />}
+                  </div>
 
                   <Button
                     fullWidth

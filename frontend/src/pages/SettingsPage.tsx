@@ -43,8 +43,24 @@ const LANG_OPTIONS: { value: Language; label: string }[] = [
   { value: "ig", label: "Igbo" },
 ];
 
-/** Language menu that opens directly beneath its trigger (settings row). */
-function LanguageMenu({ label }: { label: string }) {
+function Row({ icon, title, desc, children }: { icon: ReactNode; title: string; desc?: string; children?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 py-3.5 first:pt-0 last:pb-0">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</p>
+          {desc && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{desc}</p>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function LanguageDropdown({ label }: { label: string }) {
   const { selected_language, setSelectedLanguage } = useApp();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -68,85 +84,68 @@ function LanguageMenu({ label }: { label: string }) {
     };
   }, [open]);
 
-  const current = LANG_OPTIONS.find((l) => l.value === selected_language) ?? LANG_OPTIONS[0];
+  const current = LANG_OPTIONS.find((l) => l.value === selected_language);
 
   return (
     <div ref={wrapRef} className="relative shrink-0">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        aria-haspopup="menu"
+        aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={label}
         className={cn(
-          "inline-flex h-9 max-w-[9.5rem] items-center gap-2 rounded-lg border bg-white pl-3 pr-2.5 text-xs font-bold text-slate-700 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:bg-slate-800 dark:text-slate-200",
-          open
-            ? "border-brand-300 dark:border-brand-700"
-            : "border-slate-200 hover:border-slate-300 dark:border-slate-700 dark:hover:border-slate-600",
+          "flex h-10 min-w-36 items-center justify-between gap-2 rounded-xl border px-3.5 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/30",
+          "border-slate-200 bg-white text-slate-700 hover:border-brand-300 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-brand-700",
+          open && "border-brand-400 ring-2 ring-brand-500/20 dark:border-brand-600",
         )}
       >
-        <span className="truncate">{current.label}</span>
+        <span className="truncate">{current?.label ?? "English"}</span>
         <ChevronDown
-          className={cn("h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200", open && "rotate-180")}
+          className={cn("h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200", open && "rotate-180")}
+          strokeWidth={2.5}
           aria-hidden="true"
         />
       </button>
 
-      {/* Menu opens directly beneath the trigger */}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.97 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
             transition={{ duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-            className="absolute right-0 top-full z-50 mt-1.5 w-52 origin-top-right rounded-xl border border-slate-200 bg-white p-1.5 shadow-2xl dark:border-slate-700 dark:bg-slate-800"
-            role="menu"
+            role="listbox"
             aria-label={label}
+            className="absolute right-0 top-full z-50 mt-2 min-w-44 origin-top-right overflow-hidden rounded-2xl border border-slate-200 bg-white p-1.5 shadow-card-lg dark:border-slate-700 dark:bg-slate-800"
           >
-            {LANG_OPTIONS.map((lang) => (
-              <button
-                key={lang.value}
-                type="button"
-                role="menuitemradio"
-                aria-checked={selected_language === lang.value}
-                onClick={() => {
-                  setSelectedLanguage(lang.value);
-                  setOpen(false);
-                }}
-                className={cn(
-                  "flex h-10 w-full items-center justify-between rounded-lg px-3 text-left text-sm font-medium transition-colors",
-                  selected_language === lang.value
-                    ? "bg-brand-50 font-semibold text-brand-700 dark:bg-brand-950/60 dark:text-brand-300"
-                    : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700",
-                )}
-              >
-                <span>{lang.label}</span>
-                {selected_language === lang.value && (
-                  <Check className="h-4 w-4 text-brand-600 dark:text-brand-400" strokeWidth={2.5} aria-hidden="true" />
-                )}
-              </button>
-            ))}
+            {LANG_OPTIONS.map((l) => {
+              const selected = l.value === selected_language;
+              return (
+                <button
+                  key={l.value}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  onClick={() => {
+                    setSelectedLanguage(l.value);
+                    setOpen(false);
+                  }}
+                  className={cn(
+                    "flex h-11 w-full items-center justify-between gap-3 rounded-xl px-3 text-sm font-semibold transition-colors",
+                    selected
+                      ? "bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300"
+                      : "text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-700",
+                  )}
+                >
+                  <span className="truncate">{l.label}</span>
+                  {selected && <Check className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" strokeWidth={2.5} aria-hidden="true" />}
+                </button>
+              );
+            })}
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-function Row({ icon, title, desc, children }: { icon: ReactNode; title: string; desc?: string; children?: ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-300">
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</p>
-          {desc && <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">{desc}</p>}
-        </div>
-      </div>
-      {children}
     </div>
   );
 }
@@ -272,7 +271,7 @@ export default function SettingsPage() {
             </Row>
 
             <Row icon={<Languages className="h-4 w-4" />} title={t("language")} desc="Interface, hazards & voice">
-              <LanguageMenu label={t("language")} />
+              <LanguageDropdown label={t("language")} />
             </Row>
 
             <div className="py-3.5">
