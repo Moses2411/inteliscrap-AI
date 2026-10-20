@@ -13,7 +13,7 @@ def generate_otp() -> str:
 
 
 def generate_pin() -> str:
-    """A 6-digit numeric handover code (collector shows it, seller enters it)."""
+    """A 6-digit numeric handover code (seller reads it, collector enters it)."""
     return f"{secrets.randbelow(1_000_000):06d}"
 
 

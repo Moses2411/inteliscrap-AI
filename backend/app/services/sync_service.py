@@ -22,7 +22,11 @@ async def process_scans(db: AsyncSession, user_id: str, scans: list[ScrapScanCre
         existing = result.scalar_one_or_none()
 
         if existing:
-            if _resolve_conflict(existing, client_scan):
+            # Deletions always win over the timestamp-based conflict rule:
+            # a scan captured earlier can still be deleted after it synced.
+            if client_scan.is_deleted and not existing.is_deleted:
+                existing.is_deleted = True
+            elif _resolve_conflict(existing, client_scan):
                 existing.material_class = client_scan.material_class
                 existing.sub_grade = client_scan.sub_grade
                 existing.weight_est_kg = client_scan.weight_est_kg

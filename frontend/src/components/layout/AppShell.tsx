@@ -4,6 +4,7 @@ import { CloudOff } from "lucide-react";
 import { useOnlineStatus } from "../../utils/offline";
 import { useApp } from "../../store/appStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useAutoSync } from "../../hooks/useSync";
 import BottomNav from "./BottomNav";
 import Sidebar from "./Sidebar";
 
@@ -15,6 +16,8 @@ export default function AppShell({ children }: Props) {
   const { setOnline } = useApp();
   const { t } = useTranslation();
   const online = useOnlineStatus();
+
+  useAutoSync();
 
   useEffect(() => {
     setOnline(online);

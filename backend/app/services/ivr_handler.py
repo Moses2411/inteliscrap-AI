@@ -88,6 +88,15 @@ async def handle_voice(db: AsyncSession, params: dict) -> dict:
 
     if step == "menu":
         if dtmf == "1":
+            capacity = await pickup_service.collector_capacity(db, collector.id)
+            if capacity.at_capacity:
+                return {
+                    **_say(
+                        f"Ka riga ka cika iyakar ayyuka {capacity.active_jobs}. "
+                        "Kammala daya kafin ka karbi wani."
+                    ),
+                    "Reject": {},
+                }
             offers = await pickup_service.get_pending_offers(db, collector)
             if not offers:
                 return {**_say("Babu sabbin kaya a yanzu."), "Reject": {}}
@@ -131,7 +140,16 @@ async def handle_voice(db: AsyncSession, params: dict) -> dict:
         pickup_id, listing_id = offers[index - 1]
         pickup = await db.get(Pickup, pickup_id)
         listing = await db.get(Listing, listing_id)
-        pin = await pickup_service.accept_pickup(db, pickup, listing)
+        try:
+            pin = await pickup_service.accept_pickup(db, pickup, listing)
+        except pickup_service.CollectorAtCapacity as exc:
+            return {
+                **_say(
+                    f"Ka riga ka cika iyakar ayyuka {exc.capacity.active_jobs}. "
+                    "Kammala daya kafin ka karbi wani."
+                ),
+                "Reject": {},
+            }
         await pickup_service.enqueue_location_sms(db, collector, pickup, listing, pin)
         return {**_say("An karba. An aiko maka SMS da cikakken adireshin. Na gode!"), "Reject": {}}
 

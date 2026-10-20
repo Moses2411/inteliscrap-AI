@@ -87,15 +87,14 @@ export default function ScanDetailPage() {
   }, [id]);
 
   // Already-listed detection: trust the local link first (scan.listing_id, saved
-  // after we create a listing), then fall back to matching the seller's own
-  // listings by the title createListing used for this scan.
+  // after we create a listing), then refresh its live status from the server so
+  // completed jobs stay marked as listed instead of reverting to "not listed".
   useEffect(() => {
     if (!scan) return;
     let cancelled = false;
     (async () => {
       if (scan.listing_id) {
-        setListedStatus("active");
-        return;
+        setListedStatus(scan.listing_status ?? "active");
       }
       try {
         const mine = await fetchMyListings();
@@ -104,15 +103,19 @@ export default function ScanDetailPage() {
           scan.sub_grade ? `${scan.material_class} — ${scan.sub_grade}` : scan.material_class,
           scan.material_class,
         ];
-        const match = mine.find(
-          (l) => l.title && expectedTitles.includes(l.title) && l.status !== "cancelled",
-        );
-        if (match) {
+        const match = scan.listing_id
+          ? mine.find((l) => l.id === scan.listing_id)
+          : mine.find(
+              (l) => l.title && expectedTitles.includes(l.title) && l.status !== "cancelled",
+            );
+        if (match && match.status !== "cancelled") {
           setListedStatus(match.status);
-          await markScanListed(scan.id, match.id);
+          if (scan.listing_id !== match.id || scan.listing_status !== match.status) {
+            await markScanListed(scan.id, match.id, match.status);
+          }
         }
       } catch {
-        // offline or listings unavailable — leave the "list" CTA available
+        // offline or listings unavailable — keep the locally cached link
       }
     })();
     return () => {
@@ -192,7 +195,7 @@ export default function ScanDetailPage() {
         auto_dispatch: latitude != null,
       });
 
-      await markScanListed(scan.id, created.id);
+      await markScanListed(scan.id, created.id, created.status);
       setListedStatus(created.status ?? "active");
       setListing("success");
     } catch (err) {
@@ -370,10 +373,16 @@ export default function ScanDetailPage() {
                 <CheckCircle2 className="h-7 w-7 text-brand-600 dark:text-brand-400" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-                Already on the market
+                Already listed
               </h3>
               <p className="max-w-sm text-sm text-slate-500 dark:text-slate-400">
-                This scrap is {listedStatus === "matched" || listedStatus === "scheduled" ? "with a collector" : "listed"} — nearby collectors can see it. A collector weighs and confirms the final price at pickup.
+                {listedStatus === "completed"
+                  ? "This sale is complete — the scan stays marked as listed in your history."
+                  : `This scrap is ${
+                      listedStatus === "matched" || listedStatus === "scheduled"
+                        ? "with a collector"
+                        : "listed"
+                    } — nearby collectors can see it. A collector weighs and confirms the final price at pickup.`}
               </p>
               <Button variant="secondary" onClick={() => navigate("/market")}>
                 <Store className="h-4 w-4" /> View market

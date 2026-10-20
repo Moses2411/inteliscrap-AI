@@ -128,7 +128,7 @@ class HandoverRequest(BaseModel):
 
 
 class HandoverConfirmRequest(BaseModel):
-    """The seller enters the 6-digit PIN the collector read out."""
+    """The collector enters the 6-digit code the seller read out."""
 
     pin: str = Field(min_length=4, max_length=8)
 
@@ -426,17 +426,29 @@ class PickupJobResponse(PickupOfferResponse):
     dispute_reason: Optional[str] = None
     handover_weight_kg: Optional[float] = None
     awaiting_confirmation: bool = False
+    # Populated for the SELLER only: the code they read out to the collector,
+    # and the collector's phone so they can call them to do so.
+    handover_pin: Optional[str] = None
+    collector_phone: Optional[str] = None
 
 
 class PickupAcceptResponse(PickupJobResponse):
-    """Accept response carries the one-time PIN for the collector."""
+    """Accept response — the code now belongs to the seller side."""
 
     handover_pin: str
 
 
 class HoldStatusResponse(BaseModel):
+    """Collector workload, used to show capacity and pause new-lead banners."""
+
+    # True when every concurrent job slot is taken (new offers pause).
     on_hold: bool
+    # All unresolved handovers, including ones awaiting seller confirmation.
     open_handovers: int = 0
+    # Field jobs currently consuming a slot.
+    active_jobs: int = 0
+    max_concurrent_jobs: int = 0
+    remaining_slots: int = 0
 
 
 class DisputeItemResponse(PickupJobResponse):

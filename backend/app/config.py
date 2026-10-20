@@ -43,9 +43,15 @@ class Settings(BaseSettings):
     price_stale_hours: int = 72
     enable_realtime_prices: bool = False
 
+    # How many field jobs a collector can work at once. Accepting a pickup
+    # claims a slot until the handover is recorded (pending seller
+    # confirmation no longer counts), so a reliable collector can keep
+    # earning while earlier jobs settle.
+    collector_max_active_jobs: int = 3
+
     # Proof-of-handover
     # A collector confirms delivery with a 6-digit PIN the seller enters. New
-    # leads/listings are held while a handover is unresolved; if it is not
+    # listings are held while a handover is unresolved; if it is not
     # confirmed within the window it is escalated to "disputed" for an admin.
     handover_pin_ttl_hours: int = 168
     handover_confirm_window_hours: int = 4

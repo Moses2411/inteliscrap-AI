@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { History, RefreshCw, Trash2, AlertTriangle, ChevronRight } from "lucide-react";
@@ -10,7 +10,13 @@ import { Button } from "../components/ui/Button";
 import { EmptyState } from "../components/ui/EmptyState";
 import { Skeleton } from "../components/ui/Skeleton";
 import { PageMotion, pageItem, pageStagger } from "../components/ui/PageMotion";
-import { getLocalScans, softDeleteScan } from "../services/db";
+import {
+  getLocalScans,
+  softDeleteScan,
+  updateScanListings,
+  SCANS_CHANGED_EVENT,
+} from "../services/db";
+import { fetchMyListings } from "../services/listings";
 import { formatConfidence, formatDateTime, formatNairaEstimate } from "../utils/formatters";
 import type { ScrapScan } from "../types";
 import { useSync } from "../hooks/useSync";
@@ -33,47 +39,89 @@ function accentFor(label: string): string {
   return ACCENTS[hash % ACCENTS.length];
 }
 
-export default function HistoryPage() {
-  const { user } = useApp();
-  const role = user?.role ?? getRole();
-  const navigate = useNavigate();
-  
-  // Only sellers can access history
-  if (role !== "seller") {
+function ScanStateBadge({ scan, t }: { scan: ScrapScan; t: (key: string) => string }) {
+  if (scan.is_deleted) return <Badge tone="slate">{t("deleted")}</Badge>;
+  if (scan.listing_id || scan.listing_status) {
+    // A scan stays "Listed" after its job completes — completed sales are still
+    // listings, not drafts.
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="text-center p-8">
-          <div className="mx-auto h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center mb-4">
-            <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Access Restricted</h2>
-          <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
-            History is only available for Sellers.
-          </p>
-        </div>
-      </div>
+      <Badge tone={scan.listing_status === "completed" ? "green" : "brand"}>
+        {t("listed")}
+      </Badge>
     );
   }
+  return scan.is_synced ? (
+    <Badge tone="green">{t("synced")}</Badge>
+  ) : (
+    <Badge tone="amber">{t("pending")}</Badge>
+  );
+}
 
+export default function HistoryPage() {
+  const { user, is_online } = useApp();
+  const role = user?.role ?? getRole();
+  const navigate = useNavigate();
   const { t } = useTranslation();
-  const { triggerSync } = useSync();
+  const { triggerSync, syncing } = useSync();
   const [scans, setScans] = useState<ScrapScan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<"all" | "synced" | "pending" | "deleted">("all");
+  const [filter, setFilter] = useState<"all" | "listed" | "synced" | "pending" | "deleted">("all");
   const [grouped, setGrouped] = useState(false);
 
-  useEffect(() => {
-    async function load() {
-      const data = await getLocalScans();
-      setScans(data);
-      setLoading(false);
-    }
-    load();
+  const loadScans = useCallback(async () => {
+    const data = await getLocalScans(true);
+    setScans(data);
+    setLoading(false);
   }, []);
+
+  useEffect(() => {
+    void loadScans();
+    const reload = () => void loadScans();
+    window.addEventListener(SCANS_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(SCANS_CHANGED_EVENT, reload);
+  }, [loadScans]);
+
+  // Reconcile local scans with the seller's server-side listings. This keeps a
+  // scan marked as listed after a collector completes the job, even if the app
+  // was closed while the listing moved from active → scheduled → completed.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const listings = await fetchMyListings();
+        if (cancelled) return;
+        const byId = new Map(listings.map((listing) => [listing.id, listing]));
+        const local = await getLocalScans(true);
+        const updates: Array<{ id: string; listing_id: string; listing_status: string }> = [];
+
+        for (const scan of local) {
+          if (scan.is_deleted || !scan.listing_id) continue;
+          const match = byId.get(scan.listing_id);
+          if (!match || match.status === "cancelled") continue;
+          if (scan.listing_status !== match.status) {
+            updates.push({
+              id: scan.id,
+              listing_id: match.id,
+              listing_status: match.status,
+            });
+          }
+        }
+
+        if (!cancelled) await updateScanListings(updates);
+      } catch {
+        // Offline or signed out — the locally stored listing link still shows.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   const filtered = scans
     .filter((s) => {
-      if (filter === "all") return true;
+      if (filter === "all") return !s.is_deleted;
+      if (filter === "listed") return Boolean(s.listing_id || s.listing_status) && !s.is_deleted;
       if (filter === "synced") return s.is_synced && !s.is_deleted;
       if (filter === "pending") return !s.is_synced && !s.is_deleted;
       if (filter === "deleted") return s.is_deleted;
@@ -97,7 +145,7 @@ export default function HistoryPage() {
 
   const stats = useMemo(
     () => ({
-      total: scans.length,
+      total: scans.filter((s) => !s.is_deleted).length,
       synced: scans.filter((s) => s.is_synced && !s.is_deleted).length,
       pending: scans.filter((s) => !s.is_synced && !s.is_deleted).length,
       deleted: scans.filter((s) => s.is_deleted).length,
@@ -110,14 +158,29 @@ export default function HistoryPage() {
 
   async function handleSync() {
     await triggerSync();
-    const data = await getLocalScans();
-    setScans(data);
+    await loadScans();
   }
 
   async function handleDelete(id: string) {
     await softDeleteScan(id);
-    const data = await getLocalScans();
-    setScans(data);
+    await loadScans();
+  }
+
+  // Only sellers can access history.
+  if (role !== "seller") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="text-center p-8">
+          <div className="mx-auto h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center mb-4">
+            <AlertTriangle className="h-8 w-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Access Restricted</h2>
+          <p className="text-slate-600 dark:text-slate-400 max-w-md mx-auto">
+            History is only available for Sellers.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -127,7 +190,14 @@ export default function HistoryPage() {
           title={t("history")}
           subtitle={t("history_subtitle")}
           actions={
-            <Button variant="secondary" size="sm" onClick={handleSync} loading={loading}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleSync}
+              loading={syncing}
+              disabled={!is_online}
+              title={!is_online ? t("offline_banner") : undefined}
+            >
               <RefreshCw className="h-3.5 w-3.5" /> Sync
             </Button>
           }
@@ -150,7 +220,7 @@ export default function HistoryPage() {
         <div className="flex flex-wrap items-center gap-2">
           <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">{t("filter")}:</label>
           <div className="flex gap-1.5 bg-slate-100 rounded-xl p-1 dark:bg-slate-800">
-            {(["all", "synced", "pending", "deleted"] as const).map((f) => (
+            {(["all", "listed", "synced", "pending", "deleted"] as const).map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
@@ -186,7 +256,6 @@ export default function HistoryPage() {
           <EmptyState
             icon={<History className="h-6 w-6" />}
             title={t("no_scans_yet")}
-            subtitle={t("no_scans_yet_desc")}
           />
         ) : grouped ? (
           <motion.div variants={pageStagger} className="space-y-6">
@@ -230,21 +299,7 @@ export default function HistoryPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <Badge
-                          tone={
-                            scan.is_deleted
-                              ? "slate"
-                              : scan.is_synced
-                              ? "green"
-                              : "amber"
-                          }
-                        >
-                          {scan.is_deleted
-                            ? t("deleted")
-                            : scan.is_synced
-                            ? t("synced")
-                            : t("pending")}
-                        </Badge>
+                        <ScanStateBadge scan={scan} t={t} />
                         {!scan.is_deleted && (
                           <Button
                             variant="ghost"
@@ -304,21 +359,7 @@ export default function HistoryPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <Badge
-                      tone={
-                        scan.is_deleted
-                          ? "slate"
-                          : scan.is_synced
-                          ? "green"
-                          : "amber"
-                      }
-                    >
-                      {scan.is_deleted
-                        ? t("deleted")
-                        : scan.is_synced
-                        ? t("synced")
-                        : t("pending")}
-                    </Badge>
+                    <ScanStateBadge scan={scan} t={t} />
                     {!scan.is_deleted && (
                       <Button
                         variant="ghost"

@@ -95,6 +95,7 @@
   "deleted": "Deleted",
   "synced": "Synced",
   "pending": "Pending",
+  "listed": "Listed",
   "history_subtitle": "Your scans on this device — tap one for details",
   "total_scans": "Total scans",
   "pending_sync": "Pending sync",

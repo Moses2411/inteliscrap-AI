@@ -2,15 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowRight,
-  HardHat,
   Loader2,
   MapPin,
   Navigation,
   PackageCheck,
   Phone,
   Store,
-  Truck,
 } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { StatCard } from "../../components/ui/StatCard";
@@ -21,13 +18,13 @@ import { Button } from "../../components/ui/Button";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { EmptyState } from "../../components/ui/EmptyState";
 import { PageMotion, pageItem, pageStagger } from "../../components/ui/PageMotion";
+import { JobsListCard } from "../../components/Pickup/JobsListCard";
 import { fetchActivePickups, fetchOffers, isApproxLocation, mapLink, type PickupJob, type PickupOffer } from "../../services/pickups";
 import { fetchMyEarnings, type MyEarnings } from "../../services/earnings";
 import { shareMyLocation, getCurrentPosition } from "../../services/location";
 import { DEMO_JOBS, DEMO_OFFERS, previewEnabled } from "../../lib/demoData";
 import { formatCompactNaira, formatCompactNairaEstimate, formatPhoneDisplay } from "../../utils/formatters";
 import { getSavedPhone } from "../../services/auth";
-import { cn } from "../../lib/cn";
 import { initCollectorNotifications, notifyNewOffer, registerOffersSync } from "../../services/notifications";
 
 function distanceLabel(m?: number): string {
@@ -293,72 +290,9 @@ export default function CollectorDashboard() {
         </Card>
       </motion.div>
 
-      {/* Active pickups */}
+      {/* Active jobs — record weight and confirm handover in place. */}
       <motion.div variants={pageItem}>
-        <Card pad>
-          <h2 className="mb-3 text-sm font-bold text-slate-900 dark:text-white">Active pickups</h2>
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-16 w-full" />
-              <Skeleton className="h-16 w-full" />
-            </div>
-          ) : jobs.length > 0 ? (
-            <div className="space-y-3">
-              {jobs.map((job) => (
-                <Card key={job.pickup_id} hover>
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-center gap-3">
-                      <span className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl",
-                        job.status === "en_route" && "bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-300",
-                        job.status === "arrived" && "bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-300",
-                        job.status === "verified" && "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-300",
-                        job.status === "completed" && "bg-brand-100 text-brand-600 dark:bg-brand-900/50 dark:text-brand-300",
-                      )}>
-                        {job.status === "en_route" && <Truck className="h-5 w-5" />}
-                        {job.status === "arrived" && <MapPin className="h-5 w-5" />}
-                        {job.status === "verified" && <PackageCheck className="h-5 w-5" />}
-                        {job.status === "completed" && <HardHat className="h-5 w-5" />}
-                      </span>
-                      <div>
-                        <p className="font-semibold text-slate-900 dark:text-white">{job.material_name}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {job.address_text ?? "Address not specified"} •
-                          {job.estimated_weight_kg ? `${job.estimated_weight_kg} kg` : ""}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        tone={
-                          job.status === "en_route" ? "sky" :
-                          job.status === "arrived" ? "amber" :
-                          job.status === "verified" ? "green" :
-                          job.status === "completed" ? "brand" : "slate"
-                        }
-                      >
-                        {job.status.replace("_", " ")}
-                      </Badge>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() => navigate(`/pickups/${job.pickup_id}`)}
-                      >
-                        <ArrowRight className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon={<Truck className="h-6 w-6" />}
-              title="No active pickups"
-              subtitle="Accept an offer to start a pickup job."
-            />
-          )}
-        </Card>
+        <JobsListCard mode="collector" />
       </motion.div>
 
       {/* Earnings chart (preview only) */}

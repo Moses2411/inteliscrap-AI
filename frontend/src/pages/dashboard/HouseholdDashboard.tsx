@@ -10,7 +10,7 @@ import { PreviewPill } from "../../components/ui/PreviewPill";
 import { Button } from "../../components/ui/Button";
 import { ActivityFeed, type ActivityItem } from "../../components/ui/ActivityFeed";
 import { EmptyState } from "../../components/ui/EmptyState";
-import { HandoverConfirmCard } from "../../components/Pickup/HandoverConfirmCard";
+import { JobsListCard } from "../../components/Pickup/JobsListCard";
 import { PageMotion, pageItem } from "../../components/ui/PageMotion";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { useMarketData } from "../../hooks/useDashboardData";
@@ -162,7 +162,7 @@ export default function HouseholdDashboard() {
 
       {/* Proof-of-handover: confirmations hold new listings until resolved. */}
       <motion.div variants={pageItem}>
-        <HandoverConfirmCard />
+        <JobsListCard mode="seller" />
       </motion.div>
 
       <motion.div variants={pageItem} className="grid gap-6 lg:grid-cols-5">

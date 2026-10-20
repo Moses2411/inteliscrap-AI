@@ -1,5 +1,5 @@
 import type { SyncResponse } from "../types";
-import { cachePrices, getUnsyncedScans, markScanAsSynced } from "./db";
+import { cachePrices, getUnsyncedScans, markScansAsSynced } from "./db";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
@@ -37,9 +37,7 @@ export async function syncScans(userId: string): Promise<SyncResponse | null> {
 
   const result: SyncResponse = await response.json();
 
-  for (const id of result.synced_ids) {
-    await markScanAsSynced(id);
-  }
+  await markScansAsSynced(result.synced_ids);
 
   if (result.latest_prices.length > 0) {
     await cachePrices(result.latest_prices);

@@ -619,7 +619,7 @@ approximate locations (`LOCATION_FALLBACK_RADIUS_MULTIPLIER`, default `1.5×`) a
 ranks exact GPS matches ahead of approximate ones. Offers expose
 `location_precision` so the UI labels area-level pickups **Approximate location**.
 
-**Guarantees:** a listing is only `offered` to collectors; as soon as one accepts (via **USSD** or **IVR**), the pickup becomes `accepted`, the listing moves to `scheduled`, and all other pending `offered` pickups are no longer surfaced — the listing is unavailable to every other picker.
+**Guarantees:** a listing is only `offered` to collectors; as soon as one accepts (via **USSD** or **IVR**), the pickup becomes `accepted`, the listing moves to `scheduled`, and all other pending `offered` pickups are no longer surfaced — the listing is unavailable to every other picker. Collectors can work up to `COLLECTOR_MAX_ACTIVE_JOBS` pickups at once (default `3`); once every slot is taken, new offers pause until one handover is recorded (pending seller confirmation frees the collector's slot, but the seller still cannot list again until it settles).
 
 ### `POST /api/v1/analyze`
 

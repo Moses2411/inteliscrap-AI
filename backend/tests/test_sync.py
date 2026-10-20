@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import pytest
 from httpx import AsyncClient
 
+from app.models import ScrapScan
+
 
 @pytest.mark.asyncio
 async def test_sync_empty_scans(client: AsyncClient):
@@ -148,3 +150,36 @@ async def test_sync_marks_deleted(client: AsyncClient):
     response = await client.post("/api/v1/sync", json=payload)
     assert response.status_code == 200
     assert "scan-del" in response.json()["synced_ids"]
+
+
+@pytest.mark.asyncio
+async def test_sync_delete_after_upload_always_wins(client: AsyncClient, test_session):
+    """Deleting a scan after it synced must propagate even if captured_at is unchanged."""
+    payload = {
+        "user_id": "test-user-5",
+        "local_scans": [
+            {
+                "id": "scan-delete-later",
+                "material_class": "Copper",
+                "sub_grade": None,
+                "weight_est_kg": 1.0,
+                "estimated_naira_value": 900.0,
+                "confidence_score": 0.80,
+                "toxicity_hazards": None,
+                "safety_instructions": None,
+                "captured_at": "2026-07-17T12:00:00Z",
+                "is_deleted": False,
+            }
+        ],
+    }
+    r1 = await client.post("/api/v1/sync", json=payload)
+    assert r1.status_code == 200
+
+    payload["local_scans"][0]["is_deleted"] = True
+    r2 = await client.post("/api/v1/sync", json=payload)
+    assert r2.status_code == 200
+    assert "scan-delete-later" in r2.json()["synced_ids"]
+
+    scan = await test_session.get(ScrapScan, "scan-delete-later")
+    assert scan is not None
+    assert scan.is_deleted is True

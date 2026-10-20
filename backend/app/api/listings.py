@@ -62,17 +62,17 @@ async def accept_listing(
     pending offers on it — first accept wins.
     """
     await pickup_service.escalate_overdue_handovers(db)
-    if await pickup_service.has_open_handover(db, collector_id=collector.id):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Finish your open handovers before accepting new leads",
-        )
 
     listing = await listing_service.get_listing(db, listing_id)
     if listing is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Listing not found")
 
-    claimed = await pickup_service.claim_listing(db, listing, collector)
+    try:
+        claimed = await pickup_service.claim_listing(db, listing, collector)
+    except pickup_service.CollectorAtCapacity as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
+        ) from exc
     if claimed is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
