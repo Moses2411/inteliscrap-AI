@@ -631,6 +631,7 @@ class ManifestoItem(BaseModel):
     material_name: str
     weight_kg: float
     gross_value_naira: float
+    carbon_kg_co2e_per_kg_used: float
     carbon_offset_kg_co2e: float
     hub: Optional[str] = None
     settled_at: Optional[str] = None

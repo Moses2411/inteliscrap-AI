@@ -153,7 +153,7 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 | **Server AI** | Ollama vision model (`llava:13b` default, configurable via `OLLAMA_VISION_MODEL`) |
 | **Voice & comms** | Google TTS proxy · Web Speech API · Africa's Talking SMS + USSD + IVR |
 | **Infrastructure** | Docker / docker-compose · GitHub Actions CI · nginx (production) · Vercel/Netlify + Render/Railway |
-| **Quality** | pytest + pytest-asyncio (172 tests) · Ruff · `tsc --noEmit` · production PWA build |
+| **Quality** | pytest + pytest-asyncio (173 tests) · Ruff · `tsc --noEmit` · production PWA build |
 
 ---
 
@@ -574,7 +574,7 @@ The UI (`MomoCheckout`) is surfaced on the Settings page (a role-aware premium c
 
 ### Compliance Manifesto (EPR) Export
 
-PROs, recycling companies and FG/EPR auditors authenticate with their **session bearer token** against `GET /api/v1/compliance/manifesto` — access is **subscription-based** (an active EPR premium plan), not an API key. The response is a **network-wide**, read-only, auditable export of every settled collection in a date range: transaction, registered collector, material, weight, value, carbon offset and originating hub — the source-verifiable record EPR contracts require. (Machine-to-machine partner notifications still use the separate partner API key; only the EPR dashboard/compliance data moved to subscription auth.)
+PROs, recycling companies and FG/EPR auditors authenticate with their **session bearer token** against `GET /api/v1/compliance/manifesto` — access is **subscription-based** (an active EPR premium plan), not an API key. The response is a **network-wide**, read-only, auditable export of every settled collection in a date range: transaction, registered collector, material, weight, value, carbon offset and originating hub — the source-verifiable record EPR contracts require. (Machine-to-machine partner notifications still use the separate partner API key; only the EPR dashboard/compliance data moved to subscription auth.) Each manifest line also reports `carbon_kg_co2e_per_kg_used` — the per-material emission factor applied — so every tonnage-to-carbon figure is auditable. (An earlier build hardcoded copper's factor of 2.6 for every material, understating aluminium ~3.5× and overstating glass ~8.7×; `test_compliance_manifesto_uses_per_material_carbon_factor` guards the fix.)
 
 ### USSD Registration & Location (feature phones)
 
@@ -655,7 +655,7 @@ cd backend
 pytest -v
 ```
 
-**172 tests** across 19 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching (resolution, disk growth, proximity ordering, radius boundary, stale-cell immunity), nearest-buyer offer visibility (pickup location + opt-in phone) and the no-GPS hub/address fallback (gazetteer resolution, radius widening, GPS-first ordering)**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **role-specific yearly premium plans + subscription-gated impact/compliance data (402 without premium)**, **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user settled + estimated (in-progress) earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
+**173 tests** across 19 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching (resolution, disk growth, proximity ordering, radius boundary, stale-cell immunity), nearest-buyer offer visibility (pickup location + opt-in phone) and the no-GPS hub/address fallback (gazetteer resolution, radius widening, GPS-first ordering)**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **role-specific yearly premium plans + subscription-gated impact/compliance data (402 without premium)**, **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user settled + estimated (in-progress) earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend
@@ -752,7 +752,7 @@ inteliscrap-AI/
 │   │   │       messaging · ivr · voice services
 │   │   └── middleware/
 │   │       └── cors.py               # CORS configuration
-│   ├── tests/                        # 172 async tests across 19 suites (pytest + pytest-asyncio)
+│   ├── tests/                        # 173 async tests across 19 suites (pytest + pytest-asyncio)
 │   │   ├── conftest.py               # Async test fixtures (SQLite)
 │   │   └── test_{health,sync,matching,geo_offers,auth,ussd,listings,pickups,
 │   │             handover,settlement,outbox,hubs,payments,prices,impact,

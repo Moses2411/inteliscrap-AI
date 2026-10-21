@@ -40,7 +40,12 @@ async def generate_manifesto(
         date_to = date.today()
 
     stmt = (
-        select(Transaction, MaterialCategory.slug, MaterialCategory.name)
+        select(
+            Transaction,
+            MaterialCategory.slug,
+            MaterialCategory.name,
+            MaterialCategory.carbon_kg_co2e_per_kg,
+        )
         .join(MaterialCategory, Transaction.material_category_id == MaterialCategory.id)
         .where(
             Transaction.status == "settled",
@@ -56,7 +61,7 @@ async def generate_manifesto(
     total_carbon = 0.0
     total_income = 0.0
 
-    for txn, mat_slug, mat_name in rows:
+    for txn, mat_slug, mat_name, carbon_per_kg in rows:
         collector = await db.get(User, txn.collector_id)
         hub_name = None
         if txn.pickup_id:
@@ -69,7 +74,11 @@ async def generate_manifesto(
                 hub_name = impact_row.hub
 
         w = float(txn.weight_kg)
-        co = w * 2.6
+        # Per-material factor, not a constant: copper is 2.6 kgCO2e/kg but
+        # aluminum is 9.1 and glass is 0.3, so a hardcoded figure made this
+        # compliance manifest wrong by up to ~8.7x depending on the material.
+        factor = float(carbon_per_kg or 0)
+        co = w * factor
         total_weight += w
         total_carbon += co
         total_income += float(txn.collector_earnings_naira)
@@ -86,6 +95,7 @@ async def generate_manifesto(
                 "material_name": mat_name,
                 "weight_kg": w,
                 "gross_value_naira": float(txn.gross_value_naira),
+                "carbon_kg_co2e_per_kg_used": factor,
                 "carbon_offset_kg_co2e": co,
                 "hub": hub_name,
                 "settled_at": txn.settled_at.isoformat() if txn.settled_at else None,

@@ -549,6 +549,73 @@ async def test_compliance_manifesto(client, test_session):
 
 
 @pytest.mark.asyncio
+async def test_compliance_manifesto_uses_per_material_carbon_factor(client, test_session):
+    """The EPR manifest must apply each material's own emission factor.
+
+    Copper is 2.6 kgCO2e/kg, but aluminum is 9.1 and glass is 0.3. This document
+    used to multiply everything by a hardcoded 2.6, which was wrong by up to
+    ~8.7x depending on the material — and invisible because copper is 2.6.
+    """
+    seller, hub_owner, collector, _copper, hub = await _seed_hub(test_session)
+
+    aluminium = MaterialCategory(
+        slug="aluminum",
+        name="Aluminum",
+        price_per_kg_naira=700,
+        carbon_kg_co2e_per_kg=9.1,
+    )
+    test_session.add(aluminium)
+    await test_session.flush()
+
+    partner = User(
+        id="comp-partner-al",
+        phone_number="+2348090000002",
+        full_name="EPRON Nigeria",
+        role=UserRole.partner,
+        subscription_plan=SubscriptionPlan.epr_yearly,
+        subscription_status=SubscriptionStatus.active,
+        subscription_expires_at=datetime.utcnow() + timedelta(days=30),
+    )
+    test_session.add(partner)
+    await test_session.flush()
+
+    listing = Listing(
+        id="comp-listing-al",
+        seller_id=seller.id,
+        material_category_id=aluminium.id,
+        estimated_weight_kg=10,
+        estimated_value_naira=7000,
+        latitude=11.0,
+        longitude=7.0,
+    )
+    pickup = Pickup(
+        id="comp-pickup-al",
+        listing_id=listing.id,
+        collector_id=collector.id,
+        status=PickupStatus.accepted,
+    )
+    test_session.add_all([listing, pickup])
+    await test_session.flush()
+
+    await settlement_service.settle_pickup(test_session, pickup, weight_kg=10.0)
+
+    token = security.create_access_token(partner.id, UserRole.partner.value)
+    resp = await client.get(
+        "/api/v1/compliance/manifesto",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    item = data["items"][0]
+
+    assert item["material_slug"] == "aluminum"
+    # 10 kg of aluminum at 9.1 kgCO2e/kg = 91 — the old hardcoded 2.6 gave 26.
+    assert item["carbon_kg_co2e_per_kg_used"] == 9.1
+    assert item["carbon_offset_kg_co2e"] == pytest.approx(91.0)
+    assert data["total_carbon_offset_kg_co2e"] == pytest.approx(91.0)
+
+
+@pytest.mark.asyncio
 async def test_compliance_manifesto_requires_premium(client, test_session):
     # No session at all → unauthenticated.
     resp = await client.get("/api/v1/compliance/manifesto")
