@@ -48,6 +48,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   const [otpSent, setOtpSent] = useState(false);
   const [posted, setPosted] = useState(false);
   const [sharePhone, setSharePhone] = useState(false);
+  const [weightKg, setWeightKg] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debugOtp, setDebugOtp] = useState<string | null>(null);
@@ -59,6 +60,11 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
   const currentRoleConfig = ROLE_OPTIONS.find((o) => o.value === role);
   const addressRequired = currentRoleConfig?.requiresAddress ?? false;
   const validAddress = address.trim().length >= 5;
+
+  const weightNum = Number(weightKg);
+  // Offers reach feature-phone collectors over USSD/SMS, which render a null
+  // weight as "0kg" — so the estimate is required, not optional.
+  const validWeight = weightKg.trim() !== "" && Number.isFinite(weightNum) && weightNum > 0;
 
   async function submitAuth(e: FormEvent) {
     e.preventDefault();
@@ -109,7 +115,10 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
       await createListing({
         material_category_id: category.id,
-        estimated_value_naira: category.price_per_kg_naira, // Use base price per kg as estimate
+        // The seller's own estimate, not a measurement. Without it every USSD
+        // and SMS offer reaches the collector as "0kg". The server derives the
+        // estimated value from this weight and the material's per-kg price.
+        estimated_weight_kg: weightNum,
         confidence_score: analysis.confidence,
         toxicity_hazards: analysis.toxicity_hazards,
         latitude: coords?.latitude,
@@ -323,6 +332,27 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
         {t("listing_confirm_desc")}
       </p>
 
+      <div>
+        <label className="label" htmlFor="weight">
+          Estimated weight (kg)
+        </label>
+        <input
+          id="weight"
+          type="number"
+          inputMode="decimal"
+          min="0.1"
+          step="0.1"
+          placeholder="e.g. 6"
+          className="input"
+          value={weightKg}
+          onChange={(e) => setWeightKg(e.target.value)}
+          required
+        />
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          Roughly how much? This is what the collector sees on their phone — they weigh it properly at pickup.
+        </p>
+      </div>
+
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={sharePhone} onChange={(e) => setSharePhone(e.target.checked)} className="h-4 w-4 rounded border-slate-300 text-brand-600" />
         <span className="text-slate-600 dark:text-slate-300">Share my phone with collector</span>
@@ -336,7 +366,7 @@ export default function PostPickupForm({ analysis, onReset }: Props) {
 
       {error && <div className="text-sm font-semibold text-red-600 dark:text-red-400" role="alert">{error}</div>}
 
-      <Button fullWidth type="submit" loading={busy}>
+      <Button fullWidth type="submit" loading={busy} disabled={!validWeight}>
         {t("list_scrap")}
       </Button>
 

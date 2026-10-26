@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy import select
 
 from app.core import security
-from app.models import MaterialCategory, Pickup, User, UserRole
+from app.models import Listing, MaterialCategory, Pickup, User, UserRole
 
 
 async def _seller_headers(test_session, phone="+2348090000001"):
@@ -179,3 +179,72 @@ async def test_accept_listing_creates_pickup(client, test_session):
         f"/api/v1/listings/{listing_id}/accept", headers=other_headers
     )
     assert conflict.status_code == 409
+
+
+@pytest.mark.asyncio
+async def test_create_listing_persists_weight_and_derives_value(client, test_session):
+    """USSD/SMS offers read estimated_weight_kg; a dropped field shows "0kg".
+
+    The field was accepted by clients but never declared on ListingCreate, so
+    Pydantic silently discarded it and every feature-phone offer read 0kg.
+    """
+    headers, _ = await _seller_headers(test_session, phone="+2348090000030")
+    material = MaterialCategory(slug="copper", name="Copper", price_per_kg_naira=3200)
+    test_session.add(material)
+    await test_session.flush()
+
+    resp = await client.post(
+        "/api/v1/listings",
+        json={
+            "material_category_id": material.id,
+            "estimated_weight_kg": 6.5,
+            "auto_dispatch": False,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["estimated_weight_kg"] == 6.5
+    # No value supplied: derived from weight x the material's per-kg price.
+    assert data["estimated_value_naira"] == 20800.0
+
+    stored = (
+        await test_session.execute(select(Listing).where(Listing.id == data["id"]))
+    ).scalar_one()
+    assert float(stored.estimated_weight_kg) == 6.5
+
+
+@pytest.mark.asyncio
+async def test_create_listing_keeps_supplied_value(client, test_session):
+    headers, _ = await _seller_headers(test_session, phone="+2348090000031")
+    material = MaterialCategory(slug="glass", name="Glass", price_per_kg_naira=300)
+    test_session.add(material)
+    await test_session.flush()
+
+    resp = await client.post(
+        "/api/v1/listings",
+        json={
+            "material_category_id": material.id,
+            "estimated_weight_kg": 10,
+            "estimated_value_naira": 1234,
+            "auto_dispatch": False,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201
+    assert resp.json()["estimated_value_naira"] == 1234.0
+
+
+@pytest.mark.asyncio
+async def test_create_listing_rejects_non_positive_weight(client, test_session):
+    headers, _ = await _seller_headers(test_session, phone="+2348090000032")
+    material = MaterialCategory(slug="steel", name="Steel", price_per_kg_naira=450)
+    test_session.add(material)
+    await test_session.flush()
+
+    resp = await client.post(
+        "/api/v1/listings",
+        json={"material_category_id": material.id, "estimated_weight_kg": 0},
+        headers=headers,
+    )
+    assert resp.status_code == 422

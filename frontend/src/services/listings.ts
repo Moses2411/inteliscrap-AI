@@ -6,6 +6,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 export interface CreateListingPayload {
   material_category_id: number;
   title?: string;
+  estimated_weight_kg?: number;
   estimated_value_naira?: number;
   confidence_score?: number;
   toxicity_hazards?: string[];

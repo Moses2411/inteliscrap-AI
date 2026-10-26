@@ -227,3 +227,92 @@ async def test_accept_locks_listing_for_other_collectors(client, test_session):
 
     remaining = await get_pending_offers(test_session, second)
     assert remaining == []
+
+
+@pytest.mark.asyncio
+async def test_ussd_never_reroles_an_existing_seller(client, test_session):
+    """A seller dialling the USSD code must keep their account.
+
+    Registration used to fall through to `existing.role = collector`, silently
+    converting any non-collector who dialled in and orphaning their listings.
+    """
+    seller = User(
+        id="ussd-existing-seller",
+        phone_number="+2348030000077",
+        role=UserRole.seller,
+    )
+    test_session.add(seller)
+    await test_session.flush()
+    before = (seller.role, seller.location_hub, seller.latitude)
+
+    for text in ("", "1", "1*1"):
+        resp = await client.post(
+            "/api/v1/ussd/callback",
+            data={
+                "sessionId": "s-role",
+                "serviceCode": "*384*123#",
+                "phoneNumber": seller.phone_number,
+                "text": text,
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.text.startswith("END")
+        assert "asusu" in resp.text
+
+    await test_session.refresh(seller)
+    assert seller.role == UserRole.seller
+    # Nothing about the account was touched — no role flip, no hub reassignment.
+    assert (seller.role, seller.location_hub, seller.latitude) == before
+
+
+@pytest.mark.asyncio
+async def test_ussd_offer_shows_weight_posted_through_the_app(client, test_session):
+    """End-to-end: a listing posted with a weight must not read "0kg" on USSD.
+
+    This is the pilot path — seller posts in the browser, collector dials in.
+    """
+    from app.core import security
+
+    seller = User(
+        id="e2e-seller",
+        phone_number="+2348030000091",
+        role=UserRole.seller,
+    )
+    collector = User(
+        id="e2e-collector",
+        phone_number="+2348030000092",
+        role=UserRole.collector,
+        latitude=11.0,
+        longitude=7.0,
+        is_active=True,
+    )
+    material = MaterialCategory(slug="copper", name="Copper", price_per_kg_naira=3200)
+    test_session.add_all([seller, collector, material])
+    await test_session.flush()
+
+    token = security.create_access_token(seller.id, UserRole.seller.value)
+    created = await client.post(
+        "/api/v1/listings",
+        json={
+            "material_category_id": material.id,
+            "estimated_weight_kg": 6.5,
+            "latitude": 11.0,
+            "longitude": 7.0,
+            "auto_dispatch": True,
+        },
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert created.status_code == 201, created.text
+
+    resp = await client.post(
+        "/api/v1/ussd/callback",
+        data={
+            "sessionId": "e2e",
+            "serviceCode": "*384*123#",
+            "phoneNumber": collector.phone_number,
+            "text": "1",
+        },
+    )
+    assert "Copper" in resp.text
+    assert "6.5kg" in resp.text
+    assert "0kg" not in resp.text

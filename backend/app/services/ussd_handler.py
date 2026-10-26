@@ -117,6 +117,14 @@ async def _balance_flow(db: AsyncSession, collector: User) -> str:
     return f"END Jimillar samunka: N{_fmt_num(total)}."
 
 
+def _wrong_account_message(user: User) -> str:
+    """USSD is collector-only. Never let a dial-in re-role an existing account."""
+    return (
+        "END Wannan lambar tana da asusu a matsayin "
+        f"{user.role.value}. Don zama mai karba, yi rijista da wata lamba."
+    )
+
+
 async def _register_flow(db: AsyncSession, phone_number: str, text: str) -> str:
     """Feature-phone onboarding: register a caller as a collector from a preset hub.
 
@@ -145,18 +153,20 @@ async def _register_flow(db: AsyncSession, phone_number: str, text: str) -> str:
 
     hub_name, lat, lng = HUB_PRESETS[hub_index]
 
+    # Registration only ever creates a new collector account. An existing
+    # account is never re-roled here: a seller who dials this code would
+    # otherwise silently lose their seller account and every listing on it.
     existing = await user_service.get_by_phone(db, phone_number)
-    if existing is None:
-        collector = User(
-            phone_number=phone_number,
-            role=UserRole.collector,
-            full_name="Mai karba (USSD)",
-        )
-        db.add(collector)
-        await db.flush()
-    else:
-        existing.role = UserRole.collector
-        collector = existing
+    if existing is not None:
+        return _wrong_account_message(existing)
+
+    collector = User(
+        phone_number=phone_number,
+        role=UserRole.collector,
+        full_name="Mai karba (USSD)",
+    )
+    db.add(collector)
+    await db.flush()
 
     await user_service.set_user_location(
         db, collector, lat, lng, precision=location_service.PRECISION_HUB
@@ -180,6 +190,9 @@ async def _location_flow(db: AsyncSession, collector: User, rest: list[str]) -> 
 async def process_ussd(db: AsyncSession, phone_number: str, text: str) -> str:
     collector = await _find_collector(db, phone_number)
     if collector is None:
+        existing = await user_service.get_by_phone(db, phone_number)
+        if existing is not None:
+            return _wrong_account_message(existing)
         return await _register_flow(db, phone_number, text)
 
     parts = [p for p in (text or "").split("*") if p != ""]

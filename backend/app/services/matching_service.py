@@ -304,7 +304,13 @@ def _enqueue_offer_sms(
     accept by dialing the USSD code.
     """
     material = material_name or "Kaya"
-    weight = f" {listing.estimated_weight_kg}kg" if listing.estimated_weight_kg else ""
+    # Numeric round-trips from Postgres as Decimal("6.500"); format it for a
+    # 160-character SMS rather than letting it read "6.500kg".
+    weight = (
+        f" {float(listing.estimated_weight_kg):g}kg"
+        if listing.estimated_weight_kg
+        else ""
+    )
     for collector, dist in nearby:
         msg = (
             f"InteliScrap: New pickup - {material}{weight}, "

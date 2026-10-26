@@ -153,7 +153,7 @@ The app runs an on-device ONNX image classifier straight from the browser: snap 
 | **Server AI** | Ollama vision model (`llava:13b` default, configurable via `OLLAMA_VISION_MODEL`) |
 | **Voice & comms** | Google TTS proxy · Web Speech API · Africa's Talking SMS + USSD + IVR |
 | **Infrastructure** | Docker / docker-compose · GitHub Actions CI · nginx (production) · Vercel/Netlify + Render/Railway |
-| **Quality** | pytest + pytest-asyncio (173 tests) · Ruff · `tsc --noEmit` · production PWA build |
+| **Quality** | pytest + pytest-asyncio (178 tests) · Ruff · `tsc --noEmit` · production PWA build |
 
 ---
 
@@ -586,7 +586,9 @@ A collector can self-register without a smartphone by dialing the USSD shortcode
 4. Registered callers reach the **Main Menu** including `4. Wurin da nake aiki` → `4*N` to change their work hub on the move.
 5. When a new offer matches their hex, the outbox worker SMSes them, and they can **accept via USSD or IVR (voice callback)**.
 
-The `ussd_handler` uses a `session_id`-based state machine (`_register_flow`, `_location_flow`) so a reply-only flow works on any feature phone.
+The `ussd_handler` uses a `session_id`-based state machine (`_register_flow`, `_location_flow`) so a reply-only flow works on any feature phone. Registration only ever **creates** a collector: if the dialling number already belongs to a seller (or hub), USSD refuses rather than re-roling the account, which would otherwise orphan that user's listings.
+
+**What USSD can and cannot do today.** A feature-phone collector can be notified, list offers and **accept** one. The flow ends there — there is no handover or weight capture over USSD, so the seller completes the pickup from the browser using the PIN the collector received. Offers read the seller's `estimated_weight_kg`, which is now **required when posting a listing**; a null weight renders as `0kg` in both the USSD list and the location SMS.
 
 ### Hexagon (Uber H3) Collector Matching
 
@@ -655,7 +657,7 @@ cd backend
 pytest -v
 ```
 
-**173 tests** across 19 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching (resolution, disk growth, proximity ordering, radius boundary, stale-cell immunity), nearest-buyer offer visibility (pickup location + opt-in phone) and the no-GPS hub/address fallback (gazetteer resolution, radius widening, GPS-first ordering)**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **role-specific yearly premium plans + subscription-gated impact/compliance data (402 without premium)**, **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user settled + estimated (in-progress) earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
+**178 tests** across 19 suites cover: health check, sync (empty/single/idempotency/conflict/deletion), auth OTP flow, price updates, **H3 collector matching (resolution, disk growth, proximity ordering, radius boundary, stale-cell immunity), nearest-buyer offer visibility (pickup location + opt-in phone) and the no-GPS hub/address fallback (gazetteer resolution, radius widening, GPS-first ordering)**, **USSD registration with preset hubs**, **USSD hub-location change**, listings (**collector-only market board, direct accept**), pickups, **PIN-confirmed handover + dispute holds**, settlement fees, SMS outbox, hubs (**self-registration, role-aware request feed, subscription-gated requests**), **role-specific yearly premium plans + subscription-gated impact/compliance data (402 without premium)**, **MTN MoMo checkout / callback / polling with one-time activation (API stubbed)**, impact aggregates (incl. **network ops**), **per-user settled + estimated (in-progress) earnings**, user location updates and the **server vision endpoint** (`/api/v1/analyze`).
 
 ```bash
 cd frontend
@@ -752,7 +754,7 @@ inteliscrap-AI/
 │   │   │       messaging · ivr · voice services
 │   │   └── middleware/
 │   │       └── cors.py               # CORS configuration
-│   ├── tests/                        # 173 async tests across 19 suites (pytest + pytest-asyncio)
+│   ├── tests/                        # 178 async tests across 19 suites (pytest + pytest-asyncio)
 │   │   ├── conftest.py               # Async test fixtures (SQLite)
 │   │   └── test_{health,sync,matching,geo_offers,auth,ussd,listings,pickups,
 │   │             handover,settlement,outbox,hubs,payments,prices,impact,

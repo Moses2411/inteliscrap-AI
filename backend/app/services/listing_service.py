@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +30,20 @@ def _resolve_listing_coords(
     return latitude, longitude, precision
 
 
+def _estimated_value(
+    material: MaterialCategory | None,
+    weight_kg: float | None,
+    supplied: float | None,
+) -> Decimal | None:
+    """Total value, deriving it from the material's per-kg price when only a
+    weight was given. Callers that send a value keep it."""
+    if supplied is not None:
+        return Decimal(str(supplied))
+    if weight_kg is None or material is None or material.price_per_kg_naira is None:
+        return None
+    return Decimal(str(material.price_per_kg_naira)) * Decimal(str(weight_kg))
+
+
 async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate) -> Listing:
     # Compliance hold: a seller with an unresolved handover cannot post new
     # listings until every open pickup is confirmed complete.
@@ -43,13 +59,18 @@ async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate)
 
     latitude, longitude, location_precision = _resolve_listing_coords(seller, payload)
 
+    material = await db.get(MaterialCategory, payload.material_category_id)
+
     listing = Listing(
         seller_id=seller.id,
         material_category_id=payload.material_category_id,
         title=payload.title,
         description=payload.description,
         photo_url=payload.photo_url,
-        estimated_value_naira=payload.estimated_value_naira,
+        estimated_weight_kg=payload.estimated_weight_kg,
+        estimated_value_naira=_estimated_value(
+            material, payload.estimated_weight_kg, payload.estimated_value_naira
+        ),
         confidence_score=payload.confidence_score,
         toxicity_hazards=payload.toxicity_hazards,
         latitude=latitude,
@@ -68,7 +89,6 @@ async def create_listing(db: AsyncSession, seller: User, payload: ListingCreate)
     await subscription_service.increment_listing_count(db, seller)
 
     if payload.auto_dispatch and listing.latitude is not None and listing.longitude is not None:
-        material = await db.get(MaterialCategory, payload.material_category_id)
         await matching_service.dispatch_listing(
             db,
             listing,
